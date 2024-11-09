@@ -40,19 +40,6 @@ impl Module {
         self.walk(&mut |module| module.training = false);
     }
 
-    fn training_rec(mut self, training: bool) -> () {
-        self.training = training;
-        self.modules().for_each(|m| m.training_rec(training));
-    }
-
-    fn train_rec(mut self) -> () {
-        self.training_rec(true);
-    }
-
-    fn eval_rec(mut self) -> () {
-        self.training_rec(false);
-    }
-
     fn arb() -> impl Strategy<Value = Module> {
         let leaf = any::<bool>().prop_map(|training| Module {
             modules: HashMap::new(),
@@ -71,5 +58,28 @@ impl Module {
                 training
             })
         })
+    }
+
+    fn assert_rec<F>(self, assertion: &mut F) -> () where F: FnMut(&Module) -> () {
+        assertion(&self);
+        self.modules().for_each(|m| m.assert_rec(assertion));
+    }
+}
+
+
+proptest! {
+
+    #[test]
+    fn test_train(mut module in Module::arb()) {
+        module.train();
+        assert!(module.training);
+        module.assert_rec(&mut |m| assert!(m.training));
+    }
+
+    #[test]
+    fn test_eval(mut module in Module::arb()) {
+        module.eval();
+        assert!(!module.training);
+        module.assert_rec(&mut |m| assert!(!m.training));
     }
 }
