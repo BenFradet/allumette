@@ -1,3 +1,5 @@
+use proptest::prelude::*;
+
 #[derive(Debug)]
 pub struct Parameter {
     name: String,
@@ -10,5 +12,12 @@ impl Parameter {
             name: self.name,
             value
         }
+    }
+
+    pub fn arb() -> impl Strategy<Value = Parameter> {
+        (
+            ".*",
+            ".*",
+        ).prop_map(|(name, value)| Parameter { name, value} )
     }
 }

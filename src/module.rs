@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use proptest::prelude::*;
+
 use crate::parameter::Parameter;
 
 #[derive(Debug)]
@@ -49,5 +51,25 @@ impl Module {
 
     fn eval_rec(mut self) -> () {
         self.training_rec(false);
+    }
+
+    fn arb() -> impl Strategy<Value = Module> {
+        let leaf = any::<bool>().prop_map(|training| Module {
+            modules: HashMap::new(),
+            parameters: HashMap::new(),
+            training,
+        });
+
+        leaf.prop_recursive(4, 64, 8, |inner| {
+            (
+                prop::collection::hash_map(".*", inner.clone(), 0..4),
+                prop::collection::hash_map(".*", Parameter::arb(), 0..4),
+                any::<bool>(),
+            ).prop_map(|(modules, parameters, training)| Module {
+                modules,
+                parameters,
+                training
+            })
+        })
     }
 }
