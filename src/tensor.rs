@@ -1,4 +1,4 @@
-fn mul(a: f64, b: f64) -> f64 {
+pub fn mul(a: f64, b: f64) -> f64 {
     a * b
 }
 
@@ -6,11 +6,11 @@ fn id(a: f64) -> f64 {
     a
 }
 
-fn add(a: f64, b: f64) -> f64 {
+pub fn add(a: f64, b: f64) -> f64 {
     a + b
 }
 
-fn neg(a: f64) -> f64 {
+pub fn neg(a: f64) -> f64 {
     -a
 }
 
