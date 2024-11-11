@@ -27,21 +27,33 @@ impl Module {
     fn fold_rec<A, F>(&self, z: A, f: F) -> A where F: Fn(A, &Self) -> A + Copy {
         let mut acc = f(z, self);
         for module in self.modules.values() {
-            acc = module.fold(acc, f);
+            acc = module.fold_rec(acc, f);
         };
         acc
     }
 
-    fn fold<A, F>(&self, z: A, f: F) -> A where F: Fn(A, &Self) -> A {
-        let mut stack = vec![self];
+    fn fold<A, F>(&self, z: A, f: F) -> A where F: Fn(A, (&Self, String)) -> A {
+        let mut stack: Vec<(&Module, String)> = vec![(self, "".to_string())];
         let mut res = z;
-        while let Some(m) = stack.pop() {
-            res = f(res, m);
-            for module in self.modules.values() {
-                stack.push(module);
+        while let Some((module, name)) = stack.pop() {
+            res = f(res, (module, name.to_string()));
+            for (name, module) in self.modules.iter() {
+                stack.push((&module, name.to_string()));
             }
         }
         res
+    }
+
+    fn named_parameters(&self) -> impl Iterator<Item = (String, Parameter)> {
+        self.fold((vec![], "".to_string()), |(acc, prefix), (module, module_name)| {
+            let new_prefix = prefix + &module_name;
+            let params = module
+                .parameters
+                .iter()
+                .map(|(k, v)| (new_prefix.clone() + &k, v.clone()))
+                .collect();
+            ([acc, params].concat(), new_prefix)
+        }).0.into_iter()
     }
 
     fn walk_rec<F>(&mut self, f: &mut F) -> () where F: FnMut(&mut Self) -> () {
