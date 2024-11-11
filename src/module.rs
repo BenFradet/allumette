@@ -20,24 +20,53 @@ impl Module {
         }
     }
 
-    fn modules(self) -> impl Iterator<Item = Module> {
+    fn module_values(self) -> impl Iterator<Item = Module> {
         self.modules.into_values()
     }
 
-    // TODO: imperative version
-    fn walk<F>(&mut self, f: &mut F) -> () where F: FnMut(&mut Module) -> () {
+    fn fold_rec<A, F>(&self, z: A, f: F) -> A where F: Fn(A, &Self) -> A + Copy {
+        let mut acc = f(z, self);
+        for module in self.modules.values() {
+            acc = module.fold(acc, f);
+        };
+        acc
+    }
+
+    fn fold<A, F>(&self, z: A, f: F) -> A where F: Fn(A, &Self) -> A {
+        let mut stack = vec![self];
+        let mut res = z;
+        while let Some(m) = stack.pop() {
+            res = f(res, m);
+            for module in self.modules.values() {
+                stack.push(module);
+            }
+        }
+        res
+    }
+
+    fn walk_rec<F>(&mut self, f: &mut F) -> () where F: FnMut(&mut Self) -> () {
         f(self);
         for module in self.modules.values_mut() {
-            module.walk(f);
+            module.walk_rec(f);
+        }
+    }
+
+    fn walk<F>(&mut self, mut f: F) -> () where F: FnMut(&mut Self) -> () {
+        let mut stack = vec![self];
+        while let Some(m) = stack.pop() {
+            f(m);
+            for module in m.modules.values_mut() {
+                stack.push(module);
+            }
         }
     }
 
     fn train(&mut self) -> () {
-        self.walk(&mut |module| module.training = true);
+        self.walk(|module| module.training = true);
     }
 
     fn eval(&mut self) -> () {
-        self.walk(&mut |module| module.training = false);
+        self.walk(|module| module.training = false);
     }
 
     fn arb() -> impl Strategy<Value = Module> {
@@ -49,7 +78,7 @@ impl Module {
 
         leaf.prop_recursive(4, 64, 8, |inner| {
             (
-                prop::collection::hash_map(".*", inner.clone(), 0..4),
+                prop::collection::hash_map(".*", inner.clone(), 2),
                 prop::collection::hash_map(".*", Parameter::arb(), 0..4),
                 any::<bool>(),
             ).prop_map(|(modules, parameters, training)| Module {
@@ -62,7 +91,7 @@ impl Module {
 
     fn assert_rec<F>(self, assertion: &mut F) -> () where F: FnMut(&Module) -> () {
         assertion(&self);
-        self.modules().for_each(|m| m.assert_rec(assertion));
+        self.module_values().for_each(|m| m.assert_rec(assertion));
     }
 }
 
@@ -72,14 +101,12 @@ proptest! {
     #[test]
     fn test_train(mut module in Module::arb()) {
         module.train();
-        assert!(module.training);
         module.assert_rec(&mut |m| assert!(m.training));
     }
 
     #[test]
     fn test_eval(mut module in Module::arb()) {
         module.eval();
-        assert!(!module.training);
         module.assert_rec(&mut |m| assert!(!m.training));
     }
 }
