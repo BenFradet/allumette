@@ -56,6 +56,17 @@ impl Module {
         res
     }
 
+    fn parameters(&self) -> impl Iterator<Item = Parameter> {
+        self.fold_rec(vec![], |acc, module| {
+            let params = module
+                .parameters
+                .values()
+                .map(|p| p.clone())
+                .collect();
+            [acc, params].concat()
+        }).into_iter()
+    }
+
     fn named_parameters(&self) -> impl Iterator<Item = (String, Parameter)> {
         fn build_prefix(prefix: String, current_mod_name: String, depth: u32) -> String {
             if depth == 1 {
@@ -139,41 +150,61 @@ impl Module {
 mod tests {
     use super::*;
 
-    #[test]
-    fn named_parameters_test() -> () {
-        let (a, b) = (50., 100.);
-        let (name_a, name_b) = ("parameter_a", "parameter_b");
-        let para_a = Parameter { name: name_a.to_string(), value: a };
-        let para_b = Parameter { name: name_b.to_string(), value: b };
-        let module = Module {
+    fn test_para_a() -> Parameter {
+        Parameter { name: "parameter_a".to_string(), value: 50. }
+    }
+
+    fn test_para_b() -> Parameter {
+        Parameter { name: "parameter_b".to_string(), value: 100. }
+    }
+
+    fn test_module() -> Module {
+        let para_a = test_para_a();
+        let para_b = test_para_b();
+        Module {
             children: HashMap::from([
                 ("module_a".to_string(), Module {
                     children: HashMap::new(),
                     parameters: HashMap::from([
-                        (name_a.to_string(), para_a.clone()),
-                        (name_b.to_string(), para_b.clone())
+                        (para_a.name.clone(), para_a.clone()),
+                        (para_b.name.clone(), para_b.clone()),
                     ]),
                     training: false,
                 }),
                 ("module_b".to_string(), Module {
                     children: HashMap::new(),
                     parameters: HashMap::from([
-                        (name_a.to_string(), para_a.clone()),
-                        (name_b.to_string(), para_b.clone())
+                        (para_a.name.clone(), para_a.clone()),
+                        (para_b.name.clone(), para_b.clone()),
                     ]),
                     training: false,
                 }),
             ]),
-            parameters: HashMap::from([(name_a.to_string(), para_a.clone())]),
+            parameters: HashMap::from([(para_a.name.clone(), para_a.clone())]),
             training: false,
-        };
+        }
+    }
+
+    #[test]
+    fn parameters_test() -> () {
+        let module = test_module();
+        let parameters: Vec<_> = module.parameters().collect();
+        assert_eq!(5, parameters.len());
+    }
+
+
+    #[test]
+    fn named_parameters_test() -> () {
+        let module = test_module();
+        let para_a = test_para_a();
+        let para_b = test_para_b();
         let named_parameters: Vec<_> = module.named_parameters().collect();
         let expected = vec![
-            (name_a.to_string(), para_a.clone()),
-            ("module_b.".to_string() + name_b, para_b.clone()),
-            ("module_b.".to_string() + name_a, para_a.clone()),
-            ("module_a.".to_string() + name_b, para_b.clone()),
-            ("module_a.".to_string() + name_a, para_a.clone()),
+            (para_a.name.clone(), para_a.clone()),
+            ("module_b.".to_string() + &para_b.name, para_b.clone()),
+            ("module_b.".to_string() + &para_a.name, para_a.clone()),
+            ("module_a.".to_string() + &para_b.name, para_b.clone()),
+            ("module_a.".to_string() + &para_a.name, para_a.clone()),
         ];
         assert!(expected.iter().all(|e| named_parameters.contains(e)));
     }
