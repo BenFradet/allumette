@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use proptest::prelude::*;
 
@@ -6,7 +6,7 @@ use crate::parameter::Parameter;
 
 #[derive(Debug)]
 struct Module {
-    modules: HashMap<String, Module>,
+    children: HashMap<String, Module>,
     parameters: HashMap<String, Parameter>,
     training: bool,
 }
@@ -14,43 +14,71 @@ struct Module {
 impl Module {
     fn new() -> Self {
         Self {
-            modules: HashMap::new(),
+            children: HashMap::new(),
             parameters: HashMap::new(),
             training: true,
         }
     }
 
-    fn module_values(self) -> impl Iterator<Item = Module> {
-        self.modules.into_values()
+    fn children_values(self) -> impl Iterator<Item = Module> {
+        self.children.into_values()
     }
 
     fn fold_rec<A, F>(&self, z: A, f: F) -> A where F: Fn(A, &Self) -> A + Copy {
         let mut acc = f(z, self);
-        for module in self.modules.values() {
+        for module in self.children.values() {
             acc = module.fold_rec(acc, f);
         };
         acc
     }
 
-    fn fold<A, F>(&self, z: A, f: F) -> A where F: Fn(A, (&Self, String)) -> A {
-        let mut stack: Vec<(&Module, String)> = vec![(self, "".to_string())];
+    fn fold<A, F>(&self, z: A, f: F) -> A where F: Fn(A, (&Self, String, u32)) -> A {
+        let mut stack: Vec<(&Module, String, u32)> = vec![(self, "".to_string(), 0)];
         let mut res = z;
-        while let Some((module, name)) = stack.pop() {
+        while let Some((module, name, depth)) = stack.pop() {
+            res = f(res, (module, name.to_string(), depth));
+            for (name, module) in module.children.iter() {
+                stack.push((&module, name.to_string(), depth + 1));
+            }
+        }
+        res
+    }
+
+    fn fold_bf<A, F>(&self, z: A, f: F) -> A where F: Fn(A, (&Self, String)) -> A {
+        let mut queue: VecDeque<(&Module, String)> = VecDeque::from([(self, "".to_string())]);
+        let mut res = z;
+        while let Some((module, name)) = queue.pop_front() {
             res = f(res, (module, name.to_string()));
-            for (name, module) in self.modules.iter() {
-                stack.push((&module, name.to_string()));
+            for (name, module) in module.children.iter() {
+                queue.push_back((&module, name.to_string()));
             }
         }
         res
     }
 
     fn named_parameters(&self) -> impl Iterator<Item = (String, Parameter)> {
-        self.fold((vec![], "".to_string()), |(acc, prefix), (module, module_name)| {
-            let new_prefix = prefix + &module_name;
+        fn build_prefix(prefix: String, current_mod_name: String, depth: u32) -> String {
+            if depth == 1 {
+                current_mod_name
+            } else {
+                prefix + "." + &current_mod_name
+            }
+        }
+
+        fn build_p_name(prefix: &str, parameter_name: &str, depth: u32) -> String {
+            if depth == 0 {
+                parameter_name.to_string()
+            } else {
+                prefix.to_string() + "." + &parameter_name
+            }
+        }
+
+        self.fold((vec![], "".to_string()), |(acc, prefix), (module, mod_name, depth)| {
+            let new_prefix = build_prefix(prefix, mod_name, depth);
             let params = module
                 .parameters
                 .iter()
-                .map(|(k, v)| (new_prefix.clone() + &k, v.clone()))
+                .map(|(k, v)| (build_p_name(&new_prefix, &k, depth), v.clone()))
                 .collect();
             ([acc, params].concat(), new_prefix)
         }).0.into_iter()
@@ -58,7 +86,7 @@ impl Module {
 
     fn walk_rec<F>(&mut self, f: &mut F) -> () where F: FnMut(&mut Self) -> () {
         f(self);
-        for module in self.modules.values_mut() {
+        for module in self.children.values_mut() {
             module.walk_rec(f);
         }
     }
@@ -67,7 +95,7 @@ impl Module {
         let mut stack = vec![self];
         while let Some(m) = stack.pop() {
             f(m);
-            for module in m.modules.values_mut() {
+            for module in m.children.values_mut() {
                 stack.push(module);
             }
         }
@@ -83,7 +111,7 @@ impl Module {
 
     fn arb() -> impl Strategy<Value = Module> {
         let leaf = any::<bool>().prop_map(|training| Module {
-            modules: HashMap::new(),
+            children: HashMap::new(),
             parameters: HashMap::new(),
             training,
         });
@@ -94,7 +122,7 @@ impl Module {
                 prop::collection::hash_map(".*", Parameter::arb(), 0..4),
                 any::<bool>(),
             ).prop_map(|(modules, parameters, training)| Module {
-                modules,
+                children: modules,
                 parameters,
                 training
             })
@@ -103,10 +131,53 @@ impl Module {
 
     fn assert_rec<F>(self, assertion: &mut F) -> () where F: FnMut(&Module) -> () {
         assertion(&self);
-        self.module_values().for_each(|m| m.assert_rec(assertion));
+        self.children_values().for_each(|m| m.assert_rec(assertion));
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn named_parameters_test() -> () {
+        let (a, b) = (50., 100.);
+        let (name_a, name_b) = ("parameter_a", "parameter_b");
+        let para_a = Parameter { name: name_a.to_string(), value: a };
+        let para_b = Parameter { name: name_b.to_string(), value: b };
+        let module = Module {
+            children: HashMap::from([
+                ("module_a".to_string(), Module {
+                    children: HashMap::new(),
+                    parameters: HashMap::from([
+                        (name_a.to_string(), para_a.clone()),
+                        (name_b.to_string(), para_b.clone())
+                    ]),
+                    training: false,
+                }),
+                ("module_b".to_string(), Module {
+                    children: HashMap::new(),
+                    parameters: HashMap::from([
+                        (name_a.to_string(), para_a.clone()),
+                        (name_b.to_string(), para_b.clone())
+                    ]),
+                    training: false,
+                }),
+            ]),
+            parameters: HashMap::from([(name_a.to_string(), para_a.clone())]),
+            training: false,
+        };
+        let named_parameters: Vec<_> = module.named_parameters().collect();
+        let expected = vec![
+            (name_a.to_string(), para_a.clone()),
+            ("module_b.".to_string() + name_b, para_b.clone()),
+            ("module_b.".to_string() + name_a, para_a.clone()),
+            ("module_a.".to_string() + name_b, para_b.clone()),
+            ("module_a.".to_string() + name_a, para_a.clone()),
+        ];
+        assert!(expected.iter().all(|e| named_parameters.contains(e)));
+    }
+}
 
 proptest! {
 

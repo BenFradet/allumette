@@ -1,13 +1,13 @@
 use proptest::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {
-    name: String,
-    value: String,
+    pub name: String,
+    pub value: f64,
 }
 
 impl Parameter {
-    fn update(self, value: String) -> Self {
+    fn update(self, value: f64) -> Self {
         Self {
             name: self.name,
             value
@@ -17,7 +17,7 @@ impl Parameter {
     pub fn arb() -> impl Strategy<Value = Parameter> {
         (
             ".*",
-            ".*",
+            any::<f64>(),
         ).prop_map(|(name, value)| Parameter { name, value} )
     }
 }
