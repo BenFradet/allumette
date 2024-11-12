@@ -1,4 +1,4 @@
-use crate::tensor::{add, mul, neg};
+use crate::math::{add, mul, neg};
 
 fn map<I, F, A, B>(i: I, f: F) -> impl Iterator<Item = B>
 where 

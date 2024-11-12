@@ -1,7 +1,8 @@
+mod autodiff;
 mod hof;
 mod module;
 mod parameter;
-mod tensor;
+mod math;
 
 fn main() -> () {
 }
