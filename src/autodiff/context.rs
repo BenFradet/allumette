@@ -1,7 +1,8 @@
 // TODO: abstract over f64
+// TODO: if no other use, convert saved_values to (v1, v2)
 pub struct Context<'a> {
-    grad: bool,
-    saved_values: &'a[f64],
+    pub grad: bool,
+    pub saved_values: &'a[f64],
 }
 
 impl<'a> Default for Context<'a> {
@@ -14,9 +15,9 @@ impl<'a> Default for Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    fn new(no_grad: bool, values: &'a [f64]) -> Self {
+    fn new(grad: bool, values: &'a [f64]) -> Self {
         Self {
-            grad: no_grad,
+            grad,
             saved_values: values,
         }
     }
