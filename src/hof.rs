@@ -1,5 +1,3 @@
-use crate::math::{add, mul, neg};
-
 fn map<I, F, A, B>(i: I, f: F) -> impl Iterator<Item = B>
 where 
     I: IntoIterator<Item = A>,
@@ -43,19 +41,19 @@ where
 }
 
 fn negs<I>(i: I) -> impl Iterator<Item = f64> where I: IntoIterator<Item = f64> {
-    map(i, neg)
+    map(i, |a| -a)
 }
 
 fn adds<I>(i1: I, i2: I) -> impl Iterator<Item = f64> where I: IntoIterator<Item = f64> {
-    zip_with(i1, i2, add)
+    zip_with(i1, i2, |a, b| a + b)
 }
 
 fn sums<I>(i: I) -> f64 where I: IntoIterator<Item = f64> {
-    reduce(i, add, 0.)
+    reduce(i, |a, b| a + b, 0.)
 }
 
 fn prods<I>(i: I) -> f64 where I: IntoIterator<Item = f64> {
-    reduce(i, mul, 1.)
+    reduce(i, |a, b| a * b, 1.)
 }
 
 

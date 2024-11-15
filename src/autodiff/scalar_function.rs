@@ -1,4 +1,4 @@
-use super::context::Context;
+use super::{context::Context, scalar::Scalar};
 
 // TODO: abstract over f64
 trait Unary {
@@ -13,12 +13,16 @@ trait Binary {
     fn backward(&self, ctx: Context, d: f64) -> (f64, f64);
 }
 
-enum ScalarFunction {
+pub enum ScalarFunction {
     U(Box<dyn Unary>),
     B(Box<dyn Binary>),
 }
 
 impl ScalarFunction {
+    fn apply(&self) -> Scalar {
+        unimplemented!()
+    }
+
     fn add() -> Self { Self::B(Box::new(Add)) }
 
     fn log() -> Self { Self::U(Box::new(Log)) }
