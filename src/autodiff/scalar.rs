@@ -2,7 +2,7 @@ use std::ops;
 
 use rand::{thread_rng, Rng};
 
-use super::{scalar_function::{Add, ScalarFunction}, scalar_history::ScalarHistory};
+use super::{scalar_function::{Add, Inv, Log, Mul, ScalarFunction, Unary}, scalar_history::ScalarHistory};
 use crate::autodiff::scalar_function::Binary;
 
 // TODO: abstract over f64
@@ -29,6 +29,10 @@ impl Scalar {
         self.history = history;
         self
     }
+
+    pub fn log(self) -> Self {
+        Forward::unary(Log {}, self)
+    }
 }
 
 struct Forward;
@@ -41,13 +45,37 @@ impl Forward {
             .push_input(rhs);
         Scalar::new(res).history(new_history)
     }
+    
+    fn unary(u: impl Unary + 'static, s: Scalar) -> Scalar {
+        let res = u.forward(&s.history.ctx, s.v);
+        let new_history = ScalarHistory::default()
+            .last_fn(ScalarFunction::U(Box::new(u)))
+            .push_input(s);
+        Scalar::new(res).history(new_history)
+    }
 }
 
 impl ops::Add<Scalar> for Scalar {
     type Output = Scalar;
 
     fn add(self, rhs: Scalar) -> Self::Output {
-        let a = Add {};
-        Forward::binary(a, self, rhs)
+        Forward::binary(Add {}, self, rhs)
+    }
+}
+
+impl ops::Mul<Scalar> for Scalar {
+    type Output = Scalar;
+
+    fn mul(self, rhs: Scalar) -> Self::Output {
+        Forward::binary(Mul {}, self, rhs)
+    }
+}
+
+impl ops::Div<Scalar> for Scalar {
+    type Output = Scalar;
+
+    fn div(self, rhs: Scalar) -> Self::Output {
+        let denom = Forward::unary(Inv {}, rhs);
+        Forward::binary(Mul {}, self, denom)
     }
 }

@@ -42,7 +42,7 @@ impl Binary for Add {
     }
 }
 
-struct Log;
+pub struct Log;
 impl Unary for Log {
     fn forward(&self, _ctx: &Context, a: f64) -> f64 {
         a.ln()
@@ -55,7 +55,7 @@ impl Unary for Log {
     }
 }
 
-struct Mul;
+pub struct Mul;
 impl Binary for Mul {
     fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
         a * b
@@ -69,7 +69,7 @@ impl Binary for Mul {
     }
 }
 
-struct Inv;
+pub struct Inv;
 impl Unary for Inv {
     fn forward(&self, _ctx: &Context, a: f64) -> f64 {
         1. / a
@@ -82,7 +82,7 @@ impl Unary for Inv {
     }
 }
 
-struct Neg;
+pub struct Neg;
 impl Unary for Neg {
     fn forward(&self, _ctx: &Context, a: f64) -> f64 {
         -a
@@ -93,7 +93,7 @@ impl Unary for Neg {
     }
 }
 
-struct Sig;
+pub struct Sig;
 impl Unary for Sig {
     fn forward(&self, _ctx: &Context, a: f64) -> f64 {
         if a >= 0. {
@@ -112,7 +112,7 @@ impl Unary for Sig {
     }
 }
 
-struct Relu;
+pub struct Relu;
 impl Unary for Relu {
     fn forward(&self, _ctx: &Context, a: f64) -> f64 {
         a.max(0.)
@@ -125,7 +125,7 @@ impl Unary for Relu {
     }
 }
 
-struct Exp;
+pub struct Exp;
 impl Unary for Exp {
     fn forward(&self, _ctx: &Context, a: f64) -> f64 {
         a.exp()
@@ -138,7 +138,7 @@ impl Unary for Exp {
     }
 }
 
-struct Lt;
+pub struct Lt;
 impl Binary for Lt {
     fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
         if a < b { 1. } else { 0. }
@@ -149,7 +149,7 @@ impl Binary for Lt {
     }
 }
 
-struct Eq;
+pub struct Eq;
 impl Binary for Eq {
     fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
         if a == b { 1. } else { 0. }
