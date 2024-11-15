@@ -1,30 +1,31 @@
 // TODO: abstract over f64
 // TODO: if no other use, convert saved_values to (v1, v2)
-pub struct Context<'a> {
+#[derive(Debug)]
+pub struct Context {
     pub grad: bool,
-    pub saved_values: &'a[f64],
+    pub saved_values: Vec<f64>,
 }
 
-impl<'a> Default for Context<'a> {
+impl Default for Context {
     fn default() -> Self {
         Self {
             grad: true,
-            saved_values: &[],
+            saved_values: vec![],
         }
     }
 }
 
-impl<'a> Context<'a> {
-    fn new(grad: bool, values: &'a [f64]) -> Self {
+impl Context {
+    fn new(grad: bool, values: &[f64]) -> Self {
         Self {
             grad,
-            saved_values: values,
+            saved_values: values.to_vec(),
         }
     }
 
-    fn update(mut self, values: &'a [f64]) -> Self {
+    fn update(mut self, values: &[f64]) -> Self {
         if self.grad {
-            self.saved_values = values;
+            self.saved_values = values.to_vec();
             self
         } else {
             self
@@ -51,7 +52,7 @@ mod tests {
         let a = [1., 2., 3.];
         let c = Context::new(false, &a);
         assert!(!c.grad);
-        assert_eq!(&a, c.saved_values);
+        assert_eq!(a.to_vec(), c.saved_values);
     }
 
     #[test]
@@ -67,12 +68,12 @@ mod tests {
         let a = [1., 2., 3.];
         let c = Context::new(false, &a);
         assert!(!c.grad);
-        assert_eq!(&a, c.saved_values);
+        assert_eq!(a.to_vec(), c.saved_values);
         let b = [2., 3., 4.];
         let c2 = c.update(&b);
-        assert_eq!(&a, c2.saved_values);
+        assert_eq!(a.to_vec(), c2.saved_values);
         let c3 = c2.grad().update(&b);
         assert!(c3.grad);
-        assert_eq!(&b, c3.saved_values);
+        assert_eq!(b.to_vec(), c3.saved_values);
     }
 }
