@@ -7,8 +7,8 @@ pub trait Unary {
     fn backward(&self, ctx: &Context, d: f64) -> f64;
 }
 
-pub struct Log;
-impl Unary for Log {
+pub struct Ln;
+impl Unary for Ln {
     fn forward(&self, _ctx: &Context, a: f64) -> f64 {
         if a <= 0. {
             0.
@@ -19,10 +19,7 @@ impl Unary for Log {
 
     fn backward(&self, ctx: &Context, d: f64) -> f64 {
         let vs = &ctx.saved_values;
-        let a = vs
-            .first()
-            .filter(|v| **v != 0.)
-            .unwrap_or(&1.);
+        let a = vs.first().filter(|v| **v != 0.).unwrap_or(&1.);
         d / a
     }
 }
@@ -39,10 +36,7 @@ impl Unary for Inv {
 
     fn backward(&self, ctx: &Context, d: f64) -> f64 {
         let vs = &ctx.saved_values;
-        let a = vs
-            .first()
-            .filter(|v| **v != 0.)
-            .unwrap_or(&1.);
+        let a = vs.first().filter(|v| **v != 0.).unwrap_or(&1.);
         (-1. / (a.powf(2.))) * d
     }
 }
@@ -109,14 +103,10 @@ impl Unary for Exp {
 
 use proptest::prelude::*;
 
-fn is_close(a: f64, b: f64) -> bool {
-    (a - b).abs() < 1e-4
-}
-
 proptest! {
     #[test]
     fn ln_tests(a in any::<f64>()) {
-        let log = Log {};
+        let log = Ln {};
         let ctx = Context::default();
         let f = log.forward(&ctx, a);
         if a <= 0. {

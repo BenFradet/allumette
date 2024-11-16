@@ -5,8 +5,8 @@ use rand::{thread_rng, Rng};
 use crate::{
     autodiff::forward::Forward,
     ops::{
-        binary_ops::{Add, Eq, Lt, Mul},
-        unary_ops::{Exp, Inv, Log, Neg, Relu, Sig},
+        binary_ops::{Add, Div, Eq, Lt, Mul},
+        unary_ops::{Exp, Ln, Neg, Relu, Sig},
     },
 };
 
@@ -37,8 +37,8 @@ impl Scalar {
         self
     }
 
-    pub fn log(self) -> Self {
-        Forward::unary(Log {}, self)
+    pub fn ln(self) -> Self {
+        Forward::unary(Ln {}, self)
     }
 
     pub fn exp(self) -> Self {
@@ -86,8 +86,7 @@ impl ops::Div<Scalar> for Scalar {
     type Output = Scalar;
 
     fn div(self, rhs: Scalar) -> Self::Output {
-        let denom = Forward::unary(Inv {}, rhs);
-        Forward::binary(Lt {}, self, denom)
+        Forward::binary(Div {}, self, rhs)
     }
 }
 
@@ -105,5 +104,105 @@ impl ops::Neg for Scalar {
 
     fn neg(self) -> Self::Output {
         Forward::unary(Neg {}, self)
+    }
+}
+
+use proptest::prelude::*;
+
+proptest! {
+    #[test]
+    fn add_test(a in any::<f64>(), b in any::<f64>()) {
+        let res = Scalar::new(a) + Scalar::new(b);
+        assert_eq!(a + b, res.v);
+    }
+
+    #[test]
+    fn mul_test(a in any::<f64>(), b in any::<f64>()) {
+        let res = Scalar::new(a) * Scalar::new(b);
+        assert_eq!(a * b, res.v);
+    }
+
+    #[test]
+    fn div_test(a in any::<f64>(), b in any::<f64>()) {
+        let res = Scalar::new(a) / Scalar::new(b);
+        if b == 0. {
+            assert_eq!(0., res.v);
+        } else {
+            assert_eq!(a / b, res.v);
+        }
+    }
+
+    #[test]
+    fn sub_test(a in any::<f64>(), b in any::<f64>()) {
+        let res = Scalar::new(a) - Scalar::new(b);
+        assert_eq!(a - b, res.v);
+    }
+
+    #[test]
+    fn neg_test(a in any::<f64>()) {
+        let res = - Scalar::new(a);
+        assert_eq!(-a, res.v);
+    }
+
+    #[test]
+    fn ln_test(a in any::<f64>()) {
+        let res = Scalar::new(a).ln();
+        if a <= 0. {
+            assert_eq!(0., res.v);
+        } else {
+            assert_eq!(a.ln(), res.v);
+        }
+    }
+
+    #[test]
+    fn exp_test(a in any::<f64>()) {
+        let res = Scalar::new(a).exp();
+        assert_eq!(a.exp(), res.v);
+    }
+
+    #[test]
+    fn sig_test(a in any::<f64>()) {
+        let res = Scalar::new(a).sig();
+        if a >= 0. {
+            assert_eq!(1. / (1. + (-a).exp()), res.v);
+        } else {
+            assert_eq!(a.exp() / (1. + a.exp()), res.v);
+        }
+    }
+
+    #[test]
+    fn relu_test(a in any::<f64>()) {
+        let res = Scalar::new(a).relu();
+        assert_eq!(a.max(0.), res.v);
+    }
+
+    #[test]
+    fn eq_test(a in any::<f64>(), b in any::<f64>()) {
+        let res = Scalar::new(a).eq(Scalar::new(b));
+        if a == b {
+            assert_eq!(1., res.v);
+        } else {
+            assert_eq!(0., res.v);
+        }
+    }
+
+    #[test]
+    fn lt_test(a in any::<f64>(), b in any::<f64>()) {
+        let res = Scalar::new(a).lt(Scalar::new(b));
+        if a < b {
+            assert_eq!(1., res.v);
+        } else {
+            assert_eq!(0., res.v);
+        }
+    }
+
+    #[test]
+    fn gt_test(a in any::<f64>(), b in any::<f64>()) {
+        let res = Scalar::new(a).gt(Scalar::new(b));
+        if a > b {
+            assert_eq!(1., res.v);
+        } else {
+            assert_eq!(0., res.v);
+        }
     }
 }

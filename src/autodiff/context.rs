@@ -31,7 +31,7 @@ impl Context {
             self
         }
     }
-    
+
     pub fn push(mut self, value: f64) -> Self {
         self.saved_values.push(value);
         self

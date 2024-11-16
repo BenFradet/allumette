@@ -30,6 +30,24 @@ impl Binary for Mul {
     }
 }
 
+pub struct Div;
+impl Binary for Div {
+    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
+        if b == 0. {
+            0.
+        } else {
+            a / b
+        }
+    }
+
+    fn backward(&self, ctx: &Context, d: f64) -> (f64, f64) {
+        let vs = &ctx.saved_values;
+        let a = vs.first().unwrap_or(&1.);
+        let b = vs.get(1).filter(|v| **v != 0.).unwrap_or(&1.);
+        (d / b, a * d)
+    }
+}
+
 pub struct Lt;
 impl Binary for Lt {
     fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
@@ -93,6 +111,38 @@ proptest! {
             assert_eq!((b * d).abs(), f64::INFINITY);
         } else {
             assert!(is_close(b * d, back.0));
+        }
+        if back.1.abs() == f64::INFINITY {
+            assert_eq!((a * d).abs(), f64::INFINITY);
+        } else {
+            assert!(is_close(a * d, back.1));
+        }
+    }
+
+    #[test]
+    fn div_tests(a in any::<f64>(), b in any::<f64>(), d in any::<f64>()) {
+        let div = Div {};
+        let ctx = Context::default();
+        let f = div.forward(&ctx, a, b);
+        if b == 0. {
+            assert_eq!(f, 0.);
+        } else {
+            if f.abs() == f64::INFINITY {
+                assert_eq!((a / b).abs(), f64::INFINITY);
+            } else {
+                assert!(is_close(a / b, f));
+            }
+        }
+        let ctx2 = ctx.push(a).push(b);
+        let back = div.backward(&ctx2, d);
+        if b == 0. {
+            assert_eq!(d, back.0);
+        } else {
+            if back.0.abs() == f64::INFINITY {
+                assert_eq!((d / b).abs(), f64::INFINITY);
+            } else {
+                assert!(is_close(d / b, back.0));
+            }
         }
         if back.1.abs() == f64::INFINITY {
             assert_eq!((a * d).abs(), f64::INFINITY);
