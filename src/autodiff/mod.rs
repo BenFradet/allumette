@@ -1,6 +1,3 @@
-mod central_diff;
-mod context;
-mod forward;
-mod scalar;
-mod scalar_function;
-mod scalar_history;
+pub mod central_diff;
+pub mod context;
+pub mod forward;

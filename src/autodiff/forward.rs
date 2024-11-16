@@ -1,9 +1,9 @@
-use super::{
-    scalar::Scalar,
-    scalar_function::{Binary, ScalarFunction, Unary},
-    scalar_history::ScalarHistory,
+use crate::{
+    ops::{binary_ops::Binary, unary_ops::Unary},
+    scalar::{scalar::Scalar, scalar_function::ScalarFunction, scalar_history::ScalarHistory},
 };
 
+// TODO: abstract over scalar
 pub struct Forward;
 impl Forward {
     pub fn binary(b: impl Binary + 'static, lhs: Scalar, rhs: Scalar) -> Scalar {

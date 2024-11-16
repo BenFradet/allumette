@@ -1,45 +1,10 @@
-use std::fmt::Debug;
-
-use super::context::Context;
+use crate::autodiff::context::Context;
 
 // TODO: abstract over f64
-// TODO: move to ops.rs
 pub trait Unary {
-    // TODO: find a better encoding
     // need to have self otherwise can't be made into an object and can't dyn Unary
     fn forward(&self, ctx: &Context, a: f64) -> f64;
     fn backward(&self, ctx: &Context, d: f64) -> f64;
-}
-
-pub trait Binary {
-    fn forward(&self, ctx: &Context, a: f64, b: f64) -> f64;
-    fn backward(&self, ctx: &Context, d: f64) -> (f64, f64);
-}
-
-pub enum ScalarFunction {
-    U(Box<dyn Unary>),
-    B(Box<dyn Binary>),
-}
-
-// TODO: find a way to debug
-impl Debug for ScalarFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::U(_) => write!(f, "Unary: ???"),
-            Self::B(_) => write!(f, "Binary: ???"),
-        }
-    }
-}
-
-pub struct Add;
-impl Binary for Add {
-    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
-        a + b
-    }
-
-    fn backward(&self, _ctx: &Context, d: f64) -> (f64, f64) {
-        (d, d)
-    }
 }
 
 pub struct Log;
@@ -52,20 +17,6 @@ impl Unary for Log {
         let vs = &ctx.saved_values;
         let a = if vs.is_empty() { 0. } else { vs[0] };
         d / a
-    }
-}
-
-pub struct Mul;
-impl Binary for Mul {
-    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
-        a * b
-    }
-
-    fn backward(&self, ctx: &Context, d: f64) -> (f64, f64) {
-        let vs = &ctx.saved_values;
-        let a = vs.first().unwrap_or(&1.);
-        let b = vs.get(1).unwrap_or(&1.);
-        (b * d, a * d)
     }
 }
 
@@ -139,35 +90,5 @@ impl Unary for Exp {
         let vs = &ctx.saved_values;
         let a = vs.first().unwrap_or(&0.);
         a.exp() * d
-    }
-}
-
-pub struct Lt;
-impl Binary for Lt {
-    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
-        if a < b {
-            1.
-        } else {
-            0.
-        }
-    }
-
-    fn backward(&self, _ctx: &Context, _d: f64) -> (f64, f64) {
-        (0., 0.)
-    }
-}
-
-pub struct Eq;
-impl Binary for Eq {
-    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
-        if a == b {
-            1.
-        } else {
-            0.
-        }
-    }
-
-    fn backward(&self, _ctx: &Context, _d: f64) -> (f64, f64) {
-        (0., 0.)
     }
 }

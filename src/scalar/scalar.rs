@@ -2,11 +2,15 @@ use std::ops;
 
 use rand::{thread_rng, Rng};
 
-use super::{
-    forward::Forward,
-    scalar_function::{Add, Eq, Exp, Inv, Log, Lt, Mul, Neg, Relu, Sig},
-    scalar_history::ScalarHistory,
+use crate::{
+    autodiff::forward::Forward,
+    ops::{
+        binary_ops::{Add, Eq, Lt, Mul},
+        unary_ops::{Exp, Inv, Log, Neg, Relu, Sig},
+    },
 };
+
+use super::scalar_history::ScalarHistory;
 
 // TODO: abstract over f64
 #[derive(Debug)]
