@@ -2,6 +2,7 @@ use crate::autodiff::context::Context;
 
 pub trait Binary {
     fn forward(&self, ctx: &Context, a: f64, b: f64) -> f64;
+    // TODO: move to backward_a, backward_b
     fn backward(&self, ctx: &Context, d: f64) -> (f64, f64);
 }
 

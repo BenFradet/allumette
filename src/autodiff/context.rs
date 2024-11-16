@@ -46,6 +46,10 @@ impl Context {
         self.grad = false;
         self
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.saved_values.is_empty()
+    }
 }
 
 #[cfg(test)]

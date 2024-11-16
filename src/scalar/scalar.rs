@@ -7,10 +7,10 @@ use crate::{
     ops::{
         binary_ops::{Add, Div, Eq, Lt, Mul},
         unary_ops::{Exp, Ln, Neg, Relu, Sig},
-    },
+    }, variable::Variable,
 };
 
-use super::scalar_history::ScalarHistory;
+use super::{scalar_function::ScalarFunction, scalar_history::ScalarHistory};
 
 // TODO: abstract over f64
 #[derive(Debug)]
@@ -63,6 +63,50 @@ impl Scalar {
 
     pub fn gt(self, rhs: Scalar) -> Self {
         Forward::binary(Lt {}, rhs, self)
+    }
+}
+
+impl Variable for Scalar {
+    fn accumulate_derivative(mut self, x: f64) -> Self {
+        if self.is_leaf() {
+            self.derivative = Some(self.derivative.map(|d| d + x).unwrap_or(0.));
+            self
+        } else {
+            self
+        }
+    }
+
+    fn chain_rule(&self, d: f64) -> impl Iterator<Item = (&Self, f64)> {
+        let derivatives = self.history.last_fn.as_ref()
+            .map(|f| match f {
+                ScalarFunction::B(b) => {
+                    let (da, db) = b.backward(&self.history.ctx, d);
+                    vec![da, db]
+                },
+                ScalarFunction::U(u) => {
+                    let da = u.backward(&self.history.ctx, d);
+                    vec![da]
+                },
+            })
+            .unwrap_or(vec![]);
+        let inputs = &self.history.inputs;
+        inputs.iter().zip(derivatives)
+    }
+
+    fn id(&self) -> u64 {
+        self.id
+    }
+
+    fn is_constant(&self) -> bool {
+        self.history.is_empty()
+    }
+
+    fn is_leaf(&self) -> bool {
+        self.history.last_fn.is_none()
+    }
+
+    fn parents(&self) -> impl Iterator<Item = &Self> {
+        self.history.inputs.iter()
     }
 }
 

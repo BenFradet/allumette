@@ -5,3 +5,4 @@ pub mod module;
 pub mod ops;
 pub mod parameter;
 pub mod scalar;
+pub mod variable;

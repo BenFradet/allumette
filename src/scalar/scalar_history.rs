@@ -20,5 +20,9 @@ impl ScalarHistory {
         self
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.inputs.is_empty() && self.last_fn.is_none() && self.ctx.is_empty()
+    }
+
     // TODO: context update
 }
