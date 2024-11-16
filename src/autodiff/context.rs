@@ -31,6 +31,11 @@ impl Context {
             self
         }
     }
+    
+    pub fn push(mut self, value: f64) -> Self {
+        self.saved_values.push(value);
+        self
+    }
 
     fn grad(mut self) -> Self {
         self.grad = true;
@@ -75,5 +80,15 @@ mod tests {
         let c3 = c2.grad().update(&b);
         assert!(c3.grad);
         assert_eq!(b.to_vec(), c3.saved_values);
+    }
+
+    #[test]
+    fn push_test() {
+        let a = [1., 2., 3.];
+        let c = Context::new(false, &a);
+        assert!(!c.grad);
+        assert_eq!(a.to_vec(), c.saved_values);
+        let c2 = c.push(5.);
+        assert_eq!(vec![1., 2., 3., 5.], c2.saved_values);
     }
 }

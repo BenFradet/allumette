@@ -87,7 +87,7 @@ impl ops::Div<Scalar> for Scalar {
 
     fn div(self, rhs: Scalar) -> Self::Output {
         let denom = Forward::unary(Inv {}, rhs);
-        Forward::binary(Mul {}, self, denom)
+        Forward::binary(Lt {}, self, denom)
     }
 }
 
