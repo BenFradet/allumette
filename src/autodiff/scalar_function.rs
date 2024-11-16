@@ -63,7 +63,7 @@ impl Binary for Mul {
 
     fn backward(&self, ctx: &Context, d: f64) -> (f64, f64) {
         let vs = &ctx.saved_values;
-        let a = vs.get(0).unwrap_or(&1.);
+        let a = vs.first().unwrap_or(&1.);
         let b = vs.get(1).unwrap_or(&1.);
         (b * d, a * d)
     }
@@ -77,7 +77,7 @@ impl Unary for Inv {
 
     fn backward(&self, ctx: &Context, d: f64) -> f64 {
         let vs = &ctx.saved_values;
-        let a = vs.get(0).unwrap_or(&0.);
+        let a = vs.first().unwrap_or(&0.);
         (-1. / (a.powf(2.))) * d
     }
 }
@@ -106,7 +106,7 @@ impl Unary for Sig {
     // sig'(x) = sig(x) * (1 - sig(x))
     fn backward(&self, ctx: &Context, d: f64) -> f64 {
         let vs = &ctx.saved_values;
-        let a = vs.get(0).unwrap_or(&0.);
+        let a = vs.first().unwrap_or(&0.);
         let sig_a = self.forward(ctx, *a);
         sig_a * (1. - sig_a) * d
     }
@@ -120,7 +120,7 @@ impl Unary for Relu {
 
     fn backward(&self, ctx: &Context, d: f64) -> f64 {
         let vs = &ctx.saved_values;
-        let a = vs.get(0).unwrap_or(&0.);
+        let a = vs.first().unwrap_or(&0.);
         if a > &0. {
             d
         } else {
@@ -137,7 +137,7 @@ impl Unary for Exp {
 
     fn backward(&self, ctx: &Context, d: f64) -> f64 {
         let vs = &ctx.saved_values;
-        let a = vs.get(0).unwrap_or(&0.);
+        let a = vs.first().unwrap_or(&0.);
         a.exp() * d
     }
 }

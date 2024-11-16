@@ -67,7 +67,7 @@ impl Module {
 
     fn parameters(&self) -> impl Iterator<Item = Parameter> {
         self.fold_rec(vec![], |acc, module| {
-            let params = module.parameters.values().map(|p| p.clone()).collect();
+            let params = module.parameters.values().cloned().collect();
             [acc, params].concat()
         })
         .into_iter()
@@ -86,7 +86,7 @@ impl Module {
             if depth == 0 {
                 parameter_name.to_string()
             } else {
-                prefix.to_string() + "." + &parameter_name
+                prefix.to_string() + "." + parameter_name
             }
         }
 
@@ -97,7 +97,7 @@ impl Module {
                 let params = module
                     .parameters
                     .iter()
-                    .map(|(k, v)| (build_p_name(&new_prefix, &k, depth), v.clone()))
+                    .map(|(k, v)| (build_p_name(&new_prefix, k, depth), v.clone()))
                     .collect();
                 ([acc, params].concat(), new_prefix)
             },

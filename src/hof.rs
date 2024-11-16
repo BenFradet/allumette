@@ -19,11 +19,8 @@ where
     let mut result = Vec::new();
     let mut iter1 = i1.into_iter();
     let mut iter2 = i2.into_iter();
-    loop {
-        match (iter1.next(), iter2.next()) {
-            (Some(a), Some(b)) => result.push(f(a, b)),
-            _ => break,
-        }
+    while let (Some(a), Some(b)) = (iter1.next(), iter2.next()) {
+        result.push(f(a, b));
     }
     result.into_iter()
 }
