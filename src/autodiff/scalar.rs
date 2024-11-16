@@ -2,15 +2,18 @@ use std::ops;
 
 use rand::{thread_rng, Rng};
 
-use super::{scalar_function::{Add, Inv, Log, Mul, ScalarFunction, Unary}, scalar_history::ScalarHistory};
-use crate::autodiff::scalar_function::Binary;
+use super::{
+    forward::Forward,
+    scalar_function::{Add, Eq, Exp, Inv, Log, Lt, Mul, Neg, Relu, Sig},
+    scalar_history::ScalarHistory,
+};
 
 // TODO: abstract over f64
 #[derive(Debug)]
 pub struct Scalar {
-    v: f64,
+    pub v: f64,
     derivative: Option<f64>,
-    history: ScalarHistory,
+    pub history: ScalarHistory,
     id: u64,
 }
 
@@ -33,25 +36,29 @@ impl Scalar {
     pub fn log(self) -> Self {
         Forward::unary(Log {}, self)
     }
-}
 
-struct Forward;
-impl Forward {
-    fn binary(b: impl Binary + 'static, lhs: Scalar, rhs: Scalar) -> Scalar {
-        let res = b.forward(&lhs.history.ctx, lhs.v, rhs.v);
-        let new_history = ScalarHistory::default()
-            .last_fn(ScalarFunction::B(Box::new(b)))
-            .push_input(lhs)
-            .push_input(rhs);
-        Scalar::new(res).history(new_history)
+    pub fn exp(self) -> Self {
+        Forward::unary(Exp {}, self)
     }
-    
-    fn unary(u: impl Unary + 'static, s: Scalar) -> Scalar {
-        let res = u.forward(&s.history.ctx, s.v);
-        let new_history = ScalarHistory::default()
-            .last_fn(ScalarFunction::U(Box::new(u)))
-            .push_input(s);
-        Scalar::new(res).history(new_history)
+
+    pub fn sig(self) -> Self {
+        Forward::unary(Sig {}, self)
+    }
+
+    pub fn relu(self) -> Self {
+        Forward::unary(Relu {}, self)
+    }
+
+    pub fn eq(self, rhs: Scalar) -> Self {
+        Forward::binary(Eq {}, self, rhs)
+    }
+
+    pub fn lt(self, rhs: Scalar) -> Self {
+        Forward::binary(Lt {}, self, rhs)
+    }
+
+    pub fn gt(self, rhs: Scalar) -> Self {
+        Forward::binary(Lt {}, rhs, self)
     }
 }
 
@@ -77,5 +84,22 @@ impl ops::Div<Scalar> for Scalar {
     fn div(self, rhs: Scalar) -> Self::Output {
         let denom = Forward::unary(Inv {}, rhs);
         Forward::binary(Mul {}, self, denom)
+    }
+}
+
+impl ops::Sub<Scalar> for Scalar {
+    type Output = Scalar;
+
+    fn sub(self, rhs: Scalar) -> Self::Output {
+        let new_rhs = Forward::unary(Neg {}, rhs);
+        Forward::binary(Add {}, self, new_rhs)
+    }
+}
+
+impl ops::Neg for Scalar {
+    type Output = Scalar;
+
+    fn neg(self) -> Self::Output {
+        Forward::unary(Neg {}, self)
     }
 }

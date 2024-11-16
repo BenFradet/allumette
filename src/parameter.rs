@@ -10,14 +10,11 @@ impl Parameter {
     fn update(self, value: f64) -> Self {
         Self {
             name: self.name,
-            value
+            value,
         }
     }
 
     pub fn arb() -> impl Strategy<Value = Parameter> {
-        (
-            ".*",
-            any::<f64>(),
-        ).prop_map(|(name, value)| Parameter { name, value} )
+        (".*", any::<f64>()).prop_map(|(name, value)| Parameter { name, value })
     }
 }

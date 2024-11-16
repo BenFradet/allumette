@@ -1,5 +1,5 @@
 fn map<I, F, A, B>(i: I, f: F) -> impl Iterator<Item = B>
-where 
+where
     I: IntoIterator<Item = A>,
     F: Fn(A) -> B,
 {
@@ -11,7 +11,7 @@ where
 }
 
 fn zip_with<I1, I2, F, A, B, C>(i1: I1, i2: I2, f: F) -> impl Iterator<Item = C>
-where 
+where
     I1: IntoIterator<Item = A>,
     I2: IntoIterator<Item = B>,
     F: Fn(A, B) -> C,
@@ -40,22 +40,33 @@ where
     result
 }
 
-fn negs<I>(i: I) -> impl Iterator<Item = f64> where I: IntoIterator<Item = f64> {
+fn negs<I>(i: I) -> impl Iterator<Item = f64>
+where
+    I: IntoIterator<Item = f64>,
+{
     map(i, |a| -a)
 }
 
-fn adds<I>(i1: I, i2: I) -> impl Iterator<Item = f64> where I: IntoIterator<Item = f64> {
+fn adds<I>(i1: I, i2: I) -> impl Iterator<Item = f64>
+where
+    I: IntoIterator<Item = f64>,
+{
     zip_with(i1, i2, |a, b| a + b)
 }
 
-fn sums<I>(i: I) -> f64 where I: IntoIterator<Item = f64> {
+fn sums<I>(i: I) -> f64
+where
+    I: IntoIterator<Item = f64>,
+{
     reduce(i, |a, b| a + b, 0.)
 }
 
-fn prods<I>(i: I) -> f64 where I: IntoIterator<Item = f64> {
+fn prods<I>(i: I) -> f64
+where
+    I: IntoIterator<Item = f64>,
+{
     reduce(i, |a, b| a * b, 1.)
 }
-
 
 use proptest::prelude::*;
 

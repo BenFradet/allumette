@@ -78,7 +78,7 @@ impl Unary for Inv {
     fn backward(&self, ctx: &Context, d: f64) -> f64 {
         let vs = &ctx.saved_values;
         let a = vs.get(0).unwrap_or(&0.);
-        (- 1. / (a.powf(2.))) * d
+        (-1. / (a.powf(2.))) * d
     }
 }
 
@@ -121,7 +121,11 @@ impl Unary for Relu {
     fn backward(&self, ctx: &Context, d: f64) -> f64 {
         let vs = &ctx.saved_values;
         let a = vs.get(0).unwrap_or(&0.);
-        if a > &0. { d } else { 0. }
+        if a > &0. {
+            d
+        } else {
+            0.
+        }
     }
 }
 
@@ -141,7 +145,11 @@ impl Unary for Exp {
 pub struct Lt;
 impl Binary for Lt {
     fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
-        if a < b { 1. } else { 0. }
+        if a < b {
+            1.
+        } else {
+            0.
+        }
     }
 
     fn backward(&self, _ctx: &Context, _d: f64) -> (f64, f64) {
@@ -152,7 +160,11 @@ impl Binary for Lt {
 pub struct Eq;
 impl Binary for Eq {
     fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
-        if a == b { 1. } else { 0. }
+        if a == b {
+            1.
+        } else {
+            0.
+        }
     }
 
     fn backward(&self, _ctx: &Context, _d: f64) -> (f64, f64) {

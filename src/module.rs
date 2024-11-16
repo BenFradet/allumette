@@ -24,15 +24,21 @@ impl Module {
         self.children.into_values()
     }
 
-    fn fold_rec<A, F>(&self, z: A, f: F) -> A where F: Fn(A, &Self) -> A + Copy {
+    fn fold_rec<A, F>(&self, z: A, f: F) -> A
+    where
+        F: Fn(A, &Self) -> A + Copy,
+    {
         let mut acc = f(z, self);
         for module in self.children.values() {
             acc = module.fold_rec(acc, f);
-        };
+        }
         acc
     }
 
-    fn fold<A, F>(&self, z: A, f: F) -> A where F: Fn(A, (&Self, String, u32)) -> A {
+    fn fold<A, F>(&self, z: A, f: F) -> A
+    where
+        F: Fn(A, (&Self, String, u32)) -> A,
+    {
         let mut stack: Vec<(&Module, String, u32)> = vec![(self, "".to_string(), 0)];
         let mut res = z;
         while let Some((module, name, depth)) = stack.pop() {
@@ -44,7 +50,10 @@ impl Module {
         res
     }
 
-    fn fold_bf<A, F>(&self, z: A, f: F) -> A where F: Fn(A, (&Self, String)) -> A {
+    fn fold_bf<A, F>(&self, z: A, f: F) -> A
+    where
+        F: Fn(A, (&Self, String)) -> A,
+    {
         let mut queue: VecDeque<(&Module, String)> = VecDeque::from([(self, "".to_string())]);
         let mut res = z;
         while let Some((module, name)) = queue.pop_front() {
@@ -58,13 +67,10 @@ impl Module {
 
     fn parameters(&self) -> impl Iterator<Item = Parameter> {
         self.fold_rec(vec![], |acc, module| {
-            let params = module
-                .parameters
-                .values()
-                .map(|p| p.clone())
-                .collect();
+            let params = module.parameters.values().map(|p| p.clone()).collect();
             [acc, params].concat()
-        }).into_iter()
+        })
+        .into_iter()
     }
 
     fn named_parameters(&self) -> impl Iterator<Item = (String, Parameter)> {
@@ -84,25 +90,36 @@ impl Module {
             }
         }
 
-        self.fold((vec![], "".to_string()), |(acc, prefix), (module, mod_name, depth)| {
-            let new_prefix = build_prefix(prefix, mod_name, depth);
-            let params = module
-                .parameters
-                .iter()
-                .map(|(k, v)| (build_p_name(&new_prefix, &k, depth), v.clone()))
-                .collect();
-            ([acc, params].concat(), new_prefix)
-        }).0.into_iter()
+        self.fold(
+            (vec![], "".to_string()),
+            |(acc, prefix), (module, mod_name, depth)| {
+                let new_prefix = build_prefix(prefix, mod_name, depth);
+                let params = module
+                    .parameters
+                    .iter()
+                    .map(|(k, v)| (build_p_name(&new_prefix, &k, depth), v.clone()))
+                    .collect();
+                ([acc, params].concat(), new_prefix)
+            },
+        )
+        .0
+        .into_iter()
     }
 
-    fn walk_rec<F>(&mut self, f: &mut F) -> () where F: FnMut(&mut Self) -> () {
+    fn walk_rec<F>(&mut self, f: &mut F) -> ()
+    where
+        F: FnMut(&mut Self) -> (),
+    {
         f(self);
         for module in self.children.values_mut() {
             module.walk_rec(f);
         }
     }
 
-    fn walk<F>(&mut self, mut f: F) -> () where F: FnMut(&mut Self) -> () {
+    fn walk<F>(&mut self, mut f: F) -> ()
+    where
+        F: FnMut(&mut Self) -> (),
+    {
         let mut stack = vec![self];
         while let Some(m) = stack.pop() {
             f(m);
@@ -132,15 +149,19 @@ impl Module {
                 prop::collection::hash_map(".*", inner.clone(), 2),
                 prop::collection::hash_map(".*", Parameter::arb(), 0..4),
                 any::<bool>(),
-            ).prop_map(|(modules, parameters, training)| Module {
-                children: modules,
-                parameters,
-                training
-            })
+            )
+                .prop_map(|(modules, parameters, training)| Module {
+                    children: modules,
+                    parameters,
+                    training,
+                })
         })
     }
 
-    fn assert_rec<F>(self, assertion: &mut F) -> () where F: FnMut(&Module) -> () {
+    fn assert_rec<F>(self, assertion: &mut F) -> ()
+    where
+        F: FnMut(&Module) -> (),
+    {
         assertion(&self);
         self.children_values().for_each(|m| m.assert_rec(assertion));
     }
@@ -151,11 +172,17 @@ mod tests {
     use super::*;
 
     fn test_para_a() -> Parameter {
-        Parameter { name: "parameter_a".to_string(), value: 50. }
+        Parameter {
+            name: "parameter_a".to_string(),
+            value: 50.,
+        }
     }
 
     fn test_para_b() -> Parameter {
-        Parameter { name: "parameter_b".to_string(), value: 100. }
+        Parameter {
+            name: "parameter_b".to_string(),
+            value: 100.,
+        }
     }
 
     fn test_module() -> Module {
@@ -163,22 +190,28 @@ mod tests {
         let para_b = test_para_b();
         Module {
             children: HashMap::from([
-                ("module_a".to_string(), Module {
-                    children: HashMap::new(),
-                    parameters: HashMap::from([
-                        (para_a.name.clone(), para_a.clone()),
-                        (para_b.name.clone(), para_b.clone()),
-                    ]),
-                    training: false,
-                }),
-                ("module_b".to_string(), Module {
-                    children: HashMap::new(),
-                    parameters: HashMap::from([
-                        (para_a.name.clone(), para_a.clone()),
-                        (para_b.name.clone(), para_b.clone()),
-                    ]),
-                    training: false,
-                }),
+                (
+                    "module_a".to_string(),
+                    Module {
+                        children: HashMap::new(),
+                        parameters: HashMap::from([
+                            (para_a.name.clone(), para_a.clone()),
+                            (para_b.name.clone(), para_b.clone()),
+                        ]),
+                        training: false,
+                    },
+                ),
+                (
+                    "module_b".to_string(),
+                    Module {
+                        children: HashMap::new(),
+                        parameters: HashMap::from([
+                            (para_a.name.clone(), para_a.clone()),
+                            (para_b.name.clone(), para_b.clone()),
+                        ]),
+                        training: false,
+                    },
+                ),
             ]),
             parameters: HashMap::from([(para_a.name.clone(), para_a.clone())]),
             training: false,
@@ -191,7 +224,6 @@ mod tests {
         let parameters: Vec<_> = module.parameters().collect();
         assert_eq!(5, parameters.len());
     }
-
 
     #[test]
     fn named_parameters_test() -> () {
