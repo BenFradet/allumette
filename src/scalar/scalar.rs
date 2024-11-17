@@ -90,7 +90,10 @@ impl Variable for Scalar {
             })
             .unwrap_or(vec![]);
         let inputs = &self.history.inputs;
-        inputs.iter().zip(derivatives)
+        inputs
+            .iter()
+            .zip(derivatives)
+            //.filter(|(scalar, _)| !scalar.is_constant())
     }
 
     fn id(&self) -> u64 {
@@ -148,6 +151,90 @@ impl ops::Neg for Scalar {
 
     fn neg(self) -> Self::Output {
         Forward::unary(Neg {}, self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{autodiff::context::Context, ops::binary_ops::Binary, scalar::{scalar_function::ScalarFunction, scalar_history::ScalarHistory}};
+
+    struct F1;
+    impl Binary for F1 {
+        fn forward(&self, a: f64, b: f64) -> f64 {
+            a + b + 10.
+        }
+
+        fn backward(&self, _ctx: &Context, d: f64) -> (f64, f64) {
+            (d, d)
+        }
+    }
+
+    struct F2;
+    impl Binary for F2 {
+        fn forward(&self, a: f64, b: f64) -> f64 {
+            a * b + a
+        }
+
+        fn backward(&self, ctx: &Context, d: f64) -> (f64, f64) {
+            let vs = &ctx.saved_values;
+            let a = vs.first().unwrap_or(&1.);
+            let b = vs.get(1).unwrap_or(&1.);
+            (d * (b + 1.), d * a)
+        }
+    }
+
+    #[test]
+    fn chain_rule_test1() -> () {
+        let hist = ScalarHistory::default()
+            .last_fn(ScalarFunction::B(Box::new(F1 {})))
+            .push_input(Scalar::new(0.))
+            .push_input(Scalar::new(0.));
+        let constant = Scalar::new(0.).history(hist);
+        let back: Vec<_> = constant.chain_rule(5.).collect();
+        assert_eq!(2, back.len());
+        if let Some((_, deriv)) = back.first() {
+            assert_eq!(5., *deriv);
+        } else {
+            panic!("test failure")
+        }
+    }
+
+    #[test]
+    fn chain_rule_test2() -> () {
+        let f2 = F2 {};
+        let y = Forward::binary(f2, Scalar::new(10.), Scalar::new(5.));
+        let back: Vec<_> = y.chain_rule(5.).collect();
+        assert_eq!(2, back.len());
+        if let Some((_, deriv)) = back.get(1) {
+            assert_eq!(50., *deriv);
+        } else {
+            panic!("test failure")
+        }
+    }
+
+    #[test]
+    fn chain_rule_test3() -> () {
+        let f2 = F2 {};
+        let v1 = Scalar::new(5.);
+        let v1_id = v1.id;
+        let v2 = Scalar::new(10.);
+        let v2_id = v2.id;
+        let y = Forward::binary(f2, v1, v2);
+        let back: Vec<_> = y.chain_rule(5.).collect();
+        assert_eq!(2, back.len());
+        if let Some((v, deriv)) = back.first() {
+            assert_eq!(v1_id, v.id);
+            assert_eq!(55., *deriv);
+        } else {
+            panic!("test failure")
+        }
+        if let Some((v, deriv)) = back.get(1) {
+            assert_eq!(v2_id, v.id);
+            assert_eq!(25., *deriv);
+        } else {
+            panic!("test failure")
+        }
     }
 }
 

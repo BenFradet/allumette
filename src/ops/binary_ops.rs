@@ -1,14 +1,15 @@
 use crate::autodiff::context::Context;
 
 pub trait Binary {
-    fn forward(&self, ctx: &Context, a: f64, b: f64) -> f64;
+    fn forward(&self, a: f64, b: f64) -> f64;
     // TODO: move to backward_a, backward_b
+    // TODO: remove ctx
     fn backward(&self, ctx: &Context, d: f64) -> (f64, f64);
 }
 
 pub struct Add;
 impl Binary for Add {
-    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
+    fn forward(&self, a: f64, b: f64) -> f64 {
         a + b
     }
 
@@ -19,7 +20,7 @@ impl Binary for Add {
 
 pub struct Mul;
 impl Binary for Mul {
-    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
+    fn forward(&self, a: f64, b: f64) -> f64 {
         a * b
     }
 
@@ -33,7 +34,7 @@ impl Binary for Mul {
 
 pub struct Div;
 impl Binary for Div {
-    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
+    fn forward(&self, a: f64, b: f64) -> f64 {
         if b == 0. {
             0.
         } else {
@@ -51,7 +52,7 @@ impl Binary for Div {
 
 pub struct Lt;
 impl Binary for Lt {
-    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
+    fn forward(&self, a: f64, b: f64) -> f64 {
         if a < b {
             1.
         } else {
@@ -66,7 +67,7 @@ impl Binary for Lt {
 
 pub struct Eq;
 impl Binary for Eq {
-    fn forward(&self, _ctx: &Context, a: f64, b: f64) -> f64 {
+    fn forward(&self, a: f64, b: f64) -> f64 {
         if a == b {
             1.
         } else {
@@ -90,7 +91,7 @@ proptest! {
     fn add_tests(a in any::<f64>(), b in any::<f64>()) {
         let add = Add {};
         let ctx = Context::default();
-        let f = add.forward(&ctx, a, b);
+        let f = add.forward(a, b);
         assert_eq!(a + b, f);
         let back = add.backward(&ctx, a);
         assert_eq!((a, a), back);
@@ -100,7 +101,7 @@ proptest! {
     fn mul_tests(a in any::<f64>(), b in any::<f64>(), d in any::<f64>()) {
         let mul = Mul {};
         let ctx = Context::default();
-        let f = mul.forward(&ctx, a, b);
+        let f = mul.forward(a, b);
         if f.abs() == f64::INFINITY {
             assert_eq!((a * b).abs(), f64::INFINITY);
         } else {
@@ -124,7 +125,7 @@ proptest! {
     fn div_tests(a in any::<f64>(), b in any::<f64>(), d in any::<f64>()) {
         let div = Div {};
         let ctx = Context::default();
-        let f = div.forward(&ctx, a, b);
+        let f = div.forward(a, b);
         if b == 0. {
             assert_eq!(f, 0.);
         } else {
@@ -156,7 +157,7 @@ proptest! {
     fn lt_tests(a in any::<f64>(), b in any::<f64>(), d in any::<f64>()) {
         let lt = Lt {};
         let ctx = Context::default();
-        let f = lt.forward(&ctx, a, b);
+        let f = lt.forward(a, b);
         if a < b { assert_eq!(1., f) } else { assert_eq!(0., f) }
         let back = lt.backward(&ctx, d);
         assert_eq!((0., 0.), back);
@@ -166,7 +167,7 @@ proptest! {
     fn eq_tests(a in any::<f64>(), b in any::<f64>(), d in any::<f64>()) {
         let lt = Lt {};
         let ctx = Context::default();
-        let f = lt.forward(&ctx, a, b);
+        let f = lt.forward(a, b);
         assert!(f == 1. || f == 0.);
         let back = lt.backward(&ctx, d);
         assert_eq!((0., 0.), back);

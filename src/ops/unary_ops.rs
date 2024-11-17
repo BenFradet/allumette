@@ -3,13 +3,14 @@ use crate::autodiff::context::Context;
 // TODO: abstract over f64
 pub trait Unary {
     // need to have self otherwise can't be made into an object and can't dyn Unary
-    fn forward(&self, ctx: &Context, a: f64) -> f64;
+    fn forward(&self, a: f64) -> f64;
+    // TODO: remove ctx
     fn backward(&self, ctx: &Context, d: f64) -> f64;
 }
 
 pub struct Ln;
 impl Unary for Ln {
-    fn forward(&self, _ctx: &Context, a: f64) -> f64 {
+    fn forward(&self, a: f64) -> f64 {
         if a <= 0. {
             0.
         } else {
@@ -26,7 +27,7 @@ impl Unary for Ln {
 
 pub struct Inv;
 impl Unary for Inv {
-    fn forward(&self, _ctx: &Context, a: f64) -> f64 {
+    fn forward(&self, a: f64) -> f64 {
         if a == 0. {
             0.
         } else {
@@ -43,7 +44,7 @@ impl Unary for Inv {
 
 pub struct Neg;
 impl Unary for Neg {
-    fn forward(&self, _ctx: &Context, a: f64) -> f64 {
+    fn forward(&self, a: f64) -> f64 {
         -a
     }
 
@@ -54,7 +55,7 @@ impl Unary for Neg {
 
 pub struct Sig;
 impl Unary for Sig {
-    fn forward(&self, _ctx: &Context, a: f64) -> f64 {
+    fn forward(&self, a: f64) -> f64 {
         if a >= 0. {
             1. / (1. + (-a).exp())
         } else {
@@ -66,14 +67,14 @@ impl Unary for Sig {
     fn backward(&self, ctx: &Context, d: f64) -> f64 {
         let vs = &ctx.saved_values;
         let a = vs.first().unwrap_or(&0.);
-        let sig_a = self.forward(ctx, *a);
+        let sig_a = self.forward(*a);
         sig_a * (1. - sig_a) * d
     }
 }
 
 pub struct Relu;
 impl Unary for Relu {
-    fn forward(&self, _ctx: &Context, a: f64) -> f64 {
+    fn forward(&self, a: f64) -> f64 {
         a.max(0.)
     }
 
@@ -90,7 +91,7 @@ impl Unary for Relu {
 
 pub struct Exp;
 impl Unary for Exp {
-    fn forward(&self, _ctx: &Context, a: f64) -> f64 {
+    fn forward(&self, a: f64) -> f64 {
         a.exp()
     }
 
@@ -108,7 +109,7 @@ proptest! {
     fn ln_tests(a in any::<f64>()) {
         let log = Ln {};
         let ctx = Context::default();
-        let f = log.forward(&ctx, a);
+        let f = log.forward(a);
         if a <= 0. {
             assert_eq!(0., f);
         } else {
@@ -123,7 +124,7 @@ proptest! {
     fn inv_tests(a in any::<f64>()) {
         let inv = Inv {};
         let ctx = Context::default();
-        let f = inv.forward(&ctx, a);
+        let f = inv.forward(a);
         if a == 0. {
             assert_eq!(0., f);
         } else {
@@ -138,7 +139,7 @@ proptest! {
     fn neg_tests(a in any::<f64>()) {
         let neg = Neg {};
         let ctx = Context::default();
-        let f = neg.forward(&ctx, a);
+        let f = neg.forward(a);
         assert_eq!(-a, f);
         let back = neg.backward(&ctx, a);
         assert_eq!(-a, back);
@@ -148,7 +149,7 @@ proptest! {
     fn sig_tests(a in any::<f64>()) {
         let sig = Sig {};
         let ctx = Context::default();
-        let f = sig.forward(&ctx, a);
+        let f = sig.forward(a);
         if a >= 0. {
             assert_eq!(1. / (1. + (-a).exp()), f);
         } else {
@@ -162,7 +163,7 @@ proptest! {
     fn relu_tests(a in any::<f64>()) {
         let relu = Relu {};
         let ctx = Context::default();
-        let f = relu.forward(&ctx, a);
+        let f = relu.forward(a);
         if a >= 0. {
             assert_eq!(a, f);
         } else {
@@ -180,7 +181,7 @@ proptest! {
     fn exp_tests(a in any::<f64>()) {
         let exp = Exp {};
         let ctx = Context::default();
-        let f = exp.forward(&ctx, a);
+        let f = exp.forward(a);
         assert_eq!(a.exp(), f);
         let back = exp.backward(&ctx.push(a), a);
         assert_eq!(a.exp() * a, back);
