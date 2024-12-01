@@ -5,4 +5,5 @@ pub trait Variable: Sized {
     fn is_constant(&self) -> bool;
     fn parents(&self) -> impl Iterator<Item = &Self>;
     fn chain_rule(&self, d: f64) -> impl Iterator<Item = (&Self, f64)>;
+    fn topological_sort(&self) -> impl Iterator<Item = &Self>;
 }

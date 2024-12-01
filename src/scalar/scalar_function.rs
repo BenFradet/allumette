@@ -1,10 +1,11 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, rc::Rc};
 
 use crate::ops::{binary_ops::Binary, unary_ops::Unary};
 
+#[derive(Clone)]
 pub enum ScalarFunction {
-    U(Box<dyn Unary>),
-    B(Box<dyn Binary>),
+    U(Rc<dyn Unary>),
+    B(Rc<dyn Binary>),
 }
 
 // TODO: find a way to debug

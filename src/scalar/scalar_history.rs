@@ -2,7 +2,7 @@ use crate::autodiff::context::Context;
 
 use super::{scalar::Scalar, scalar_function::ScalarFunction};
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ScalarHistory {
     pub last_fn: Option<ScalarFunction>,
     pub ctx: Context,

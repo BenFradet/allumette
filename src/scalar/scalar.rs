@@ -1,4 +1,7 @@
-use std::ops;
+use std::{
+    collections::{hash_map::Entry, HashMap, VecDeque},
+    ops,
+};
 
 use rand::{thread_rng, Rng};
 
@@ -7,13 +10,14 @@ use crate::{
     ops::{
         binary_ops::{Add, Div, Eq, Lt, Mul},
         unary_ops::{Exp, Ln, Neg, Relu, Sig},
-    }, variable::Variable,
+    },
+    variable::Variable,
 };
 
 use super::{scalar_function::ScalarFunction, scalar_history::ScalarHistory};
 
 // TODO: abstract over f64
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Scalar {
     pub v: f64,
     derivative: Option<f64>,
@@ -34,6 +38,11 @@ impl Scalar {
 
     pub fn history(mut self, history: ScalarHistory) -> Self {
         self.history = history;
+        self
+    }
+
+    pub fn id(mut self, id: u64) -> Self {
+        self.id = id;
         self
     }
 
@@ -77,23 +86,24 @@ impl Variable for Scalar {
     }
 
     fn chain_rule(&self, d: f64) -> impl Iterator<Item = (&Self, f64)> {
-        let derivatives = self.history.last_fn.as_ref()
+        let derivatives = self
+            .history
+            .last_fn
+            .as_ref()
             .map(|f| match f {
                 ScalarFunction::B(b) => {
                     let (da, db) = b.backward(&self.history.ctx, d);
                     vec![da, db]
-                },
+                }
                 ScalarFunction::U(u) => {
                     let da = u.backward(&self.history.ctx, d);
                     vec![da]
-                },
+                }
             })
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
         let inputs = &self.history.inputs;
-        inputs
-            .iter()
-            .zip(derivatives)
-            //.filter(|(scalar, _)| !scalar.is_constant())
+        inputs.iter().zip(derivatives)
+        //.filter(|(scalar, _)| !scalar.is_constant())
     }
 
     fn id(&self) -> u64 {
@@ -110,6 +120,23 @@ impl Variable for Scalar {
 
     fn parents(&self) -> impl Iterator<Item = &Self> {
         self.history.inputs.iter()
+    }
+
+    fn topological_sort(&self) -> impl Iterator<Item = &Self> {
+        let mut queue = VecDeque::new();
+        queue.push_back(self);
+        let mut visited: HashMap<u64, bool> = HashMap::from([(self.id, true)]);
+        let mut result = Vec::new();
+        while let Some(var) = queue.pop_front() {
+            for parent in var.parents() {
+                if let Entry::Vacant(e) = visited.entry(parent.id) {
+                    e.insert(true);
+                    queue.push_back(parent);
+                }
+            }
+            result.push(var);
+        }
+        result.into_iter()
     }
 }
 
@@ -156,8 +183,59 @@ impl ops::Neg for Scalar {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use super::*;
-    use crate::{autodiff::context::Context, ops::binary_ops::Binary, scalar::{scalar_function::ScalarFunction, scalar_history::ScalarHistory}};
+    use crate::{
+        autodiff::context::Context,
+        ops::binary_ops::Binary,
+        scalar::{scalar_function::ScalarFunction, scalar_history::ScalarHistory},
+    };
+
+    #[test]
+    fn topological_sort_test2() -> () {
+        let x = Scalar::new(1.).id(0);
+        let y = Scalar::new(2.).id(1);
+        let log_z = Scalar::new(3.).id(10).history(
+            ScalarHistory::default()
+                .push_input(x.clone())
+                .push_input(y.clone()),
+        );
+        let exp_z = Scalar::new(4.).id(11).history(
+            ScalarHistory::default()
+                .push_input(x.clone())
+                .push_input(y.clone()),
+        );
+        let h = Scalar::new(5.)
+            .id(100)
+            .history(ScalarHistory::default().push_input(log_z).push_input(exp_z));
+        let sorted: Vec<_> = h.topological_sort().map(|s| s.id).collect();
+        assert_eq!(vec![100, 10, 11, 0, 1], sorted);
+    }
+
+    #[test]
+    fn topological_sort_test1() -> () {
+        let five = Scalar::new(5.).id(5);
+        let four = Scalar::new(4.).id(4);
+        let z = Scalar::new(0.).id(0).history(
+            ScalarHistory::default()
+                .push_input(four.clone())
+                .push_input(five.clone()),
+        );
+        let two = Scalar::new(2.)
+            .id(2)
+            .history(ScalarHistory::default().push_input(five));
+        let three = Scalar::new(3.)
+            .id(3)
+            .history(ScalarHistory::default().push_input(two));
+        let one = Scalar::new(1.)
+            .id(1)
+            .history(ScalarHistory::default().push_input(four).push_input(three));
+        let sorted_z: Vec<_> = z.topological_sort().map(|s| s.id).collect();
+        assert_eq!(vec![0, 4, 5], sorted_z);
+        let sorted_one: Vec<_> = one.topological_sort().map(|s| s.id).collect();
+        assert_eq!(vec![1, 4, 3, 2, 5], sorted_one);
+    }
 
     struct F1;
     impl Binary for F1 {
@@ -187,7 +265,7 @@ mod tests {
     #[test]
     fn chain_rule_test1() -> () {
         let hist = ScalarHistory::default()
-            .last_fn(ScalarFunction::B(Box::new(F1 {})))
+            .last_fn(ScalarFunction::B(Rc::new(F1 {})))
             .push_input(Scalar::new(0.))
             .push_input(Scalar::new(0.));
         let constant = Scalar::new(0.).history(hist);
