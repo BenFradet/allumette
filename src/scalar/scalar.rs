@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map::Entry, HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     ops,
 };
 
@@ -76,9 +76,9 @@ impl Scalar {
 }
 
 impl Variable for Scalar {
-    fn accumulate_derivative(mut self, x: f64) -> Self {
+    fn accumulate_derivative(mut self, d: f64) -> Self {
         if self.is_leaf() {
-            self.derivative = Some(self.derivative.map(|d| d + x).unwrap_or(0.));
+            self.derivative = Some(self.derivative.unwrap_or(0.) + d);
             self
         } else {
             self
@@ -103,7 +103,6 @@ impl Variable for Scalar {
             .unwrap_or_default();
         let inputs = &self.history.inputs;
         inputs.iter().zip(derivatives)
-        //.filter(|(scalar, _)| !scalar.is_constant())
     }
 
     fn id(&self) -> u64 {
@@ -125,18 +124,46 @@ impl Variable for Scalar {
     fn topological_sort(&self) -> impl Iterator<Item = &Self> {
         let mut queue = VecDeque::new();
         queue.push_back(self);
-        let mut visited: HashMap<u64, bool> = HashMap::from([(self.id, true)]);
+        let mut visited: HashSet<u64> = HashSet::from([self.id]);
         let mut result = Vec::new();
         while let Some(var) = queue.pop_front() {
             for parent in var.parents() {
-                if let Entry::Vacant(e) = visited.entry(parent.id) {
-                    e.insert(true);
+                if !visited.contains(&parent.id) {
+                    visited.insert(parent.id);
                     queue.push_back(parent);
                 }
             }
             result.push(var);
         }
         result.into_iter()
+    }
+
+    fn backprop(&self, d: f64) -> HashMap<u64, Self> {
+        let sorted = self.topological_sort();
+        let mut derivs = HashMap::from([(self.id, d)]);
+        let mut res: HashMap<u64, Scalar> = HashMap::new();
+        for s in sorted {
+            if let Some(current_deriv) = derivs.get(&s.id).cloned() {
+                for (parent, grad) in s.chain_rule(current_deriv) {
+                    if parent.is_leaf() {
+                        let new = match res.get(&parent.id) {
+                            // TODO: remove clones
+                            Some(s) => s.clone().accumulate_derivative(grad),
+                            None => parent.clone().accumulate_derivative(grad),
+                        };
+                        res.insert(parent.id, new);
+                    } else {
+                        match derivs.get_mut(&parent.id) {
+                            Some(e) => *e += grad,
+                            None => {
+                                derivs.insert(parent.id, grad);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        res
     }
 }
 
@@ -192,6 +219,77 @@ mod tests {
         scalar::{scalar_function::ScalarFunction, scalar_history::ScalarHistory},
     };
 
+    struct F1;
+    impl Binary for F1 {
+        fn forward(&self, a: f64, b: f64) -> f64 {
+            a + b + 10.
+        }
+
+        fn backward(&self, _ctx: &Context, d: f64) -> (f64, f64) {
+            (d, d)
+        }
+    }
+
+    struct F2;
+    impl Binary for F2 {
+        fn forward(&self, a: f64, b: f64) -> f64 {
+            a * b + a
+        }
+
+        fn backward(&self, ctx: &Context, d: f64) -> (f64, f64) {
+            let vs = &ctx.saved_values;
+            let a = vs.first().unwrap_or(&1.);
+            let b = vs.get(1).unwrap_or(&1.);
+            (d * (b + 1.), d * a)
+        }
+    }
+
+    #[test]
+    fn backprop_test1() -> () {
+        let var = Scalar::new(0.);
+        let var_id = var.id;
+        let var2 = Forward::binary(F1 {}, Scalar::new(0.), var);
+        let backprop = var2.backprop(5.);
+        let res = backprop.get(&var_id);
+        assert_eq!(res.and_then(|s| s.derivative), Some(5.));
+    }
+
+    #[test]
+    fn backprop_test2() -> () {
+        let var = Scalar::new(0.);
+        let var_id = var.id;
+        let var2 = Forward::binary(F1 {}, Scalar::new(0.), var);
+        let var3 = Forward::binary(F1 {}, Scalar::new(0.), var2);
+        let backprop = var3.backprop(5.);
+        let res = backprop.get(&var_id);
+        assert_eq!(res.and_then(|s| s.derivative), Some(5.));
+    }
+
+    #[test]
+    fn backprop_test3() -> () {
+        let var = Scalar::new(0.);
+        let var_id = var.id;
+        let var2 = Forward::binary(F1 {}, Scalar::new(0.), var.clone());
+        let var3 = Forward::binary(F1 {}, Scalar::new(0.), var);
+        let var4 = Forward::binary(F1 {}, var2, var3);
+        let backprop = var4.backprop(5.);
+        let res = backprop.get(&var_id);
+        assert_eq!(res.and_then(|s| s.derivative), Some(10.));
+    }
+
+    #[test]
+    fn backprop_test4() -> () {
+        let var = Scalar::new(0.);
+        let var_id = var.id;
+        let var1 = Forward::binary(F1 {}, Scalar::new(0.), var);
+        let var2 = Forward::binary(F1 {}, Scalar::new(0.), var1.clone());
+        let var3 = Forward::binary(F1 {}, Scalar::new(0.), var1);
+        let var4 = Forward::binary(F1 {}, var2, var3);
+        let backprop = var4.backprop(5.);
+        let res = backprop.get(&var_id);
+        assert_eq!(res.and_then(|s| s.derivative), Some(10.));
+    }
+
     #[test]
     fn topological_sort_test2() -> () {
         let x = Scalar::new(1.).id(0);
@@ -235,31 +333,6 @@ mod tests {
         assert_eq!(vec![0, 4, 5], sorted_z);
         let sorted_one: Vec<_> = one.topological_sort().map(|s| s.id).collect();
         assert_eq!(vec![1, 4, 3, 2, 5], sorted_one);
-    }
-
-    struct F1;
-    impl Binary for F1 {
-        fn forward(&self, a: f64, b: f64) -> f64 {
-            a + b + 10.
-        }
-
-        fn backward(&self, _ctx: &Context, d: f64) -> (f64, f64) {
-            (d, d)
-        }
-    }
-
-    struct F2;
-    impl Binary for F2 {
-        fn forward(&self, a: f64, b: f64) -> f64 {
-            a * b + a
-        }
-
-        fn backward(&self, ctx: &Context, d: f64) -> (f64, f64) {
-            let vs = &ctx.saved_values;
-            let a = vs.first().unwrap_or(&1.);
-            let b = vs.get(1).unwrap_or(&1.);
-            (d * (b + 1.), d * a)
-        }
     }
 
     #[test]
