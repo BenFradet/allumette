@@ -11,7 +11,6 @@ use crate::{
         binary_ops::{Add, Div, Eq, Lt, Mul},
         unary_ops::{Exp, Ln, Neg, Relu, Sig},
     },
-    variable::Variable,
 };
 
 use super::{scalar_function::ScalarFunction, scalar_history::ScalarHistory};
@@ -44,6 +43,18 @@ impl Scalar {
     pub fn id(mut self, id: u64) -> Self {
         self.id = id;
         self
+    }
+
+    fn derivative(&self) -> Option<f64> {
+        self.derivative
+    }
+
+    fn is_constant(&self) -> bool {
+        self.history.is_empty()
+    }
+
+    fn is_leaf(&self) -> bool {
+        self.history.last_fn.is_none()
     }
 
     fn parents(&self) -> impl Iterator<Item = &Self> {
@@ -150,24 +161,6 @@ impl Scalar {
 
     pub fn gt(self, rhs: Scalar) -> Self {
         Forward::binary(Lt {}, rhs, self)
-    }
-}
-
-impl Variable for Scalar {
-    fn derivative(&self) -> Option<f64> {
-        self.derivative
-    }
-
-    fn id(&self) -> u64 {
-        self.id
-    }
-
-    fn is_constant(&self) -> bool {
-        self.history.is_empty()
-    }
-
-    fn is_leaf(&self) -> bool {
-        self.history.last_fn.is_none()
     }
 }
 
