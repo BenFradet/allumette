@@ -46,6 +46,43 @@ impl Scalar {
         self
     }
 
+    fn accumulate_derivative(mut self, d: f64) -> Self {
+        if self.is_leaf() {
+            self.derivative = Some(self.derivative.unwrap_or(0.) + d);
+            self
+        } else {
+            self
+        }
+    }
+
+    fn backprop(&self, d: f64) -> HashMap<u64, Self> {
+        let sorted = self.topological_sort();
+        let mut derivs = HashMap::from([(self.id, d)]);
+        let mut res: HashMap<u64, Scalar> = HashMap::new();
+        for s in sorted {
+            if let Some(current_deriv) = derivs.get(&s.id).cloned() {
+                for (parent, grad) in s.chain_rule(current_deriv) {
+                    if parent.is_leaf() {
+                        let new = match res.get(&parent.id) {
+                            // TODO: remove clones
+                            Some(s) => s.clone().accumulate_derivative(grad),
+                            None => parent.clone().accumulate_derivative(grad),
+                        };
+                        res.insert(parent.id, new);
+                    } else {
+                        match derivs.get_mut(&parent.id) {
+                            Some(e) => *e += grad,
+                            None => {
+                                derivs.insert(parent.id, grad);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        res
+    }
+
     pub fn ln(self) -> Self {
         Forward::unary(Ln {}, self)
     }
@@ -76,13 +113,8 @@ impl Scalar {
 }
 
 impl Variable for Scalar {
-    fn accumulate_derivative(mut self, d: f64) -> Self {
-        if self.is_leaf() {
-            self.derivative = Some(self.derivative.unwrap_or(0.) + d);
-            self
-        } else {
-            self
-        }
+    fn derivative(&self) -> Option<f64> {
+        self.derivative
     }
 
     fn chain_rule(&self, d: f64) -> impl Iterator<Item = (&Self, f64)> {
@@ -136,34 +168,6 @@ impl Variable for Scalar {
             result.push(var);
         }
         result.into_iter()
-    }
-
-    fn backprop(&self, d: f64) -> HashMap<u64, Self> {
-        let sorted = self.topological_sort();
-        let mut derivs = HashMap::from([(self.id, d)]);
-        let mut res: HashMap<u64, Scalar> = HashMap::new();
-        for s in sorted {
-            if let Some(current_deriv) = derivs.get(&s.id).cloned() {
-                for (parent, grad) in s.chain_rule(current_deriv) {
-                    if parent.is_leaf() {
-                        let new = match res.get(&parent.id) {
-                            // TODO: remove clones
-                            Some(s) => s.clone().accumulate_derivative(grad),
-                            None => parent.clone().accumulate_derivative(grad),
-                        };
-                        res.insert(parent.id, new);
-                    } else {
-                        match derivs.get_mut(&parent.id) {
-                            Some(e) => *e += grad,
-                            None => {
-                                derivs.insert(parent.id, grad);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        res
     }
 }
 
