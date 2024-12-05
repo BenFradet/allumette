@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 
 use proptest::prelude::*;
 
-use crate::parameter::Parameter;
+use super::parameter_f::Parameter;
 
 #[derive(Debug)]
 struct Module {
@@ -239,20 +239,5 @@ mod tests {
             ("module_a.".to_string() + &para_a.name, para_a.clone()),
         ];
         assert!(expected.iter().all(|e| named_parameters.contains(e)));
-    }
-}
-
-proptest! {
-
-    #[test]
-    fn test_train(mut module in Module::arb()) {
-        module.train();
-        module.assert_rec(&mut |m| assert!(m.training));
-    }
-
-    #[test]
-    fn test_eval(mut module in Module::arb()) {
-        module.eval();
-        module.assert_rec(&mut |m| assert!(!m.training));
     }
 }

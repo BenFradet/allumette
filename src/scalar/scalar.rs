@@ -46,6 +46,10 @@ impl Scalar {
         self
     }
 
+    fn parents(&self) -> impl Iterator<Item = &Self> {
+        self.history.inputs.iter()
+    }
+
     fn accumulate_derivative(mut self, d: f64) -> Self {
         if self.is_leaf() {
             self.derivative = Some(self.derivative.unwrap_or(0.) + d);
@@ -53,6 +57,43 @@ impl Scalar {
         } else {
             self
         }
+    }
+
+    fn chain_rule(&self, d: f64) -> impl Iterator<Item = (&Self, f64)> {
+        let derivatives = self
+            .history
+            .last_fn
+            .as_ref()
+            .map(|f| match f {
+                ScalarFunction::B(b) => {
+                    let (da, db) = b.backward(&self.history.ctx, d);
+                    vec![da, db]
+                }
+                ScalarFunction::U(u) => {
+                    let da = u.backward(&self.history.ctx, d);
+                    vec![da]
+                }
+            })
+            .unwrap_or_default();
+        let inputs = &self.history.inputs;
+        inputs.iter().zip(derivatives)
+    }
+
+    fn topological_sort(&self) -> impl Iterator<Item = &Self> {
+        let mut queue = VecDeque::new();
+        queue.push_back(self);
+        let mut visited: HashSet<u64> = HashSet::from([self.id]);
+        let mut result = Vec::new();
+        while let Some(var) = queue.pop_front() {
+            for parent in var.parents() {
+                if !visited.contains(&parent.id) {
+                    visited.insert(parent.id);
+                    queue.push_back(parent);
+                }
+            }
+            result.push(var);
+        }
+        result.into_iter()
     }
 
     fn backprop(&self, d: f64) -> HashMap<u64, Self> {
@@ -117,26 +158,6 @@ impl Variable for Scalar {
         self.derivative
     }
 
-    fn chain_rule(&self, d: f64) -> impl Iterator<Item = (&Self, f64)> {
-        let derivatives = self
-            .history
-            .last_fn
-            .as_ref()
-            .map(|f| match f {
-                ScalarFunction::B(b) => {
-                    let (da, db) = b.backward(&self.history.ctx, d);
-                    vec![da, db]
-                }
-                ScalarFunction::U(u) => {
-                    let da = u.backward(&self.history.ctx, d);
-                    vec![da]
-                }
-            })
-            .unwrap_or_default();
-        let inputs = &self.history.inputs;
-        inputs.iter().zip(derivatives)
-    }
-
     fn id(&self) -> u64 {
         self.id
     }
@@ -147,27 +168,6 @@ impl Variable for Scalar {
 
     fn is_leaf(&self) -> bool {
         self.history.last_fn.is_none()
-    }
-
-    fn parents(&self) -> impl Iterator<Item = &Self> {
-        self.history.inputs.iter()
-    }
-
-    fn topological_sort(&self) -> impl Iterator<Item = &Self> {
-        let mut queue = VecDeque::new();
-        queue.push_back(self);
-        let mut visited: HashSet<u64> = HashSet::from([self.id]);
-        let mut result = Vec::new();
-        while let Some(var) = queue.pop_front() {
-            for parent in var.parents() {
-                if !visited.contains(&parent.id) {
-                    visited.insert(parent.id);
-                    queue.push_back(parent);
-                }
-            }
-            result.push(var);
-        }
-        result.into_iter()
     }
 }
 

@@ -1,5 +1,6 @@
 use proptest::prelude::*;
 
+// TODO: remove
 #[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {
     pub name: String,
@@ -7,11 +8,9 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    fn update(self, value: f64) -> Self {
-        Self {
-            name: self.name,
-            value,
-        }
+    fn update(mut self, value: f64) -> Self {
+        self.value = value;
+        self
     }
 
     pub fn arb() -> impl Strategy<Value = Parameter> {
