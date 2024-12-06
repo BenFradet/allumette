@@ -19,7 +19,7 @@ use super::{scalar_function::ScalarFunction, scalar_history::ScalarHistory};
 #[derive(Clone, Debug)]
 pub struct Scalar {
     pub v: f64,
-    derivative: Option<f64>,
+    pub derivative: Option<f64>,
     pub history: ScalarHistory,
     id: u64,
 }
@@ -45,8 +45,9 @@ impl Scalar {
         self
     }
 
-    fn derivative(&self) -> Option<f64> {
-        self.derivative
+    pub fn derivative(mut self, d: Option<f64>) -> Self {
+        self.derivative = d;
+        self
     }
 
     fn is_constant(&self) -> bool {

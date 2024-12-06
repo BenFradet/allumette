@@ -7,7 +7,7 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    fn var(mut self, scalar: Scalar) -> Self {
+    pub fn scalar(mut self, scalar: Scalar) -> Self {
         self.scalar = scalar;
         self
     }
