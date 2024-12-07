@@ -1,11 +1,9 @@
 use std::collections::{HashMap, VecDeque};
 
-use proptest::prelude::*;
-
-use super::parameter_f::Parameter;
+use super::parameter::Parameter;
 
 #[derive(Debug)]
-struct Module {
+pub struct Module {
     children: HashMap<String, Module>,
     parameters: HashMap<String, Parameter>,
     training: bool,
@@ -137,27 +135,6 @@ impl Module {
         self.walk(|module| module.training = false);
     }
 
-    fn arb() -> impl Strategy<Value = Module> {
-        let leaf = any::<bool>().prop_map(|training| Module {
-            children: HashMap::new(),
-            parameters: HashMap::new(),
-            training,
-        });
-
-        leaf.prop_recursive(4, 64, 8, |inner| {
-            (
-                prop::collection::hash_map(".*", inner.clone(), 2),
-                prop::collection::hash_map(".*", Parameter::arb(), 0..4),
-                any::<bool>(),
-            )
-                .prop_map(|(modules, parameters, training)| Module {
-                    children: modules,
-                    parameters,
-                    training,
-                })
-        })
-    }
-
     fn assert_rec<F>(self, assertion: &mut F) -> ()
     where
         F: FnMut(&Module) -> (),
@@ -169,19 +146,21 @@ impl Module {
 
 #[cfg(test)]
 mod tests {
+    use crate::scalar::scalar::Scalar;
+
     use super::*;
 
     fn test_para_a() -> Parameter {
         Parameter {
             name: "parameter_a".to_string(),
-            value: 50.,
+            scalar: Scalar::new(50.),
         }
     }
 
     fn test_para_b() -> Parameter {
         Parameter {
             name: "parameter_b".to_string(),
-            value: 100.,
+            scalar: Scalar::new(100.),
         }
     }
 
@@ -238,6 +217,12 @@ mod tests {
             ("module_a.".to_string() + &para_b.name, para_b.clone()),
             ("module_a.".to_string() + &para_a.name, para_a.clone()),
         ];
-        assert!(expected.iter().all(|e| named_parameters.contains(e)));
+        // can't have partial eq on scalar because of scalar function's rc<dyn>
+        assert!(expected.iter().all(|(en, pn)| named_parameters.iter().any(|(n, p)| {
+            n == en &&
+            p.name == pn.name &&
+            p.scalar.derivative == pn.scalar.derivative &&
+            p.scalar.v == pn.scalar.v
+        })));
     }
 }

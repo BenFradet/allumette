@@ -1,6 +1,6 @@
 // TODO: abstract over f64
 // TODO: if no other use, convert saved_values to (v1, v2)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Context {
     pub grad: bool,
     pub saved_values: Vec<f64>,
