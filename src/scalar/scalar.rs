@@ -136,32 +136,40 @@ impl Scalar {
         res
     }
 
-    pub fn ln(self) -> Self {
+    pub fn ln(&self) -> Self {
         Forward::unary(Ln {}, self)
     }
 
-    pub fn exp(self) -> Self {
+    pub fn exp(&self) -> Self {
         Forward::unary(Exp {}, self)
     }
 
-    pub fn sig(self) -> Self {
+    pub fn sig(&self) -> Self {
         Forward::unary(Sig {}, self)
     }
 
-    pub fn relu(self) -> Self {
+    pub fn relu(&self) -> Self {
         Forward::unary(Relu {}, self)
     }
 
-    pub fn eq(self, rhs: Scalar) -> Self {
+    pub fn eq(&self, rhs: &Scalar) -> Self {
         Forward::binary(Eq {}, self, rhs)
     }
 
-    pub fn lt(self, rhs: Scalar) -> Self {
+    pub fn lt(&self, rhs: &Scalar) -> Self {
         Forward::binary(Lt {}, self, rhs)
     }
 
-    pub fn gt(self, rhs: Scalar) -> Self {
+    pub fn gt(&self, rhs: &Scalar) -> Self {
         Forward::binary(Lt {}, rhs, self)
+    }
+}
+
+impl ops::Add<&Scalar> for Scalar {
+    type Output = Scalar;
+
+    fn add(self, rhs: &Scalar) -> Self::Output {
+        Forward::binary(Add {}, &self, rhs)
     }
 }
 
@@ -169,32 +177,56 @@ impl ops::Add<Scalar> for Scalar {
     type Output = Scalar;
 
     fn add(self, rhs: Scalar) -> Self::Output {
+        Forward::binary(Add {}, &self, &rhs)
+    }
+}
+
+impl ops::Add<Scalar> for &Scalar {
+    type Output = Scalar;
+
+    fn add(self, rhs: Scalar) -> Self::Output {
+        Forward::binary(Add {}, self, &rhs)
+    }
+}
+
+impl ops::Add<&Scalar> for &Scalar {
+    type Output = Scalar;
+
+    fn add(self, rhs: &Scalar) -> Self::Output {
         Forward::binary(Add {}, self, rhs)
     }
 }
 
-impl ops::Mul<Scalar> for Scalar {
+impl ops::Mul<&Scalar> for Scalar {
     type Output = Scalar;
 
-    fn mul(self, rhs: Scalar) -> Self::Output {
+    fn mul(self, rhs: &Scalar) -> Self::Output {
+        Forward::binary(Mul {}, &self, rhs)
+    }
+}
+
+impl ops::Mul<&Scalar> for &Scalar {
+    type Output = Scalar;
+
+    fn mul(self, rhs: &Scalar) -> Self::Output {
         Forward::binary(Mul {}, self, rhs)
     }
 }
 
-impl ops::Div<Scalar> for Scalar {
+impl ops::Div<&Scalar> for Scalar {
     type Output = Scalar;
 
-    fn div(self, rhs: Scalar) -> Self::Output {
-        Forward::binary(Div {}, self, rhs)
+    fn div(self, rhs: &Scalar) -> Self::Output {
+        Forward::binary(Div {}, &self, rhs)
     }
 }
 
-impl ops::Sub<Scalar> for Scalar {
+impl ops::Sub<&Scalar> for Scalar {
     type Output = Scalar;
 
-    fn sub(self, rhs: Scalar) -> Self::Output {
+    fn sub(self, rhs: &Scalar) -> Self::Output {
         let new_rhs = Forward::unary(Neg {}, rhs);
-        Forward::binary(Add {}, self, new_rhs)
+        Forward::binary(Add {}, &self, &new_rhs)
     }
 }
 
@@ -202,7 +234,7 @@ impl ops::Neg for Scalar {
     type Output = Scalar;
 
     fn neg(self) -> Self::Output {
-        Forward::unary(Neg {}, self)
+        Forward::unary(Neg {}, &self)
     }
 }
 
@@ -246,7 +278,7 @@ mod tests {
     fn backprop_test1() -> () {
         let var = Scalar::new(0.);
         let var_id = var.id;
-        let var2 = Forward::binary(F1 {}, Scalar::new(0.), var);
+        let var2 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
         let backprop = var2.backprop(5.);
         let res = backprop.get(&var_id);
         assert_eq!(res.and_then(|s| s.derivative), Some(5.));
@@ -256,8 +288,8 @@ mod tests {
     fn backprop_test2() -> () {
         let var = Scalar::new(0.);
         let var_id = var.id;
-        let var2 = Forward::binary(F1 {}, Scalar::new(0.), var);
-        let var3 = Forward::binary(F1 {}, Scalar::new(0.), var2);
+        let var2 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
+        let var3 = Forward::binary(F1 {}, &Scalar::new(0.), &var2);
         let backprop = var3.backprop(5.);
         let res = backprop.get(&var_id);
         assert_eq!(res.and_then(|s| s.derivative), Some(5.));
@@ -267,9 +299,9 @@ mod tests {
     fn backprop_test3() -> () {
         let var = Scalar::new(0.);
         let var_id = var.id;
-        let var2 = Forward::binary(F1 {}, Scalar::new(0.), var.clone());
-        let var3 = Forward::binary(F1 {}, Scalar::new(0.), var);
-        let var4 = Forward::binary(F1 {}, var2, var3);
+        let var2 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
+        let var3 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
+        let var4 = Forward::binary(F1 {}, &var2, &var3);
         let backprop = var4.backprop(5.);
         let res = backprop.get(&var_id);
         assert_eq!(res.and_then(|s| s.derivative), Some(10.));
@@ -279,10 +311,10 @@ mod tests {
     fn backprop_test4() -> () {
         let var = Scalar::new(0.);
         let var_id = var.id;
-        let var1 = Forward::binary(F1 {}, Scalar::new(0.), var);
-        let var2 = Forward::binary(F1 {}, Scalar::new(0.), var1.clone());
-        let var3 = Forward::binary(F1 {}, Scalar::new(0.), var1);
-        let var4 = Forward::binary(F1 {}, var2, var3);
+        let var1 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
+        let var2 = Forward::binary(F1 {}, &Scalar::new(0.), &var1);
+        let var3 = Forward::binary(F1 {}, &Scalar::new(0.), &var1);
+        let var4 = Forward::binary(F1 {}, &var2, &var3);
         let backprop = var4.backprop(5.);
         let res = backprop.get(&var_id);
         assert_eq!(res.and_then(|s| s.derivative), Some(10.));
@@ -352,7 +384,7 @@ mod tests {
     #[test]
     fn chain_rule_test2() -> () {
         let f2 = F2 {};
-        let y = Forward::binary(f2, Scalar::new(10.), Scalar::new(5.));
+        let y = Forward::binary(f2, &Scalar::new(10.), &Scalar::new(5.));
         let back: Vec<_> = y.chain_rule(5.).collect();
         assert_eq!(2, back.len());
         if let Some((_, deriv)) = back.get(1) {
@@ -369,7 +401,7 @@ mod tests {
         let v1_id = v1.id;
         let v2 = Scalar::new(10.);
         let v2_id = v2.id;
-        let y = Forward::binary(f2, v1, v2);
+        let y = Forward::binary(f2, &v1, &v2);
         let back: Vec<_> = y.chain_rule(5.).collect();
         assert_eq!(2, back.len());
         if let Some((v, deriv)) = back.first() {
@@ -398,13 +430,13 @@ proptest! {
 
     #[test]
     fn mul_test(a in any::<f64>(), b in any::<f64>()) {
-        let res = Scalar::new(a) * Scalar::new(b);
+        let res = Scalar::new(a) * &Scalar::new(b);
         assert_eq!(a * b, res.v);
     }
 
     #[test]
     fn div_test(a in any::<f64>(), b in any::<f64>()) {
-        let res = Scalar::new(a) / Scalar::new(b);
+        let res = Scalar::new(a) / &Scalar::new(b);
         if b == 0. {
             assert_eq!(0., res.v);
         } else {
@@ -414,7 +446,7 @@ proptest! {
 
     #[test]
     fn sub_test(a in any::<f64>(), b in any::<f64>()) {
-        let res = Scalar::new(a) - Scalar::new(b);
+        let res = Scalar::new(a) - &Scalar::new(b);
         assert_eq!(a - b, res.v);
     }
 
@@ -458,7 +490,7 @@ proptest! {
 
     #[test]
     fn eq_test(a in any::<f64>(), b in any::<f64>()) {
-        let res = Scalar::new(a).eq(Scalar::new(b));
+        let res = Scalar::new(a).eq(&Scalar::new(b));
         if a == b {
             assert_eq!(1., res.v);
         } else {
@@ -468,7 +500,7 @@ proptest! {
 
     #[test]
     fn lt_test(a in any::<f64>(), b in any::<f64>()) {
-        let res = Scalar::new(a).lt(Scalar::new(b));
+        let res = Scalar::new(a).lt(&Scalar::new(b));
         if a < b {
             assert_eq!(1., res.v);
         } else {
@@ -478,7 +510,7 @@ proptest! {
 
     #[test]
     fn gt_test(a in any::<f64>(), b in any::<f64>()) {
-        let res = Scalar::new(a).gt(Scalar::new(b));
+        let res = Scalar::new(a).gt(&Scalar::new(b));
         if a > b {
             assert_eq!(1., res.v);
         } else {

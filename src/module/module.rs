@@ -9,58 +9,25 @@ pub struct Module {
     training: bool,
 }
 
-impl Module {
-    fn new() -> Self {
+impl Default for Module {
+    fn default() -> Self {
         Self {
             children: HashMap::new(),
             parameters: HashMap::new(),
             training: true,
         }
     }
+}
+
+impl Module {
+    pub fn add_parameter(mut self, param: Parameter) -> Self {
+        let name = param.name.to_owned();
+        self.parameters.insert(name, param);
+        self
+    }
 
     fn children_values(self) -> impl Iterator<Item = Module> {
         self.children.into_values()
-    }
-
-    fn fold_rec<A, F>(&self, z: A, f: F) -> A
-    where
-        F: Fn(A, &Self) -> A + Copy,
-    {
-        let mut acc = f(z, self);
-        for module in self.children.values() {
-            acc = module.fold_rec(acc, f);
-        }
-        acc
-    }
-
-    fn fold<A, F>(&self, z: A, f: F) -> A
-    where
-        F: Fn(A, (&Self, String, u32)) -> A,
-    {
-        let mut stack: Vec<(&Module, String, u32)> = vec![(self, "".to_string(), 0)];
-        let mut res = z;
-        while let Some((module, name, depth)) = stack.pop() {
-            res = f(res, (module, name.to_string(), depth));
-            for (name, module) in module.children.iter() {
-                stack.push((&module, name.to_string(), depth + 1));
-            }
-        }
-        res
-    }
-
-    fn fold_bf<A, F>(&self, z: A, f: F) -> A
-    where
-        F: Fn(A, (&Self, String)) -> A,
-    {
-        let mut queue: VecDeque<(&Module, String)> = VecDeque::from([(self, "".to_string())]);
-        let mut res = z;
-        while let Some((module, name)) = queue.pop_front() {
-            res = f(res, (module, name.to_string()));
-            for (name, module) in module.children.iter() {
-                queue.push_back((&module, name.to_string()));
-            }
-        }
-        res
     }
 
     fn parameters(&self) -> impl Iterator<Item = Parameter> {
@@ -102,6 +69,47 @@ impl Module {
         )
         .0
         .into_iter()
+    }
+
+    fn fold_rec<A, F>(&self, z: A, f: F) -> A
+    where
+        F: Fn(A, &Self) -> A + Copy,
+    {
+        let mut acc = f(z, self);
+        for module in self.children.values() {
+            acc = module.fold_rec(acc, f);
+        }
+        acc
+    }
+
+    fn fold<A, F>(&self, z: A, f: F) -> A
+    where
+        F: Fn(A, (&Self, String, u32)) -> A,
+    {
+        let mut stack: Vec<(&Module, String, u32)> = vec![(self, "".to_string(), 0)];
+        let mut res = z;
+        while let Some((module, name, depth)) = stack.pop() {
+            res = f(res, (module, name.to_string(), depth));
+            for (name, module) in module.children.iter() {
+                stack.push((&module, name.to_string(), depth + 1));
+            }
+        }
+        res
+    }
+
+    fn fold_bf<A, F>(&self, z: A, f: F) -> A
+    where
+        F: Fn(A, (&Self, String)) -> A,
+    {
+        let mut queue: VecDeque<(&Module, String)> = VecDeque::from([(self, "".to_string())]);
+        let mut res = z;
+        while let Some((module, name)) = queue.pop_front() {
+            res = f(res, (module, name.to_string()));
+            for (name, module) in module.children.iter() {
+                queue.push_back((&module, name.to_string()));
+            }
+        }
+        res
     }
 
     fn walk_rec<F>(&mut self, f: &mut F) -> ()
@@ -218,11 +226,13 @@ mod tests {
             ("module_a.".to_string() + &para_a.name, para_a.clone()),
         ];
         // can't have partial eq on scalar because of scalar function's rc<dyn>
-        assert!(expected.iter().all(|(en, pn)| named_parameters.iter().any(|(n, p)| {
-            n == en &&
-            p.name == pn.name &&
-            p.scalar.derivative == pn.scalar.derivative &&
-            p.scalar.v == pn.scalar.v
-        })));
+        assert!(expected
+            .iter()
+            .all(|(en, pn)| named_parameters.iter().any(|(n, p)| {
+                n == en
+                    && p.name == pn.name
+                    && p.scalar.derivative == pn.scalar.derivative
+                    && p.scalar.v == pn.scalar.v
+            })));
     }
 }

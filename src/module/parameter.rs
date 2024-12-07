@@ -8,10 +8,7 @@ pub struct Parameter {
 
 impl Parameter {
     pub fn new(name: String, scalar: Scalar) -> Self {
-        Self {
-            name,
-            scalar,
-        }
+        Self { name, scalar }
     }
 
     pub fn scalar(mut self, scalar: Scalar) -> Self {

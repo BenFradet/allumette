@@ -9,10 +9,7 @@ pub struct SGD {
 
 impl SGD {
     pub fn new(params: Vec<Parameter>, lr: f64) -> Self {
-        Self {
-            params,
-            lr,
-        }
+        Self { params, lr }
     }
 }
 
@@ -35,11 +32,8 @@ impl Optimizer for SGD {
 
     fn step(mut self) -> Self {
         for p in &mut self.params {
-            match p.scalar.derivative {
-                Some(d) => {
-                    p.scalar = Scalar::new(p.scalar.v - self.lr * d);
-                },
-                None => (),
+            if let Some(d) = p.scalar.derivative {
+                p.scalar = Scalar::new(p.scalar.v - self.lr * d);
             }
             p.scalar.derivative = None;
         }
