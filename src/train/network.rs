@@ -1,3 +1,5 @@
+use crate::scalar::scalar::Scalar;
+
 use super::linear::Linear;
 
 pub struct Network {
@@ -15,8 +17,10 @@ impl Network {
         }
     }
 
-    pub fn forward(&self, x: f64, y: f64) -> f64 {
-        //middle = self.layer1.forward(vec![x, y]).map(|m| m.rel)
-        0.
+    pub fn forward(&self, x: Scalar) -> Option<Scalar> {
+        let l1 = self.layer1.forward(vec![x]).map(|s| s.relu());
+        let l2 = self.layer2.forward(l1.collect()).map(|s| s.relu());
+        let l3 = self.layer3.forward(l2.collect()).next().map(|s| s.sig());
+        l3
     }
 }
