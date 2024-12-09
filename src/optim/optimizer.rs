@@ -1,4 +1,4 @@
 pub trait Optimizer {
-    fn zero(self) -> Self;
-    fn step(self) -> Self;
+    fn zero(&mut self) -> ();
+    fn step(&mut self) -> ();
 }

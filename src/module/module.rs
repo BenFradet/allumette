@@ -2,10 +2,10 @@ use std::collections::{HashMap, VecDeque};
 
 use super::parameter::Parameter;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Module {
     children: HashMap<String, Module>,
-    parameters: HashMap<String, Parameter>,
+    pub parameters: HashMap<String, Parameter>,
     training: bool,
 }
 
@@ -26,11 +26,20 @@ impl Module {
         self
     }
 
+    pub fn add_param(&mut self, param: Parameter) -> () {
+        let name = param.name.to_owned();
+        self.parameters.insert(name, param);
+    }
+
+    pub fn add_child(&mut self, name: String, module: Module) -> () {
+        self.children.insert(name, module);
+    }
+
     fn children_values(self) -> impl Iterator<Item = Module> {
         self.children.into_values()
     }
 
-    fn parameters(&self) -> impl Iterator<Item = Parameter> {
+    pub fn parameters(&self) -> impl Iterator<Item = Parameter> {
         self.fold_rec(vec![], |acc, module| {
             let params = module.parameters.values().cloned().collect();
             [acc, params].concat()

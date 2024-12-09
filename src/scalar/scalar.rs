@@ -108,7 +108,7 @@ impl Scalar {
         result.into_iter()
     }
 
-    fn backprop(&self, d: f64) -> HashMap<u64, Self> {
+    pub fn backprop(&self, d: f64) -> HashMap<u64, Self> {
         let sorted = self.topological_sort();
         let mut derivs = HashMap::from([(self.id, d)]);
         let mut res: HashMap<u64, Scalar> = HashMap::new();
@@ -231,6 +231,14 @@ impl ops::Sub<&Scalar> for Scalar {
 }
 
 impl ops::Neg for Scalar {
+    type Output = Scalar;
+
+    fn neg(self) -> Self::Output {
+        Forward::unary(Neg {}, &self)
+    }
+}
+
+impl ops::Neg for &Scalar {
     type Output = Scalar;
 
     fn neg(self) -> Self::Output {

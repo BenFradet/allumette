@@ -1,9 +1,8 @@
-use crate::{module::parameter::Parameter, scalar::scalar::Scalar};
+use crate::{module::{module::Module, parameter::Parameter}, scalar::scalar::Scalar};
 
 use rand::{thread_rng, Rng};
 
 pub struct Linear {
-    //module: Module,
     weights: Vec<Vec<Parameter>>,
     bias: Vec<Parameter>,
     out_size: usize,
@@ -11,10 +10,10 @@ pub struct Linear {
 }
 
 impl Linear {
-    pub fn new(in_size: usize, out_size: usize) -> Self {
+    #[allow(clippy::needless_range_loop)]
+    pub fn new(module: &mut Module, in_size: usize, out_size: usize) -> Self {
         let mut weights = vec![vec![]];
         let mut bias = vec![];
-        //let mut module = Module::new();
         let mut rng = thread_rng();
 
         for i in 0..in_size {
@@ -23,7 +22,7 @@ impl Linear {
                 let rand: f64 = rng.gen();
                 let scalar = Scalar::new(2. * (rand - 0.5));
                 let param = Parameter::new(format!("weight_{i}_{j}"), scalar);
-                //module = module.add_parameter(param.clone());
+                module.add_param(param.clone());
                 weights[i][j] = param;
             }
         }
@@ -32,12 +31,11 @@ impl Linear {
             let rand: f64 = rng.gen();
             let scalar = Scalar::new(2. * (rand - 0.5));
             let param = Parameter::new(format!("bias_{j}"), scalar);
-            //module = module.add_parameter(param.clone());
+            module.add_param(param.clone());
             bias[j] = param;
         }
 
         Self {
-            //module,
             weights,
             bias,
             out_size,
@@ -45,6 +43,7 @@ impl Linear {
         }
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn forward(&self, inputs: Vec<Scalar>) -> impl Iterator<Item = Scalar> {
         let mut outputs = vec![];
         for j in 0..self.out_size {

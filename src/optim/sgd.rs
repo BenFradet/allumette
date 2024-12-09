@@ -1,42 +1,32 @@
-use crate::{module::parameter::Parameter, scalar::scalar::Scalar};
+use crate::{module::module::Module, scalar::scalar::Scalar};
 
 use super::optimizer::Optimizer;
 
-pub struct SGD {
-    params: Vec<Parameter>,
+pub struct SGD<'a> {
+    module: &'a mut Module,
     lr: f64,
 }
 
-impl SGD {
-    pub fn new(params: Vec<Parameter>, lr: f64) -> Self {
-        Self { params, lr }
+impl<'a> SGD<'a> {
+    pub fn new(module: &'a mut Module, lr: f64) -> Self {
+        Self { module, lr }
     }
+
 }
 
-impl Default for SGD {
-    fn default() -> Self {
-        Self {
-            params: vec![],
-            lr: 1.,
-        }
-    }
-}
-
-impl Optimizer for SGD {
-    fn zero(mut self) -> Self {
-        for p in &mut self.params {
+impl<'a> Optimizer for SGD<'a> {
+    fn zero(&mut self) -> () {
+        for (_, p) in &mut self.module.parameters {
             p.scalar.derivative = None;
         }
-        self
     }
 
-    fn step(mut self) -> Self {
-        for p in &mut self.params {
+    fn step(&mut self) -> () {
+        for (_, p) in &mut self.module.parameters {
             if let Some(d) = p.scalar.derivative {
                 p.scalar = Scalar::new(p.scalar.v - self.lr * d);
             }
             p.scalar.derivative = None;
         }
-        self
     }
 }
