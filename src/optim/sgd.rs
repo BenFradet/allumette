@@ -1,32 +1,34 @@
-use crate::{module::module::Module, scalar::scalar::Scalar};
+use std::collections::HashMap;
+
+use crate::scalar::scalar::Scalar;
 
 use super::optimizer::Optimizer;
 
-pub struct SGD<'a> {
-    module: &'a mut Module,
+pub struct SGD {
     lr: f64,
 }
 
-impl<'a> SGD<'a> {
-    pub fn new(module: &'a mut Module, lr: f64) -> Self {
-        Self { module, lr }
+impl SGD {
+    pub fn new(lr: f64) -> Self {
+        Self { lr }
     }
-
 }
 
-impl<'a> Optimizer for SGD<'a> {
-    fn zero(&mut self) -> () {
-        for (_, p) in &mut self.module.parameters {
-            p.scalar.derivative = None;
+impl Optimizer for SGD {
+    fn zero(&self, mut scalars: HashMap<String, Scalar>) -> HashMap<String, Scalar> {
+        for s in scalars.values_mut() {
+            s.derivative = None;
         }
+        scalars
     }
 
-    fn step(&mut self) -> () {
-        for (_, p) in &mut self.module.parameters {
-            if let Some(d) = p.scalar.derivative {
-                p.scalar = Scalar::new(p.scalar.v - self.lr * d);
+    fn step(&self, mut scalars: HashMap<String, Scalar>) -> HashMap<String, Scalar> {
+        for s in scalars.values_mut() {
+            if let Some(d) = s.derivative {
+                *s = Scalar::new(s.v - self.lr * d);
             }
-            p.scalar.derivative = None;
+            s.derivative = None;
         }
+        scalars
     }
 }

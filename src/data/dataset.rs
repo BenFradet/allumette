@@ -1,12 +1,12 @@
 use rand::{thread_rng, Rng};
 
-pub struct Graph {
+pub struct Dataset {
     pub n: usize,
     pub x: Vec<(f64, f64)>,
     pub y: Vec<usize>,
 }
 
-impl Graph {
+impl Dataset {
     pub fn simple(n: usize) -> Self {
         let x = Self::make_points(n);
         let mut y = vec![];
@@ -41,7 +41,11 @@ impl Graph {
         let x = Self::make_points(n);
         let mut y = vec![];
         for (x1, x2) in &x {
-            let y1 = if (*x1 < 0.5 && *x2 > 0.5) || (*x1 > 0.5 && *x2 < 0.5) { 1 } else { 0 };
+            let y1 = if (*x1 < 0.5 && *x2 > 0.5) || (*x1 > 0.5 && *x2 < 0.5) {
+                1
+            } else {
+                0
+            };
             y.push(y1);
         }
         Self { n, x, y }

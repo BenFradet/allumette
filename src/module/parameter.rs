@@ -7,12 +7,8 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    pub fn new(name: String, scalar: Scalar) -> Self {
-        Self { name, scalar }
-    }
-
-    pub fn scalar(mut self, scalar: Scalar) -> Self {
-        self.scalar = scalar;
-        self
+    pub fn new(scalar: Scalar) -> Self {
+        let id = scalar.id.clone();
+        Self { name: id, scalar }
     }
 }

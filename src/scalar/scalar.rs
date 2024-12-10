@@ -21,17 +21,18 @@ pub struct Scalar {
     pub v: f64,
     pub derivative: Option<f64>,
     pub history: ScalarHistory,
-    id: u64,
+    pub id: String,
 }
 
 impl Scalar {
     pub fn new(v: f64) -> Self {
         let mut rng = thread_rng();
+        let id: u64 = rng.gen();
         Self {
             v,
             derivative: None,
             history: ScalarHistory::default(),
-            id: rng.gen(),
+            id: id.to_string(),
         }
     }
 
@@ -40,7 +41,7 @@ impl Scalar {
         self
     }
 
-    pub fn id(mut self, id: u64) -> Self {
+    pub fn id(mut self, id: String) -> Self {
         self.id = id;
         self
     }
@@ -94,12 +95,12 @@ impl Scalar {
     fn topological_sort(&self) -> impl Iterator<Item = &Self> {
         let mut queue = VecDeque::new();
         queue.push_back(self);
-        let mut visited: HashSet<u64> = HashSet::from([self.id]);
+        let mut visited: HashSet<String> = HashSet::from([self.id.clone()]);
         let mut result = Vec::new();
         while let Some(var) = queue.pop_front() {
             for parent in var.parents() {
                 if !visited.contains(&parent.id) {
-                    visited.insert(parent.id);
+                    visited.insert(parent.id.clone());
                     queue.push_back(parent);
                 }
             }
@@ -108,10 +109,10 @@ impl Scalar {
         result.into_iter()
     }
 
-    pub fn backprop(&self, d: f64) -> HashMap<u64, Self> {
+    pub fn backprop(&self, d: f64) -> HashMap<String, Self> {
         let sorted = self.topological_sort();
-        let mut derivs = HashMap::from([(self.id, d)]);
-        let mut res: HashMap<u64, Scalar> = HashMap::new();
+        let mut derivs = HashMap::from([(self.id.clone(), d)]);
+        let mut res: HashMap<String, Scalar> = HashMap::new();
         for s in sorted {
             if let Some(current_deriv) = derivs.get(&s.id).cloned() {
                 for (parent, grad) in s.chain_rule(current_deriv) {
@@ -121,12 +122,12 @@ impl Scalar {
                             Some(s) => s.clone().accumulate_derivative(grad),
                             None => parent.clone().accumulate_derivative(grad),
                         };
-                        res.insert(parent.id, new);
+                        res.insert(parent.id.clone(), new);
                     } else {
                         match derivs.get_mut(&parent.id) {
                             Some(e) => *e += grad,
                             None => {
-                                derivs.insert(parent.id, grad);
+                                derivs.insert(parent.id.clone(), grad);
                             }
                         }
                     }
@@ -285,7 +286,7 @@ mod tests {
     #[test]
     fn backprop_test1() -> () {
         let var = Scalar::new(0.);
-        let var_id = var.id;
+        let var_id = var.id.to_owned();
         let var2 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
         let backprop = var2.backprop(5.);
         let res = backprop.get(&var_id);
@@ -295,7 +296,7 @@ mod tests {
     #[test]
     fn backprop_test2() -> () {
         let var = Scalar::new(0.);
-        let var_id = var.id;
+        let var_id = var.id.to_owned();
         let var2 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
         let var3 = Forward::binary(F1 {}, &Scalar::new(0.), &var2);
         let backprop = var3.backprop(5.);
@@ -306,7 +307,7 @@ mod tests {
     #[test]
     fn backprop_test3() -> () {
         let var = Scalar::new(0.);
-        let var_id = var.id;
+        let var_id = var.id.to_owned();
         let var2 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
         let var3 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
         let var4 = Forward::binary(F1 {}, &var2, &var3);
@@ -318,7 +319,7 @@ mod tests {
     #[test]
     fn backprop_test4() -> () {
         let var = Scalar::new(0.);
-        let var_id = var.id;
+        let var_id = var.id.to_owned();
         let var1 = Forward::binary(F1 {}, &Scalar::new(0.), &var);
         let var2 = Forward::binary(F1 {}, &Scalar::new(0.), &var1);
         let var3 = Forward::binary(F1 {}, &Scalar::new(0.), &var1);
@@ -330,47 +331,65 @@ mod tests {
 
     #[test]
     fn topological_sort_test2() -> () {
-        let x = Scalar::new(1.).id(0);
-        let y = Scalar::new(2.).id(1);
-        let log_z = Scalar::new(3.).id(10).history(
+        let x = Scalar::new(1.).id(0.to_string());
+        let y = Scalar::new(2.).id(1.to_string());
+        let log_z = Scalar::new(3.).id(10.to_string()).history(
             ScalarHistory::default()
                 .push_input(x.clone())
                 .push_input(y.clone()),
         );
-        let exp_z = Scalar::new(4.).id(11).history(
+        let exp_z = Scalar::new(4.).id(11.to_string()).history(
             ScalarHistory::default()
                 .push_input(x.clone())
                 .push_input(y.clone()),
         );
         let h = Scalar::new(5.)
-            .id(100)
+            .id(100.to_string())
             .history(ScalarHistory::default().push_input(log_z).push_input(exp_z));
-        let sorted: Vec<_> = h.topological_sort().map(|s| s.id).collect();
-        assert_eq!(vec![100, 10, 11, 0, 1], sorted);
+        let sorted: Vec<_> = h.topological_sort().map(|s| s.id.to_owned()).collect();
+        assert_eq!(
+            vec![
+                100.to_string(),
+                10.to_string(),
+                11.to_string(),
+                0.to_string(),
+                1.to_string()
+            ],
+            sorted
+        );
     }
 
     #[test]
     fn topological_sort_test1() -> () {
-        let five = Scalar::new(5.).id(5);
-        let four = Scalar::new(4.).id(4);
-        let z = Scalar::new(0.).id(0).history(
+        let five = Scalar::new(5.).id(5.to_string());
+        let four = Scalar::new(4.).id(4.to_string());
+        let z = Scalar::new(0.).id(0.to_string()).history(
             ScalarHistory::default()
                 .push_input(four.clone())
                 .push_input(five.clone()),
         );
         let two = Scalar::new(2.)
-            .id(2)
+            .id(2.to_string())
             .history(ScalarHistory::default().push_input(five));
         let three = Scalar::new(3.)
-            .id(3)
+            .id(3.to_string())
             .history(ScalarHistory::default().push_input(two));
         let one = Scalar::new(1.)
-            .id(1)
+            .id(1.to_string())
             .history(ScalarHistory::default().push_input(four).push_input(three));
-        let sorted_z: Vec<_> = z.topological_sort().map(|s| s.id).collect();
-        assert_eq!(vec![0, 4, 5], sorted_z);
-        let sorted_one: Vec<_> = one.topological_sort().map(|s| s.id).collect();
-        assert_eq!(vec![1, 4, 3, 2, 5], sorted_one);
+        let sorted_z: Vec<_> = z.topological_sort().map(|s| s.id.to_owned()).collect();
+        assert_eq!(vec![0.to_string(), 4.to_string(), 5.to_string()], sorted_z);
+        let sorted_one: Vec<_> = one.topological_sort().map(|s| s.id.to_owned()).collect();
+        assert_eq!(
+            vec![
+                1.to_string(),
+                4.to_string(),
+                3.to_string(),
+                2.to_string(),
+                5.to_string()
+            ],
+            sorted_one
+        );
     }
 
     #[test]
@@ -406,9 +425,9 @@ mod tests {
     fn chain_rule_test3() -> () {
         let f2 = F2 {};
         let v1 = Scalar::new(5.);
-        let v1_id = v1.id;
+        let v1_id = v1.id.to_owned();
         let v2 = Scalar::new(10.);
-        let v2_id = v2.id;
+        let v2_id = v2.id.to_owned();
         let y = Forward::binary(f2, &v1, &v2);
         let back: Vec<_> = y.chain_rule(5.).collect();
         assert_eq!(2, back.len());
