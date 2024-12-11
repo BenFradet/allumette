@@ -30,10 +30,6 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
             let loss = -prob.ln();
             let loss_v = loss.v;
             let res = (loss / &Scalar::new(data.n as f64)).backprop(1.);
-            //println!("res {res:?}");
-            //println!("");
-            //println!("before {scalars:?}");
-            //println!("");
             scalars.extend(res);
             total_loss += loss_v;
         }

@@ -25,7 +25,7 @@ impl Optimizer for SGD {
     fn step(&self, mut scalars: HashMap<String, Scalar>) -> HashMap<String, Scalar> {
         for s in scalars.values_mut() {
             if let Some(d) = s.derivative {
-                *s = Scalar::new(s.v - self.lr * d);
+                *s = Scalar::new(s.v - self.lr * d).id(s.id.clone());
             }
             s.derivative = None;
         }
