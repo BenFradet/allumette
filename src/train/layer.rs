@@ -21,7 +21,7 @@ impl Layer {
 
     // TODO: use module
     #[allow(clippy::needless_range_loop)]
-    pub fn init_weights(&self) -> HashMap<String, Scalar> {
+    pub fn weights(&self) -> HashMap<String, Scalar> {
         let mut weights = HashMap::new();
         let mut rng = thread_rng();
 
@@ -37,7 +37,7 @@ impl Layer {
     }
 
     #[allow(clippy::needless_range_loop)]
-    pub fn init_bias(&self) -> HashMap<String, Scalar> {
+    pub fn bias(&self) -> HashMap<String, Scalar> {
         let mut bias = HashMap::new();
         let mut rng = thread_rng();
 

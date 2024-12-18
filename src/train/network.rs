@@ -23,16 +23,16 @@ impl Network {
     }
 
     pub fn init(&self) -> HashMap<String, Scalar> {
-        let mut res = self.layer1.init_weights();
-        let l1_b = self.layer1.init_bias();
+        let mut res = self.layer1.weights();
+        let l1_b = self.layer1.bias();
         res.extend(l1_b);
-        let l2_w = self.layer2.init_weights();
+        let l2_w = self.layer2.weights();
         res.extend(l2_w);
-        let l2_b = self.layer2.init_bias();
+        let l2_b = self.layer2.bias();
         res.extend(l2_b);
-        let l3_w = self.layer3.init_weights();
+        let l3_w = self.layer3.weights();
         res.extend(l3_w);
-        let l3_b = self.layer3.init_bias();
+        let l3_b = self.layer3.bias();
         res.extend(l3_b);
         res
     }
