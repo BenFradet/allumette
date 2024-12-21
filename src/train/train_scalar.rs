@@ -43,6 +43,7 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum Result {
     Correct,
     Incorrect,
@@ -80,5 +81,39 @@ fn prob(out: Option<Scalar>, label: usize) -> (Scalar, Result) {
                 },
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{scalar::scalar::Scalar, train::train_scalar::{prob, Result}};
+
+    fn bimap<A, B, A1, B1, FA, FB>(t: (A, B), fa: FA, fb: FB) -> (A1, B1)
+    where
+        FA: Fn(A) -> A1,
+        FB: Fn(B) -> B1,
+    {
+        let a1 = fa(t.0);
+        let b1 = fb(t.1);
+        (a1, b1)
+    }
+
+    #[test]
+    fn prob_tests() -> () {
+        let s1 = Scalar::new(1.);
+        let s75 = Scalar::new(0.75);
+        let s50 = Scalar::new(0.5);
+        let s25 = Scalar::new(0.25);
+        let s0 = Scalar::new(0.);
+        assert_eq!((1., Result::Correct), bimap(prob(Some(s1.clone()), 1), |s| s.v, |r| r));
+        assert_eq!((0.75, Result::Correct), bimap(prob(Some(s75.clone()), 1), |s| s.v, |r| r));
+        assert_eq!((0.5, Result::Incorrect), bimap(prob(Some(s50.clone()), 1), |s| s.v, |r| r));
+        assert_eq!((0.25, Result::Incorrect), bimap(prob(Some(s25.clone()), 1), |s| s.v, |r| r));
+        assert_eq!((0., Result::Incorrect), bimap(prob(Some(s0.clone()), 1), |s| s.v, |r| r));
+        assert_eq!((0., Result::Incorrect), bimap(prob(Some(s1), 0), |s| s.v, |r| r));
+        assert_eq!((0.25, Result::Incorrect), bimap(prob(Some(s75), 0), |s| s.v, |r| r));
+        assert_eq!((0.5, Result::Incorrect), bimap(prob(Some(s50), 0), |s| s.v, |r| r));
+        assert_eq!((0.75, Result::Correct), bimap(prob(Some(s25), 0), |s| s.v, |r| r));
+        assert_eq!((1., Result::Correct), bimap(prob(Some(s0), 0), |s| s.v, |r| r));
     }
 }
