@@ -86,7 +86,7 @@ fn prob(out: Option<Scalar>, label: usize) -> (Scalar, Result) {
 
 #[cfg(test)]
 mod tests {
-    use crate::{scalar::scalar::Scalar, train::train_scalar::{prob, Result}};
+    use super::*;
 
     fn bimap<A, B, A1, B1, FA, FB>(t: (A, B), fa: FA, fb: FB) -> (A1, B1)
     where
