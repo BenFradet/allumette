@@ -51,3 +51,36 @@ impl Network {
             .map(|s| s.sig())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_test() -> () {
+        let hidden_layer_size = 3;
+        let network = Network::new(hidden_layer_size);
+        let l1 = network.layer1;
+        let l2 = network.layer2;
+        let l3 = network.layer3;
+        assert_eq!(2, l1.in_size);
+        assert_eq!(hidden_layer_size, l1.out_size);
+        assert_eq!("layer1", l1.name);
+        assert_eq!(hidden_layer_size, l2.in_size);
+        assert_eq!(hidden_layer_size, l2.out_size);
+        assert_eq!("layer2", l2.name);
+        assert_eq!(hidden_layer_size, l3.in_size);
+        assert_eq!(1, l3.out_size);
+        assert_eq!("layer3", l3.name);
+    }
+
+    #[test]
+    fn init_test() -> () {
+        let hidden_layer_size = 3;
+        let network = Network::new(hidden_layer_size);
+        let res = network.init();
+        let weights = 2 * 3 + 3 * 3 + 3 * 1;
+        let bias = 3 + 3 + 1;
+        assert_eq!(weights + bias, res.len());
+    }
+}

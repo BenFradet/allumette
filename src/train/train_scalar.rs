@@ -8,8 +8,8 @@ use super::network::Network;
 
 // TODO: make it work with module
 pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_size: usize) -> () {
-    let model = Network::new(hidden_layer_size);
-    let mut scalars = model.init();
+    let network = Network::new(hidden_layer_size);
+    let mut scalars = network.init();
     let optim = SGD::new(learning_rate);
     let mut losses = vec![];
 
@@ -22,7 +22,7 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
             let label = data.y[i];
             let x1_scalar = Scalar::new(*x1);
             let x2_scalar = Scalar::new(*x2);
-            let out = model.forward(x1_scalar, x2_scalar, &scalars);
+            let out = network.forward(x1_scalar, x2_scalar, &scalars);
 
             let (prob, result) = prob(out, label);
             correct += result.to();

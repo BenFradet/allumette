@@ -5,9 +5,9 @@ use crate::scalar::scalar::Scalar;
 use rand::{thread_rng, Rng};
 
 pub struct Layer {
-    name: String,
-    in_size: usize,
-    out_size: usize,
+    pub name: String,
+    pub in_size: usize,
+    pub out_size: usize,
 }
 
 impl Layer {
