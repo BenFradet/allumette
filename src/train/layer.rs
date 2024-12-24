@@ -37,7 +37,7 @@ impl Layer {
     }
 
     #[allow(clippy::needless_range_loop)]
-    pub fn bias(&self) -> HashMap<String, Scalar> {
+    pub fn biases(&self) -> HashMap<String, Scalar> {
         let mut bias = HashMap::new();
         let mut rng = thread_rng();
 
@@ -77,5 +77,36 @@ impl Layer {
 
     fn bias_key(&self, j: usize) -> String {
         format!("{}_bias_{j}", self.name)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn biases_test() -> () {
+        let layer = Layer::new("layer".to_owned(), 2, 3);
+        let res = layer.biases();
+        assert!(res.iter().all(|(k, v)| k.starts_with("layer_bias") && v.v <= 1. && v.v >= -1.));
+    }
+
+    #[test]
+    fn weights_test() -> () {
+        let layer = Layer::new("layer".to_owned(), 2, 3);
+        let res = layer.weights();
+        assert!(res.iter().all(|(k, v)| k.starts_with("layer_weight") && v.v <= 1. && v.v >= -1.));
+    }
+
+    #[test]
+    fn weight_key_test() -> () {
+        let layer = Layer::new("layer".to_owned(), 1, 1);
+        assert_eq!("layer_weight_0_0", layer.weight_key(0, 0));
+    }
+
+    #[test]
+    fn bias_key_test() -> () {
+        let layer = Layer::new("layer".to_owned(), 1, 1);
+        assert_eq!("layer_bias_0", layer.bias_key(0));
     }
 }
