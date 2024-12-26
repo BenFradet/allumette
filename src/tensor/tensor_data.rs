@@ -1,31 +1,48 @@
-// TODO: stride and shape part of tensor data?
 #[derive(Debug)]
 pub struct TensorData<const N: usize> {
     data: Vec<f64>,
-    stride: Stride<N>,
+    strides: Stride<N>,
     shape: Shape<N>,
 }
 
 impl<const N: usize> TensorData<N> {
+    fn new(data: Vec<f64>, strides: Stride<N>, shape: Shape<N>) -> Self {
+        TensorData {
+            data,
+            strides,
+            shape,
+        }
+    }
+
     fn position(&self, idx: Index<N>) -> usize {
         idx.data
             .iter()
-            .zip(self.stride.data.iter())
+            .zip(self.strides.data.iter())
             .fold(0, |acc, (idx, stride)| acc + idx * stride)
     }
 
     #[allow(clippy::needless_range_loop)]
     fn index(&self, pos: usize) -> Index<N> {
-        let stride: Stride<N> = (&self.shape).into();
         let mut res = [1; N];
         let mut mut_pos = pos;
         for i in 0..N {
-            let s = stride.data[i];
+            let s = self.strides.data[i];
             let idx = mut_pos / s;
             mut_pos -= idx * s;
             res[i] = idx;
         }
         Index { data: res }
+    }
+
+    fn is_contiguous(&self) -> bool {
+        let res = self.strides.data.iter().fold((true, usize::MAX), |(is_contiguous, last), stride| {
+            if !is_contiguous || *stride > last {
+                (false, *stride)
+            } else {
+                (true, *stride)
+            }
+        });
+        res.0
     }
 }
 
@@ -70,7 +87,7 @@ mod tests {
 
     #[test]
     fn stride_from_shape_test() -> () {
-        let res = TensorData::stride_from_shape(&Shape { data: [5, 4] });
+        let res: Stride<2> = (&Shape { data: [5, 4] }).into();
         assert_eq!([4, 1], res.data);
     }
 }
