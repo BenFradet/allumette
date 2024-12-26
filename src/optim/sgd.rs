@@ -53,6 +53,8 @@ mod tests {
         let map = HashMap::from([(s_id.clone(), s)]);
         let sgd = SGD::new(0.25);
         let res = sgd.step(map);
-        assert!(res.iter().all(|kv| kv.1.derivative == None && kv.1.v == 0.3125 && kv.1.id == s_id));
+        assert!(res
+            .iter()
+            .all(|kv| kv.1.derivative == None && kv.1.v == 0.3125 && kv.1.id == s_id));
     }
 }

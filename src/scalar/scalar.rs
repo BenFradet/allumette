@@ -243,7 +243,7 @@ impl ops::Neg for &Scalar {
     type Output = Scalar;
 
     fn neg(self) -> Self::Output {
-        Forward::unary(Neg {}, &self)
+        Forward::unary(Neg {}, self)
     }
 }
 

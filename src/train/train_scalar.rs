@@ -105,15 +105,45 @@ mod tests {
         let s50 = Scalar::new(0.5);
         let s25 = Scalar::new(0.25);
         let s0 = Scalar::new(0.);
-        assert_eq!((1., Result::Correct), bimap(prob(Some(s1.clone()), 1), |s| s.v, |r| r));
-        assert_eq!((0.75, Result::Correct), bimap(prob(Some(s75.clone()), 1), |s| s.v, |r| r));
-        assert_eq!((0.5, Result::Incorrect), bimap(prob(Some(s50.clone()), 1), |s| s.v, |r| r));
-        assert_eq!((0.25, Result::Incorrect), bimap(prob(Some(s25.clone()), 1), |s| s.v, |r| r));
-        assert_eq!((0., Result::Incorrect), bimap(prob(Some(s0.clone()), 1), |s| s.v, |r| r));
-        assert_eq!((0., Result::Incorrect), bimap(prob(Some(s1), 0), |s| s.v, |r| r));
-        assert_eq!((0.25, Result::Incorrect), bimap(prob(Some(s75), 0), |s| s.v, |r| r));
-        assert_eq!((0.5, Result::Incorrect), bimap(prob(Some(s50), 0), |s| s.v, |r| r));
-        assert_eq!((0.75, Result::Correct), bimap(prob(Some(s25), 0), |s| s.v, |r| r));
-        assert_eq!((1., Result::Correct), bimap(prob(Some(s0), 0), |s| s.v, |r| r));
+        assert_eq!(
+            (1., Result::Correct),
+            bimap(prob(Some(s1.clone()), 1), |s| s.v, |r| r)
+        );
+        assert_eq!(
+            (0.75, Result::Correct),
+            bimap(prob(Some(s75.clone()), 1), |s| s.v, |r| r)
+        );
+        assert_eq!(
+            (0.5, Result::Incorrect),
+            bimap(prob(Some(s50.clone()), 1), |s| s.v, |r| r)
+        );
+        assert_eq!(
+            (0.25, Result::Incorrect),
+            bimap(prob(Some(s25.clone()), 1), |s| s.v, |r| r)
+        );
+        assert_eq!(
+            (0., Result::Incorrect),
+            bimap(prob(Some(s0.clone()), 1), |s| s.v, |r| r)
+        );
+        assert_eq!(
+            (0., Result::Incorrect),
+            bimap(prob(Some(s1), 0), |s| s.v, |r| r)
+        );
+        assert_eq!(
+            (0.25, Result::Incorrect),
+            bimap(prob(Some(s75), 0), |s| s.v, |r| r)
+        );
+        assert_eq!(
+            (0.5, Result::Incorrect),
+            bimap(prob(Some(s50), 0), |s| s.v, |r| r)
+        );
+        assert_eq!(
+            (0.75, Result::Correct),
+            bimap(prob(Some(s25), 0), |s| s.v, |r| r)
+        );
+        assert_eq!(
+            (1., Result::Correct),
+            bimap(prob(Some(s0), 0), |s| s.v, |r| r)
+        );
     }
 }

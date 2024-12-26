@@ -14,8 +14,9 @@ impl<const N: usize> TensorData<N> {
             .fold(0, |acc, (idx, stride)| acc + idx * stride)
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn index(&self, pos: usize) -> Index<N> {
-        let stride = Self::stride_from_shape(&self.shape);
+        let stride: Stride<N> = (&self.shape).into();
         let mut res = [1; N];
         let mut mut_pos = pos;
         for i in 0..N {
@@ -25,19 +26,6 @@ impl<const N: usize> TensorData<N> {
             res[i] = idx;
         }
         Index { data: res }
-    }
-
-    // TODO: impl From
-    fn stride_from_shape(shape: &Shape<N>) -> Stride<N> {
-        let mut res = [1; N];
-        let mut offset = 1;
-        for i in 0..N - 1 {
-            let idx = N - i - 1;
-            let s = shape.data[idx];
-            res[i] = s * offset;
-            offset = shape.data[idx] * offset;
-        }
-        Stride { data: res }
     }
 }
 
@@ -54,6 +42,21 @@ struct Order<const N: usize> {
 #[derive(Debug)]
 struct Stride<const N: usize> {
     data: [usize; N],
+}
+
+impl<const N: usize> From<&Shape<N>> for Stride<N> {
+    #[allow(clippy::needless_range_loop)]
+    fn from(shape: &Shape<N>) -> Self {
+        let mut res = [1; N];
+        let mut offset = 1;
+        for i in 0..N - 1 {
+            let idx = N - i - 1;
+            let s = shape.data[idx];
+            res[i] = s * offset;
+            offset *= shape.data[idx];
+        }
+        Stride { data: res }
+    }
 }
 
 #[derive(Debug)]

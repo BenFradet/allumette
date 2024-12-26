@@ -100,7 +100,7 @@ impl Module {
         while let Some((module, name, depth)) = stack.pop() {
             res = f(res, (module, name.to_string(), depth));
             for (name, module) in module.children.iter() {
-                stack.push((&module, name.to_string(), depth + 1));
+                stack.push((module, name.to_string(), depth + 1));
             }
         }
         res
@@ -115,7 +115,7 @@ impl Module {
         while let Some((module, name)) = queue.pop_front() {
             res = f(res, (module, name.to_string()));
             for (name, module) in module.children.iter() {
-                queue.push_back((&module, name.to_string()));
+                queue.push_back((module, name.to_string()));
             }
         }
         res

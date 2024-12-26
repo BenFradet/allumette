@@ -58,7 +58,11 @@ impl Dataset {
         let radius_sq = 0.25;
         for (x1, x2) in &x {
             let (x1p, x2p) = (x1 - center, x2 - center);
-            let y1 = if x1p * x1p + x2p * x2p < radius_sq { 1 } else { 0 };
+            let y1 = if x1p * x1p + x2p * x2p < radius_sq {
+                1
+            } else {
+                0
+            };
             y.push(y1);
         }
         Self { n, x, y }
@@ -82,7 +86,10 @@ fn common_test(ds: &Dataset, n: usize) -> () {
     assert_eq!(n, ds.n);
     assert_eq!(n, ds.x.len());
     assert_eq!(n, ds.y.len());
-    assert!(ds.x.iter().all(|(x1, x2)| *x1 >= 0. && *x1 <= 1. && *x2 >= 0. && *x2 <= 1.));
+    assert!(ds
+        .x
+        .iter()
+        .all(|(x1, x2)| *x1 >= 0. && *x1 <= 1. && *x2 >= 0. && *x2 <= 1.));
     assert!(ds.y.iter().all(|y| *y == 0 || *y == 1));
 }
 

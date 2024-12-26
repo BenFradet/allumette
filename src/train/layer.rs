@@ -62,7 +62,7 @@ impl Layer {
             for i in 0..self.in_size {
                 let wk = self.weight_key(i, j);
                 let w = scalars.get(&wk).unwrap_or(&z);
-                outputs[j] = &outputs[j] + &inputs[i] * &w;
+                outputs[j] = &outputs[j] + &inputs[i] * w;
             }
             let bk = self.bias_key(j);
             let b = scalars.get(&bk).unwrap_or(&z);
@@ -88,14 +88,18 @@ mod tests {
     fn biases_test() -> () {
         let layer = Layer::new("layer".to_owned(), 2, 3);
         let res = layer.biases();
-        assert!(res.iter().all(|(k, v)| k.starts_with("layer_bias") && v.v <= 1. && v.v >= -1.));
+        assert!(res
+            .iter()
+            .all(|(k, v)| k.starts_with("layer_bias") && v.v <= 1. && v.v >= -1.));
     }
 
     #[test]
     fn weights_test() -> () {
         let layer = Layer::new("layer".to_owned(), 2, 3);
         let res = layer.weights();
-        assert!(res.iter().all(|(k, v)| k.starts_with("layer_weight") && v.v <= 1. && v.v >= -1.));
+        assert!(res
+            .iter()
+            .all(|(k, v)| k.starts_with("layer_weight") && v.v <= 1. && v.v >= -1.));
     }
 
     #[test]
