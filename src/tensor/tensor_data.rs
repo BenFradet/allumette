@@ -1,3 +1,5 @@
+use proptest::{array, collection, prelude::*};
+
 #[derive(Debug)]
 pub struct TensorData<const N: usize> {
     data: Vec<f64>,
@@ -21,6 +23,10 @@ impl<const N: usize> TensorData<N> {
             .fold(0, |acc, (idx, stride)| acc + idx * stride)
     }
 
+    fn size(&self) -> usize {
+        self.shape.size()
+    }
+
     #[allow(clippy::needless_range_loop)]
     fn index(&self, pos: usize) -> Index<N> {
         let mut res = [1; N];
@@ -32,6 +38,11 @@ impl<const N: usize> TensorData<N> {
             res[i] = idx;
         }
         Index { data: res }
+    }
+
+    // TODO: look into use<'_, N>
+    fn indices(&self) -> impl Iterator<Item = Index<N>> + use<'_, N> {
+        (0..self.size()).map(|i| self.index(i))
     }
 
     fn is_contiguous(&self) -> bool {
@@ -48,15 +59,21 @@ impl<const N: usize> TensorData<N> {
                 });
         res.0
     }
+
+    fn arbitrary() -> impl Strategy<Value = TensorData<N>> {
+        Shape::arbitrary().prop_flat_map(|shape| {
+            let size = shape.size();
+            let data = collection::vec(0.0f64..1., size);
+            (data, Just(shape))
+        }).prop_map(|(data, shape)| {
+            let strides: Strides<N> = (&shape).into();
+            TensorData::new(data, shape, strides)
+        })
+    }
 }
 
 #[derive(Debug)]
 struct Index<const N: usize> {
-    data: [usize; N],
-}
-
-#[derive(Debug)]
-struct Order<const N: usize> {
     data: [usize; N],
 }
 
@@ -76,9 +93,20 @@ impl<const N: usize> From<&Shape<N>> for Strides<N> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+// Clone needed by proptest's Just
+#[derive(Clone, Debug, PartialEq)]
 struct Shape<const N: usize> {
     data: [usize; N],
+}
+
+impl<const N: usize> Shape<N> {
+    fn size(&self) -> usize {
+        self.data.iter().fold(1, |acc, u| acc * u)
+    }
+
+    fn arbitrary() -> impl Strategy<Value = Shape<N>> {
+        array::uniform(1usize..10).prop_map(|v| Shape { data: v })
+    }
 }
 
 #[cfg(test)]
