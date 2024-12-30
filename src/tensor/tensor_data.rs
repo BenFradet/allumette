@@ -1,4 +1,4 @@
-use std::ops::Index;
+use std::{collections::HashSet, ops::Index};
 
 use proptest::{array, collection, prelude::*};
 
@@ -45,6 +45,22 @@ impl<const N: usize> TensorData<N> {
     // TODO: look into use<'_, N>
     fn indices(&self) -> impl Iterator<Item = Idx<N>> + use<'_, N> {
         (0..self.size()).map(|i| self.index(i))
+    }
+
+    fn permute(mut self, order: Order<N>) -> Option<Self> {
+        if order.fits_shape(&self.shape) {
+            let mut new_shape = [0; N];
+            let mut new_strides = [0; N];
+            for (idx, value) in order.data.iter().enumerate() {
+                new_shape[idx] = self.shape[*value];
+                new_strides[idx] = self.strides[*value];
+            }
+            self.shape = Shape::new(new_shape);
+            self.strides = Strides { data: new_strides };
+            Some(self)
+        } else {
+            None
+        }
     }
 
     fn is_contiguous(&self) -> bool {
@@ -113,6 +129,13 @@ struct Strides<const N: usize> {
     data: [usize; N],
 }
 
+impl<const N: usize> Index<usize> for Strides<N> {
+    type Output = usize;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
 impl<const N: usize> From<&Shape<N>> for Strides<N> {
     #[allow(clippy::needless_range_loop)]
     fn from(shape: &Shape<N>) -> Self {
@@ -149,6 +172,18 @@ impl<const N: usize> Index<usize> for Shape<N> {
     type Output = usize;
     fn index(&self, index: usize) -> &Self::Output {
         &self.data[index]
+    }
+}
+
+struct Order<const N: usize> {
+    data: [usize; N],
+}
+
+impl<const N: usize> Order<N> {
+    fn fits_shape(&self, shape: &Shape<N>) -> bool {
+        let s1: HashSet<_> = self.data.into_iter().collect();
+        let s2: HashSet<_> = (0..shape.size).collect();
+        s1 == s2
     }
 }
 
