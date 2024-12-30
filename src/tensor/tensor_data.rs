@@ -161,6 +161,14 @@ mod tests {
     proptest! {
         // TODO: find a way to have arbitrary const generics?
         #[test]
+        fn position_test(tensor_data in TensorData::<4>::arbitrary()) {
+            for idx in tensor_data.indices() {
+                let pos = tensor_data.position(idx);
+                assert!(pos < tensor_data.size());
+            }
+        }
+        
+        #[test]
         fn enumeration_test(tensor_data in TensorData::<4>::arbitrary()) {
             let indices: Vec<_> = tensor_data.indices().collect();
             let count = indices.len();
