@@ -18,7 +18,7 @@ impl<const N: usize> TensorData<N> {
         }
     }
 
-    fn position(&self, idx: Idx<N>) -> usize {
+    fn position(&self, idx: &Idx<N>) -> usize {
         idx.iter()
             .zip(self.strides.iter())
             .fold(0, |acc, (idx, stride)| acc + idx * stride)
@@ -47,7 +47,7 @@ impl<const N: usize> TensorData<N> {
     }
 
     fn permute(mut self, order: Order<N>) -> Option<Self> {
-        if order.fits_shape(&self.shape) {
+        if order.fits() {
             let mut new_shape = [0; N];
             let mut new_strides = [0; N];
             for (idx, value) in order.iter().enumerate() {
@@ -100,14 +100,19 @@ mod tests {
         // TODO: find a way to have arbitrary const generics?
 
         #[test]
-        fn permute_test(tensor_data in TensorData::<4>::arbitrary()) {
-
+        fn permute_test(tensor_data in TensorData::<4>::arbitrary(), idx in Idx::<4>::arbitrary()) {
+            let pos = tensor_data.position(&idx);
+            let order = Order::range().reverse();
+            let perm_opt = tensor_data.permute(order);
+            assert!(perm_opt.is_some());
+            let perm = perm_opt.unwrap();
+            assert_eq!(pos, perm.position(&idx));
         }
 
         #[test]
         fn position_test(tensor_data in TensorData::<4>::arbitrary()) {
             for idx in tensor_data.indices() {
-                let pos = tensor_data.position(idx);
+                let pos = tensor_data.position(&idx);
                 assert!(pos < tensor_data.size());
             }
         }
@@ -146,8 +151,8 @@ mod tests {
         let tensor = TensorData::new(data, shape, strides);
         assert!(tensor.is_contiguous());
         assert_eq!(Shape::new([3, 5]), tensor.shape);
-        assert_eq!(5, tensor.position(Idx::new([1, 0])));
-        assert_eq!(7, tensor.position(Idx::new([1, 2])));
+        assert_eq!(5, tensor.position(&Idx::new([1, 0])));
+        assert_eq!(7, tensor.position(&Idx::new([1, 2])));
     }
 
     #[test]
