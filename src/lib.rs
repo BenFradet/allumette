@@ -8,3 +8,4 @@ pub mod optim;
 pub mod scalar;
 pub mod tensor;
 pub mod train;
+pub mod util;
