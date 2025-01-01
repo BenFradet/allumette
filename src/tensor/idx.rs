@@ -1,4 +1,8 @@
+use proptest::{array, prelude::Strategy};
+
 use crate::util::const_iter::ConstIter;
+
+use super::shape::Shape;
 
 // all derives needed by the HashSet test
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -13,5 +17,11 @@ impl<const N: usize> Idx<N> {
 
     pub fn iter(&self) -> ConstIter<N> {
         ConstIter::new(&self.data)
+    }
+
+    pub fn arbitrary() -> impl Strategy<Value = Idx<N>> {
+        Shape::arbitrary()
+            .prop_flat_map(|shape: Shape<N>| array::uniform(0usize..shape.size))
+            .prop_map(Idx::new)
     }
 }

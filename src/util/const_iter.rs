@@ -5,10 +5,7 @@ pub struct ConstIter<'a, const N: usize> {
 
 impl<'a, const N: usize> ConstIter<'a, N> {
     pub fn new(data: &'a [usize; N]) -> Self {
-        Self {
-            data,
-            index: 0,
-        }
+        Self { data, index: 0 }
     }
 }
 
