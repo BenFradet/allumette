@@ -27,6 +27,7 @@ impl<const N: usize> Index<usize> for Strides<N> {
 }
 
 impl<const N: usize> From<&Shape<N>> for Strides<N> {
+    // TODO: fixme
     #[allow(clippy::needless_range_loop)]
     fn from(shape: &Shape<N>) -> Self {
         let mut res = [1; N];

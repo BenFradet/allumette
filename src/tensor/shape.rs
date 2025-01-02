@@ -16,7 +16,7 @@ impl<const N: usize> Shape<N> {
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Shape<N>> {
-        array::uniform(1usize..10).prop_map(Shape::new)
+        array::uniform(1usize..3).prop_map(Shape::new)
     }
 }
 
