@@ -52,11 +52,10 @@ impl<const N: usize> TensorData<N> {
             let mut new_strides = [0; N];
             for (idx, value) in order.iter().enumerate() {
                 new_shape[idx] = self.shape[value];
-                //new_strides[idx] = self.strides[value];
+                new_strides[idx] = self.strides[value];
             }
             self.shape = Shape::new(new_shape);
-            //self.strides = Strides::new(new_strides);
-            self.strides = (&self.shape).into();
+            self.strides = Strides::new(new_strides);
             Some(self)
         } else {
             None
@@ -97,38 +96,21 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn permute_manual() -> () {
-        let shape = Shape::new([2, 1, 2, 2]);
-        let strides = (&shape).into();
-        println!("strides: {:?}", strides);
-        //let ind = Idx::new([0, 0, 1, 1]);
-        let td = TensorData::new(vec![], shape, strides);
-        let order = Order::range().reverse();
-        let perm = td.permute(&order);
-        println!("perm: {:?}", perm);
-    }
-
     proptest! {
         // TODO: find a way to have arbitrary const generics?
 
         #[test]
         fn permute_test(tensor_data in TensorData::<4>::arbitrary(), idx in Idx::<4>::arbitrary()) {
+            let reversed_index = idx.clone().reverse();
             let pos = tensor_data.position(&idx);
             let order = Order::range().reverse();
-            println!("idx: {:?}", idx);
-            println!("orig: {:?}", tensor_data);
             let perm_opt = tensor_data.permute(&order);
             assert!(perm_opt.is_some());
             let perm = perm_opt.unwrap();
-            println!("perm: {:?}", perm);
-            assert_eq!(pos, perm.position(&idx));
+            assert_eq!(pos, perm.position(&reversed_index));
             let orig_opt = perm.permute(&order);
             assert!(orig_opt.is_some());
             let orig = orig_opt.unwrap();
-            println!("orig: {:?}", orig);
-            println!();
-
             assert_eq!(pos, orig.position(&idx));
         }
 

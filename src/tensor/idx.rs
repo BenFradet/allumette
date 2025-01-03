@@ -19,6 +19,11 @@ impl<const N: usize> Idx<N> {
         ConstIter::new(&self.data)
     }
 
+    pub fn reverse(mut self) -> Self {
+        self.data.reverse();
+        self
+    }
+
     pub fn arbitrary() -> impl Strategy<Value = Idx<N>> {
         Shape::arbitrary()
             .prop_flat_map(|shape: Shape<N>| array::uniform(0usize..shape.size))
