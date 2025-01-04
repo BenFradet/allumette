@@ -15,6 +15,22 @@ impl<const N: usize> Shape<N> {
         Self { data, size }
     }
 
+    // feature(generic_const_exprs)
+    // https://github.com/rust-lang/rust/issues/76560
+    // https://users.rust-lang.org/t/operations-on-const-generic-parameters-as-a-generic-parameter/78865/2
+    pub fn broadcast<const M: usize>(&self, other: &Shape<M>) -> Shape<{Self::max(M, N)}>
+    where [(); Self::max(M, N)]: {
+        let res = [0; Self::max(M, N)];
+        // N != M => padLeft with 1s
+        // ∀ y, y = f(1)
+        // ∀ x != 1, ¬∃ y = f(x)
+        Shape::new(res)
+    }
+
+    pub const fn max(x: usize, y: usize) -> usize {
+        if x < y { y } else { x }
+    }
+
     pub fn arbitrary() -> impl Strategy<Value = Shape<N>> {
         array::uniform(1usize..3).prop_map(Shape::new)
     }
