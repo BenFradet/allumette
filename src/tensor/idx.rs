@@ -19,15 +19,20 @@ impl<const N: usize> Idx<N> {
         ConstIter::new(&self.data)
     }
 
-    pub fn broadcast<const M: usize>(self, reference_shape: &Shape<M>) -> Idx<M> {
-        let offset = N - M;
-        let mut res = [0; M];
-        for i in 0..M {
-            if reference_shape[i] != 1 {
-                res[i] = self.data[offset + i]
+    // reduce self into smaller index
+    pub fn broadcast<const M: usize>(self, reference_shape: &Shape<M>) -> Option<Idx<M>> {
+        if N >= M {
+            let offset = N - M;
+            let mut res = [0; M];
+            for i in 0..M {
+                if reference_shape[i] != 1 {
+                    res[i] = self.data[offset + i]
+                }
             }
+            Some(Idx::new(res))
+        } else {
+            None
         }
-        Idx::new(res)
     }
 
     pub fn reverse(mut self) -> Self {
@@ -39,5 +44,25 @@ impl<const N: usize> Idx<N> {
         Shape::arbitrary()
             .prop_flat_map(|shape: Shape<N>| array::uniform(0usize..shape.size))
             .prop_map(Idx::new)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn broadcast_test() -> () {
+        let s = Shape::new([2, 3]);
+        let i = Idx::new([0, 0, 1]);
+        assert_eq!(Some(Idx::new([0, 1])), i.broadcast(&s));
+
+        let s = Shape::new([2, 3, 3]);
+        let i = Idx::new([0, 0, 1]);
+        assert_eq!(Some(Idx::new([0, 0, 1])), i.broadcast(&s));
+
+        let s = Shape::new([2, 3, 3, 4]);
+        let i = Idx::new([0, 0, 1]);
+        assert_eq!(None, i.broadcast(&s));
     }
 }
