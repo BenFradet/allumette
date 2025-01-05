@@ -19,6 +19,17 @@ impl<const N: usize> Idx<N> {
         ConstIter::new(&self.data)
     }
 
+    pub fn broadcast<const M: usize>(self, reference_shape: &Shape<M>) -> Idx<M> {
+        let offset = N - M;
+        let mut res = [0; M];
+        for i in 0..M {
+            if reference_shape[i] != 1 {
+                res[i] = self.data[offset + i]
+            }
+        }
+        Idx::new(res)
+    }
+
     pub fn reverse(mut self) -> Self {
         self.data.reverse();
         self
