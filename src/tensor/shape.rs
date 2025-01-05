@@ -27,6 +27,22 @@ impl<const N: usize> Shape<N> {
         Shape::new(res)
     }
 
+    pub fn pad_left<const M: usize>(self, cnst: usize) -> Shape<M> {
+        let mut res = [cnst; M];
+        if N < M {
+            let offset = M - N;
+            for i in offset..M {
+                let ni = i - offset;
+                res[i] = self.data[ni];
+            }
+        } else {
+            for i in 0..M {
+                res[i] = self.data[i];
+            }
+        }
+        Shape::new(res)
+    }
+
     pub const fn max(x: usize, y: usize) -> usize {
         if x < y { y } else { x }
     }
@@ -40,5 +56,29 @@ impl<const N: usize> Index<usize> for Shape<N> {
     type Output = usize;
     fn index(&self, index: usize) -> &Self::Output {
         &self.data[index]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn pad_left_test() -> () {
+        let s = Shape::new([1, 2, 1, 2]);
+        let pad = s.pad_left::<6>(0);
+        assert_eq!([0, 0, 1, 2, 1, 2], pad.data);
+
+        let s = Shape::new([]);
+        let pad = s.pad_left::<6>(0);
+        assert_eq!([0, 0, 0, 0, 0, 0], pad.data);
+
+        let s = Shape::new([1, 2, 1, 2]);
+        let pad = s.pad_left::<0>(0);
+        assert_eq!([0; 0], pad.data);
+
+        let s = Shape::new([1, 2, 3, 4]);
+        let pad = s.pad_left::<2>(0);
+        assert_eq!([1, 2], pad.data);
     }
 }
