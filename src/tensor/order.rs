@@ -19,7 +19,9 @@ impl<const N: usize> Order<N> {
 
     pub fn range() -> Self {
         // this should be safe
-        Self { data: (0..N).collect::<Vec<_>>().try_into().unwrap() }
+        Self {
+            data: (0..N).collect::<Vec<_>>().try_into().unwrap(),
+        }
     }
 
     pub fn reverse(mut self) -> Self {
