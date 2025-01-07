@@ -1,6 +1,6 @@
 use proptest::{collection, prelude::*};
 
-use super::{idx::Idx, order::Order, shape::Shape, strides::Strides};
+use super::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
 #[derive(Debug)]
 pub struct TensorData<const N: usize> {
