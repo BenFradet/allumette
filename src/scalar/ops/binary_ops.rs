@@ -1,5 +1,3 @@
-use crate::autodiff::context::Context;
-
 pub trait Binary {
     fn forward(&self, a: f64, b: f64) -> f64;
     // TODO: move to backward_a, backward_b
@@ -81,6 +79,8 @@ impl Binary for Eq {
 }
 
 use proptest::prelude::*;
+
+use crate::scalar::autodiff::context::Context;
 
 fn is_close(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-4

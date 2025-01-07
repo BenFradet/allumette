@@ -1,5 +1,3 @@
-use crate::autodiff::context::Context;
-
 // TODO: abstract over f64
 pub trait Unary {
     // need to have self otherwise can't be made into an object and can't dyn Unary
@@ -103,6 +101,8 @@ impl Unary for Exp {
 }
 
 use proptest::prelude::*;
+
+use crate::scalar::autodiff::context::Context;
 
 proptest! {
     #[test]

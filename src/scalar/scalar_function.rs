@@ -1,6 +1,6 @@
 use std::{fmt::Debug, rc::Rc};
 
-use crate::ops::{binary_ops::Binary, unary_ops::Unary};
+use super::ops::{binary_ops::Binary, unary_ops::Unary};
 
 // TODO: find a way to partial eq
 #[derive(Clone)]

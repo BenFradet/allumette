@@ -1,9 +1,6 @@
 use std::rc::Rc;
 
-use crate::{
-    ops::{binary_ops::Binary, unary_ops::Unary},
-    scalar::{scalar::Scalar, scalar_function::ScalarFunction, scalar_history::ScalarHistory},
-};
+use crate::scalar::{ops::{binary_ops::Binary, unary_ops::Unary}, scalar::Scalar, scalar_function::ScalarFunction, scalar_history::ScalarHistory};
 
 use super::context::Context;
 

@@ -1,4 +1,4 @@
-use allumette::{data::dataset::Dataset, train::train_scalar};
+use allumette::{data::dataset::Dataset, scalar::train::train_scalar};
 
 fn main() -> () {
     let pts = 10;
