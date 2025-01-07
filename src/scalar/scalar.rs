@@ -5,7 +5,15 @@ use std::{
 
 use rand::{thread_rng, Rng};
 
-use super::{autodiff::forward::Forward, ops::{binary_ops::{Add, Div, Eq, Lt, Mul}, unary_ops::{Exp, Ln, Neg, Relu, Sig}}, scalar_function::ScalarFunction, scalar_history::ScalarHistory};
+use super::{
+    autodiff::forward::Forward,
+    ops::{
+        binary_ops::{Add, Div, Eq, Lt, Mul},
+        unary_ops::{Exp, Ln, Neg, Relu, Sig},
+    },
+    scalar_function::ScalarFunction,
+    scalar_history::ScalarHistory,
+};
 
 // TODO: abstract over f64
 #[derive(Clone, Debug)]
@@ -244,7 +252,10 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::scalar::{autodiff::context::Context, ops::binary_ops::Binary, scalar_function::ScalarFunction, scalar_history::ScalarHistory};
+    use crate::scalar::{
+        autodiff::context::Context, ops::binary_ops::Binary, scalar_function::ScalarFunction,
+        scalar_history::ScalarHistory,
+    };
 
     struct F1;
     impl Binary for F1 {
