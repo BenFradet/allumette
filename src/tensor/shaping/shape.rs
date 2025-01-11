@@ -15,6 +15,10 @@ impl<const N: usize> Shape<N> {
         Self { data, size }
     }
 
+    pub fn data(&self) -> &[usize; N] {
+        &self.data
+    }
+
     // feature(generic_const_exprs)
     // https://github.com/rust-lang/rust/issues/76560
     // https://users.rust-lang.org/t/operations-on-const-generic-parameters-as-a-generic-parameter/78865/2

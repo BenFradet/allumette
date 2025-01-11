@@ -2,4 +2,3 @@
 pub mod ops;
 pub mod shaping;
 pub mod tensor;
-pub mod tensor_data;

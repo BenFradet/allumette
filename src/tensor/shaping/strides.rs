@@ -4,7 +4,7 @@ use crate::util::const_iter::ConstIter;
 
 use super::shape::Shape;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Strides<const N: usize> {
     data: [usize; N],
 }
