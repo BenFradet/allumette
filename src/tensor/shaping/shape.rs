@@ -2,6 +2,8 @@ use std::ops::Index;
 
 use proptest::{array, prelude::Strategy};
 
+use crate::util::max::max;
+
 // Clone needed by proptest's Just
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shape<const N: usize> {
@@ -24,16 +26,16 @@ impl<const N: usize> Shape<N> {
     // https://users.rust-lang.org/t/operations-on-const-generic-parameters-as-a-generic-parameter/78865/2
     // https://hackmd.io/OZG_XiLFRs2Xmw5s39jRzA
     // "[(); Self::max(M, N)]:" const well-formed bound
-    pub fn broadcast<const M: usize>(self, other: Shape<M>) -> Option<Shape<{ Self::max(M, N) }>>
+    pub fn broadcast<const M: usize>(self, other: Shape<M>) -> Option<Shape<{ max(M, N) }>>
     where
-        [(); Self::max(M, N)]:,
+        [(); max(M, N)]:,
     {
-        let padded_n = self.pad_left::<{ Self::max(M, N) }>(1);
-        let padded_m = other.pad_left::<{ Self::max(M, N) }>(1);
-        let mut res = [0; Self::max(M, N)];
+        let padded_n = self.pad_left::<{ max(M, N) }>(1);
+        let padded_m = other.pad_left::<{ max(M, N) }>(1);
+        let mut res = [0; max(M, N)];
         let mut flag = false;
 
-        for i in 0..Self::max(M, N) {
+        for i in 0..max(M, N) {
             let n = padded_n[i];
             let m = padded_m[i];
             if n == 1 {
@@ -72,14 +74,6 @@ impl<const N: usize> Shape<N> {
             res[..M].copy_from_slice(&self.data[..M]);
         }
         Shape::new(res)
-    }
-
-    pub const fn max(x: usize, y: usize) -> usize {
-        if x < y {
-            y
-        } else {
-            x
-        }
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Shape<N>> {

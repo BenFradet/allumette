@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use proptest::{collection, prelude::*};
 
-use super::{ops::tensor_ops::TensorOps, shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides}};
+use crate::util::max::max;
+
+use super::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
 #[derive(Debug)]
 pub struct Tensor<const N: usize> {
@@ -18,6 +20,30 @@ impl<const N: usize> Tensor<N> {
             shape,
             strides,
         }
+    }
+
+    // TODO: we could do without any broadcasting as this is an endomorphism
+    fn map(&self, f: impl Fn(f64) -> f64) -> Self {
+        let len = self.data.len();
+        let mut out = Vec::with_capacity(len);
+        // TODO: add an iterator
+        for i in 0..len {
+            let idx = self.index(i);
+            let value = self.data[self.position(&idx)];
+            let broadcast_idx = idx.broadcast(&self.shape).unwrap();
+            let new_position = self.position(&broadcast_idx);
+            out[new_position] = f(value);
+        }
+        // cloning of stack-allocated arrays should be cheap
+        Tensor::new(out, self.shape.clone(), self.strides.clone())
+    }
+
+    // feature(generic_const_exprs)
+    fn zip<const M: usize>(&self, other: Tensor<M>, f: impl Fn(f64, f64) -> f64) -> Option<Tensor<{ max(M, N) }>>
+    where
+        [(); max(M, N)]:,
+    {
+        None
     }
 
     pub fn position(&self, idx: &Idx<N>) -> usize {
@@ -89,26 +115,6 @@ impl<const N: usize> Tensor<N> {
                 let strides: Strides<N> = (&shape).into();
                 Tensor::new(data, shape, strides)
             })
-    }
-}
-
-impl<const N: usize> TensorOps for Tensor<N> {
-    type Placeholder = Tensor<N>;
-
-    // this doesn't consider different shapes or strides
-    fn map(t: &Self::Placeholder, f: impl Fn(f64) -> f64) -> Self::Placeholder {
-        let len = t.data.len();
-        let mut out = Vec::with_capacity(len);
-        for i in 0..len {
-            let idx = t.index(i);
-            let value = t.data[t.position(&idx)];
-            // TODO: rm unwrap
-            let broadcast_idx = idx.broadcast(&t.shape).unwrap();
-            let new_position = t.position(&broadcast_idx);
-            out[new_position] = f(value);
-        }
-        // cloning of stack-allocated arrays should be cheap
-        Tensor::new(out, t.shape.clone(), t.strides.clone())
     }
 }
 
