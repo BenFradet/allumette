@@ -40,7 +40,11 @@ impl<const N: usize> Tensor<N> {
     }
 
     // feature(generic_const_exprs)
-    fn zip<const M: usize>(&self, other: Tensor<M>, f: impl Fn(f64, f64) -> f64) -> Option<Tensor<{ max(M, N) }>>
+    fn zip<const M: usize>(
+        &self,
+        other: Tensor<M>,
+        f: impl Fn(f64, f64) -> f64,
+    ) -> Option<Tensor<{ max(M, N) }>>
     where
         [(); max(M, N)]:,
     {
