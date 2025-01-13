@@ -28,11 +28,12 @@ impl<const N: usize> Tensor<N> {
         let mut out = Vec::with_capacity(len);
         // TODO: add an iterator
         for i in 0..len {
-            let idx = self.index(i);
-            let value = self.data[self.position(&idx)];
-            let broadcast_idx = idx.broadcast(&self.shape).unwrap();
-            let new_position = self.position(&broadcast_idx);
-            out[new_position] = f(value);
+            let idx = self.strides.idx(i);
+            let pos = self.strides.position(&idx);
+            let value = self.data[pos];
+            let to_idx = idx.broadcast(&self.shape).unwrap();
+            let to_pos = self.strides.position(&to_idx);
+            out[to_pos] = f(value);
         }
         // cloning of stack-allocated arrays should be cheap
         Tensor::new(out, self.shape.clone(), self.strides.clone())
@@ -43,35 +44,31 @@ impl<const N: usize> Tensor<N> {
     where
         [(); max(M, N)]:,
     {
-        None
+        let shape = self.shape.broadcast(&other.shape)?;
+        let strides: Strides<_> = (&shape).into();
+        let len = shape.size;
+        let mut out = Vec::with_capacity(len);
+        for i in 0..len {
+            let idx = strides.idx(i);
+            let idxa = idx.broadcast(&self.shape)?;
+            let idxb = idx.broadcast(&other.shape)?;
+            let posa = self.strides.position(&idxa);
+            let posb = other.strides.position(&idxb);
+            let va = self.data[posa];
+            let vb = other.data[posb];
+            let pos = strides.position(&idx);
+            out[pos] = f(va, vb);
+        }
+        Some(Tensor::new(out, shape, strides))
     }
 
-    pub fn position(&self, idx: &Idx<N>) -> usize {
-        idx.iter()
-            .zip(self.strides.iter())
-            .fold(0, |acc, (idx, stride)| acc + idx * stride)
-    }
-
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.shape.size
     }
 
-    #[allow(clippy::needless_range_loop)]
-    pub fn index(&self, pos: usize) -> Idx<N> {
-        let mut res = [1; N];
-        let mut mut_pos = pos;
-        for i in 0..N {
-            let s = self.strides[i];
-            let idx = mut_pos / s;
-            mut_pos -= idx * s;
-            res[i] = idx;
-        }
-        Idx::new(res)
-    }
-
     // TODO: look into use<'_, N>
-    fn indices(&self) -> impl Iterator<Item = Idx<N>> + use<'_, N> {
-        (0..self.size()).map(|i| self.index(i))
+    pub fn indices(&self) -> impl Iterator<Item = Idx<N>> + use<'_, N> {
+        (0..self.size()).map(|i| self.strides.idx(i))
     }
 
     fn permute(mut self, order: &Order<N>) -> Option<Self> {
@@ -104,7 +101,7 @@ impl<const N: usize> Tensor<N> {
         res.0
     }
 
-    fn arbitrary() -> impl Strategy<Value = Tensor<N>> {
+    pub fn arbitrary() -> impl Strategy<Value = Tensor<N>> {
         Shape::arbitrary()
             .prop_flat_map(|shape| {
                 let size = shape.size;
@@ -130,24 +127,16 @@ mod tests {
         #[test]
         fn permute_test(tensor_data in Tensor::<4>::arbitrary(), idx in Idx::<4>::arbitrary()) {
             let reversed_index = idx.clone().reverse();
-            let pos = tensor_data.position(&idx);
+            let pos = tensor_data.strides.position(&idx);
             let order = Order::range().reverse();
             let perm_opt = tensor_data.permute(&order);
             assert!(perm_opt.is_some());
             let perm = perm_opt.unwrap();
-            assert_eq!(pos, perm.position(&reversed_index));
+            assert_eq!(pos, perm.strides.position(&reversed_index));
             let orig_opt = perm.permute(&order);
             assert!(orig_opt.is_some());
             let orig = orig_opt.unwrap();
-            assert_eq!(pos, orig.position(&idx));
-        }
-
-        #[test]
-        fn position_test(tensor_data in Tensor::<4>::arbitrary()) {
-            for idx in tensor_data.indices() {
-                let pos = tensor_data.position(&idx);
-                assert!(pos < tensor_data.size());
-            }
+            assert_eq!(pos, orig.strides.position(&idx));
         }
 
         #[test]
@@ -184,8 +173,8 @@ mod tests {
         let tensor = Tensor::new(data, shape, strides);
         assert!(tensor.is_contiguous());
         assert_eq!(Shape::new([3, 5]), tensor.shape);
-        assert_eq!(5, tensor.position(&Idx::new([1, 0])));
-        assert_eq!(7, tensor.position(&Idx::new([1, 2])));
+        assert_eq!(5, tensor.strides.position(&Idx::new([1, 0])));
+        assert_eq!(7, tensor.strides.position(&Idx::new([1, 2])));
     }
 
     #[test]

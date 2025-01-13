@@ -20,7 +20,7 @@ impl<const N: usize> Idx<N> {
     }
 
     // reduce self into smaller index
-    pub fn broadcast<const M: usize>(self, reference_shape: &Shape<M>) -> Option<Idx<M>> {
+    pub fn broadcast<const M: usize>(&self, reference_shape: &Shape<M>) -> Option<Idx<M>> {
         if N >= M {
             let offset = N - M;
             let mut res = [0; M];

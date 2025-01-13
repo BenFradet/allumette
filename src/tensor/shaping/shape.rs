@@ -26,7 +26,7 @@ impl<const N: usize> Shape<N> {
     // https://users.rust-lang.org/t/operations-on-const-generic-parameters-as-a-generic-parameter/78865/2
     // https://hackmd.io/OZG_XiLFRs2Xmw5s39jRzA
     // "[(); Self::max(M, N)]:" const well-formed bound
-    pub fn broadcast<const M: usize>(self, other: Shape<M>) -> Option<Shape<{ max(M, N) }>>
+    pub fn broadcast<const M: usize>(&self, other: &Shape<M>) -> Option<Shape<{ max(M, N) }>>
     where
         [(); max(M, N)]:,
     {
@@ -61,7 +61,7 @@ impl<const N: usize> Shape<N> {
         }
     }
 
-    pub fn pad_left<const M: usize>(self, cnst: usize) -> Shape<M> {
+    pub fn pad_left<const M: usize>(&self, cnst: usize) -> Shape<M> {
         // TODO: can't do if N == M self because compiler doesn't know that
         let mut res = [cnst; M];
         if N < M {
@@ -96,35 +96,35 @@ mod tests {
     fn broadcast_test() -> () {
         let s1 = Shape::new([2, 3, 1]);
         let s2 = Shape::new([7, 2, 3, 5]);
-        assert_eq!(Some(Shape::new([7, 2, 3, 5])), s1.broadcast(s2));
+        assert_eq!(Some(Shape::new([7, 2, 3, 5])), s1.broadcast(&s2));
 
         let s1 = Shape::new([1]);
         let s2 = Shape::new([5, 5]);
-        assert_eq!(Some(Shape::new([5, 5])), s1.broadcast(s2));
+        assert_eq!(Some(Shape::new([5, 5])), s1.broadcast(&s2));
 
         let s1 = Shape::new([5, 5]);
         let s2 = Shape::new([1]);
-        assert_eq!(Some(Shape::new([5, 5])), s1.broadcast(s2));
+        assert_eq!(Some(Shape::new([5, 5])), s1.broadcast(&s2));
 
         let s1 = Shape::new([1, 5, 5]);
         let s2 = Shape::new([5, 5]);
-        assert_eq!(Some(Shape::new([1, 5, 5])), s1.broadcast(s2));
+        assert_eq!(Some(Shape::new([1, 5, 5])), s1.broadcast(&s2));
 
         let s1 = Shape::new([5, 1, 5, 1]);
         let s2 = Shape::new([1, 5, 1, 5]);
-        assert_eq!(Some(Shape::new([5, 5, 5, 5])), s1.broadcast(s2));
+        assert_eq!(Some(Shape::new([5, 5, 5, 5])), s1.broadcast(&s2));
 
         let s1 = Shape::new([5, 7, 5, 1]);
         let s2 = Shape::new([1, 5, 1, 5]);
-        assert_eq!(None, s1.broadcast(s2));
+        assert_eq!(None, s1.broadcast(&s2));
 
         let s1 = Shape::new([5, 2]);
         let s2 = Shape::new([5]);
-        assert_eq!(None, s1.broadcast(s2));
+        assert_eq!(None, s1.broadcast(&s2));
 
         let s1 = Shape::new([2, 5]);
         let s2 = Shape::new([5]);
-        assert_eq!(Some(Shape::new([2, 5])), s1.broadcast(s2));
+        assert_eq!(Some(Shape::new([2, 5])), s1.broadcast(&s2));
     }
 
     #[test]
