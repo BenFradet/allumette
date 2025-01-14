@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use proptest::{collection, prelude::*};
 
-use crate::util::max::max;
+use crate::util::{type_if::{TypeIf, TypeTrue}, max::max};
 
 use super::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
@@ -64,6 +64,12 @@ impl<const N: usize> Tensor<N> {
             out[pos] = f(va, vb);
         }
         Some(Tensor::new(out, shape, strides))
+    }
+
+    fn reduce<const M: usize>(&self, f: impl Fn(f64, f64) -> f64) -> Tensor<N>
+    where TypeIf<{ M <= N }>: TypeTrue,
+    {
+        todo!()
     }
 
     pub fn size(&self) -> usize {
