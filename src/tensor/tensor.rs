@@ -22,6 +22,16 @@ impl<const N: usize> Tensor<N> {
         }
     }
 
+    fn zeros(shape: Shape<N>) -> Self {
+        let data = vec![0.; shape.size];
+        let strides = (&shape).into();
+        Tensor {
+            data: Arc::new(data),
+            shape,
+            strides,
+        }
+    }
+
     // TODO: we could do without any broadcasting as this is an endomorphism
     fn map(mut self, f: impl Fn(f64) -> f64) -> Self {
         let len = self.data.len();
@@ -151,6 +161,13 @@ mod tests {
 
     proptest! {
         // TODO: find a way to have arbitrary const generics?
+
+        #[test]
+        fn zeros_test(shape in Shape::<4>::arbitrary()) {
+            let zeros = Tensor::zeros(shape.clone());
+            assert_eq!(shape.size, zeros.data.len());
+            assert!(zeros.data.iter().all(|f| *f == 0.));
+        }
 
         #[test]
         fn permute_test(tensor_data in Tensor::<4>::arbitrary(), idx in Idx::<4>::arbitrary()) {
