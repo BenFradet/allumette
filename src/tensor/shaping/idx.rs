@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 use proptest::{array, prelude::Strategy};
 
 use crate::util::const_iter::ConstIter;
@@ -44,6 +46,19 @@ impl<const N: usize> Idx<N> {
         Shape::arbitrary()
             .prop_flat_map(|shape: Shape<N>| array::uniform(0usize..shape.size))
             .prop_map(Idx::new)
+    }
+}
+
+impl<const N: usize> IndexMut<usize> for Idx<N> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.data[index]
+    }
+}
+
+impl<const N: usize> Index<usize> for Idx<N> {
+    type Output = usize;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
     }
 }
 

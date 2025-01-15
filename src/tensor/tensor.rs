@@ -67,9 +67,27 @@ impl<const N: usize> Tensor<N> {
     }
 
     fn reduce<const M: usize>(&self, f: impl Fn(f64, f64) -> f64) -> Tensor<N>
-    where TypeIf<{ M <= N }>: TypeTrue,
+    where TypeIf<{ M < N }>: TypeTrue,
     {
-        todo!()
+        let mut shape_data = self.shape.data().clone();
+        shape_data[M] = 1;
+        let shape = Shape::new(shape_data);
+        let strides: Strides<_> = (&shape).into();
+        let len = shape.size;
+        let mut out = Vec::with_capacity(len);
+        for i in 0..len {
+            let out_idx = strides.idx(i);
+            let out_pos = strides.position(&out_idx);
+            for j in 0..self.shape[M] {
+                let mut self_idx = out_idx.clone();
+                self_idx[M] = j;
+                let self_pos = self.strides.position(&self_idx);
+                let v_out = out[out_pos];
+                let v_self = self.data[self_pos];
+                out[out_pos] = f(v_out, v_self);
+            }
+        }
+        Tensor::new(out, shape, strides)
     }
 
     pub fn size(&self) -> usize {
