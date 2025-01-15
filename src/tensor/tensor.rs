@@ -23,7 +23,7 @@ impl<const N: usize> Tensor<N> {
     }
 
     // TODO: we could do without any broadcasting as this is an endomorphism
-    fn map(&self, f: impl Fn(f64) -> f64) -> Self {
+    fn map(mut self, f: impl Fn(f64) -> f64) -> Self {
         let len = self.data.len();
         let mut out = Vec::with_capacity(len);
         // TODO: add an iterator
@@ -35,8 +35,8 @@ impl<const N: usize> Tensor<N> {
             let to_pos = self.strides.position(&to_idx);
             out[to_pos] = f(value);
         }
-        // cloning of stack-allocated arrays should be cheap
-        Tensor::new(out, self.shape.clone(), self.strides.clone())
+        self.data = Arc::new(out);
+        self
     }
 
     // feature(generic_const_exprs)
