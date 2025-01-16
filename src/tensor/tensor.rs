@@ -32,11 +32,20 @@ impl<const N: usize> Tensor<N> {
         }
     }
 
-    // TODO: we could do without any broadcasting as this is an endomorphism
     fn map(mut self, f: impl Fn(f64) -> f64) -> Self {
-        let len = self.data.len();
-        let mut out = Vec::with_capacity(len);
+        let len = self.size();
+        let mut out = vec![0.; len];
         // TODO: add an iterator
+        for i in 0..len {
+            out[i] = f(self.data[i]);
+        }
+        self.data = Arc::new(out);
+        self
+    }
+
+    fn map_(mut self, f: impl Fn(f64) -> f64) -> Self {
+        let len = self.size();
+        let mut out = vec![0.; len];
         for i in 0..len {
             let idx = self.strides.idx(i);
             let pos = self.strides.position(&idx);
@@ -61,7 +70,7 @@ impl<const N: usize> Tensor<N> {
         let shape = self.shape.broadcast(&other.shape)?;
         let strides: Strides<_> = (&shape).into();
         let len = shape.size;
-        let mut out = Vec::with_capacity(len);
+        let mut out = vec![0.; len];
         for i in 0..len {
             let idx = strides.idx(i);
             let idxa = idx.broadcast(&self.shape)?;
@@ -84,7 +93,7 @@ impl<const N: usize> Tensor<N> {
         let shape = Shape::new(shape_data);
         let strides: Strides<_> = (&shape).into();
         let len = shape.size;
-        let mut out = Vec::with_capacity(len);
+        let mut out = vec![0.; len];
         for i in 0..len {
             let out_idx = strides.idx(i);
             let out_pos = strides.position(&out_idx);
@@ -161,6 +170,17 @@ mod tests {
 
     proptest! {
         // TODO: find a way to have arbitrary const generics?
+
+        #[test]
+        fn map_test(shape in Shape::<4>::arbitrary(), f in -1_f64..1.) {
+            let map_ = Tensor::zeros(shape.clone()).map_(|z| z + f);
+            assert_eq!(shape.size, map_.data.len());
+            assert!(map_.data.iter().all(|e| *e == f));
+            let map = Tensor::zeros(shape.clone()).map(|z| z + f);
+            assert_eq!(shape.size, map.data.len());
+            assert!(map.data.iter().all(|e| *e == f));
+        }
+        
 
         #[test]
         fn zeros_test(shape in Shape::<4>::arbitrary()) {
