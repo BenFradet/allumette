@@ -36,8 +36,8 @@ impl<const N: usize> Tensor<N> {
         let len = self.size();
         let mut out = vec![0.; len];
         // TODO: add an iterator
-        for i in 0..len {
-            out[i] = f(self.data[i]);
+        for (i, d) in self.data.iter().enumerate() {
+            out[i] = f(*d);
         }
         self.data = Arc::new(out);
         self
