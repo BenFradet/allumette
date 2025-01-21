@@ -263,7 +263,7 @@ mod tests {
             a + b + 10.
         }
 
-        fn backward(&self, _ctx: &Context, d: f64) -> (f64, f64) {
+        fn backward(&self, _ctx: &Context<f64>, d: f64) -> (f64, f64) {
             (d, d)
         }
     }
@@ -274,7 +274,7 @@ mod tests {
             a * b + a
         }
 
-        fn backward(&self, ctx: &Context, d: f64) -> (f64, f64) {
+        fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64) {
             let vs = &ctx.saved_values;
             let a = vs.first().unwrap_or(&1.);
             let b = vs.get(1).unwrap_or(&1.);

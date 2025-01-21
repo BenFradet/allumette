@@ -1,12 +1,10 @@
-// TODO: abstract over f64
-// TODO: if no other use, convert saved_values to (v1, v2)
 #[derive(Clone, Debug, PartialEq)]
-pub struct Context {
+pub struct Context<E> {
     pub grad: bool,
-    pub saved_values: Vec<f64>,
+    pub saved_values: Vec<E>,
 }
 
-impl Default for Context {
+impl<E> Default for Context<E> {
     fn default() -> Self {
         Self {
             grad: true,
@@ -15,15 +13,15 @@ impl Default for Context {
     }
 }
 
-impl Context {
-    fn new(grad: bool, values: &[f64]) -> Self {
+impl<E: Clone> Context<E> {
+    fn new(grad: bool, values: &[E]) -> Self {
         Self {
             grad,
             saved_values: values.to_vec(),
         }
     }
 
-    fn update(mut self, values: &[f64]) -> Self {
+    fn update(mut self, values: &[E]) -> Self {
         if self.grad {
             self.saved_values = values.to_vec();
             self
@@ -32,7 +30,7 @@ impl Context {
         }
     }
 
-    pub fn push(mut self, value: f64) -> Self {
+    pub fn push(mut self, value: E) -> Self {
         self.saved_values.push(value);
         self
     }

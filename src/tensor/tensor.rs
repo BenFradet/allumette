@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use proptest::{collection, prelude::*};
 
-use crate::util::{type_if::{TypeIf, TypeTrue}, max::max};
+use crate::util::{
+    max::max,
+    type_if::{TypeIf, TypeTrue},
+};
 
 use super::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
@@ -86,9 +89,10 @@ impl<const N: usize> Tensor<N> {
     }
 
     fn reduce<const M: usize>(&self, f: impl Fn(f64, f64) -> f64) -> Tensor<N>
-    where TypeIf<{ M < N }>: TypeTrue,
+    where
+        TypeIf<{ M < N }>: TypeTrue,
     {
-        let mut shape_data = self.shape.data().clone();
+        let mut shape_data = *self.shape.data();
         shape_data[M] = 1;
         let shape = Shape::new(shape_data);
         let strides: Strides<_> = (&shape).into();
@@ -180,7 +184,7 @@ mod tests {
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
         }
-        
+
 
         #[test]
         fn zeros_test(shape in Shape::<4>::arbitrary()) {

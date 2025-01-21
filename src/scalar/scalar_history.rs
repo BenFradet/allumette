@@ -3,7 +3,7 @@ use super::{autodiff::context::Context, scalar::Scalar, scalar_function::ScalarF
 #[derive(Clone, Debug, Default)]
 pub struct ScalarHistory {
     pub last_fn: Option<ScalarFunction>,
-    pub ctx: Context,
+    pub ctx: Context<f64>,
     pub inputs: Vec<Scalar>,
 }
 
@@ -18,7 +18,7 @@ impl ScalarHistory {
         self
     }
 
-    pub fn context(mut self, c: Context) -> Self {
+    pub fn context(mut self, c: Context<f64>) -> Self {
         self.ctx = c;
         self
     }

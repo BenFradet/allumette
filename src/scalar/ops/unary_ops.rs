@@ -3,7 +3,7 @@ pub trait Unary {
     // need to have self otherwise can't be made into an object and can't dyn Unary
     fn forward(&self, a: f64) -> f64;
     // TODO: remove ctx
-    fn backward(&self, ctx: &Context, d: f64) -> f64;
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64;
 }
 
 pub struct Ln;
@@ -16,7 +16,7 @@ impl Unary for Ln {
         }
     }
 
-    fn backward(&self, ctx: &Context, d: f64) -> f64 {
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
         let vs = &ctx.saved_values;
         let a = vs.first().filter(|v| **v != 0.).unwrap_or(&1.);
         d / a
@@ -33,7 +33,7 @@ impl Unary for Inv {
         }
     }
 
-    fn backward(&self, ctx: &Context, d: f64) -> f64 {
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
         let vs = &ctx.saved_values;
         let a = vs.first().filter(|v| **v != 0.).unwrap_or(&1.);
         (-1. / (a.powf(2.))) * d
@@ -46,7 +46,7 @@ impl Unary for Neg {
         -a
     }
 
-    fn backward(&self, _ctx: &Context, d: f64) -> f64 {
+    fn backward(&self, _ctx: &Context<f64>, d: f64) -> f64 {
         -d
     }
 }
@@ -62,7 +62,7 @@ impl Unary for Sig {
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
-    fn backward(&self, ctx: &Context, d: f64) -> f64 {
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
         let vs = &ctx.saved_values;
         let a = vs.first().unwrap_or(&0.);
         let sig_a = self.forward(*a);
@@ -76,7 +76,7 @@ impl Unary for Relu {
         a.max(0.)
     }
 
-    fn backward(&self, ctx: &Context, d: f64) -> f64 {
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
         let vs = &ctx.saved_values;
         let a = vs.first().unwrap_or(&0.);
         if a > &0. {
@@ -93,7 +93,7 @@ impl Unary for Exp {
         a.exp()
     }
 
-    fn backward(&self, ctx: &Context, d: f64) -> f64 {
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
         let vs = &ctx.saved_values;
         let a = vs.first().unwrap_or(&0.);
         a.exp() * d

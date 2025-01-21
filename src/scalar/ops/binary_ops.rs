@@ -2,7 +2,7 @@ pub trait Binary {
     fn forward(&self, a: f64, b: f64) -> f64;
     // TODO: move to backward_a, backward_b
     // TODO: remove ctx
-    fn backward(&self, ctx: &Context, d: f64) -> (f64, f64);
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64);
 }
 
 pub struct Add;
@@ -11,7 +11,7 @@ impl Binary for Add {
         a + b
     }
 
-    fn backward(&self, _ctx: &Context, d: f64) -> (f64, f64) {
+    fn backward(&self, _ctx: &Context<f64>, d: f64) -> (f64, f64) {
         (d, d)
     }
 }
@@ -22,7 +22,7 @@ impl Binary for Mul {
         a * b
     }
 
-    fn backward(&self, ctx: &Context, d: f64) -> (f64, f64) {
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64) {
         let vs = &ctx.saved_values;
         let a = vs.first().unwrap_or(&1.);
         let b = vs.get(1).unwrap_or(&1.);
@@ -40,7 +40,7 @@ impl Binary for Div {
         }
     }
 
-    fn backward(&self, ctx: &Context, d: f64) -> (f64, f64) {
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64) {
         let vs = &ctx.saved_values;
         let a = vs.first().unwrap_or(&1.);
         let b = vs.get(1).filter(|v| **v != 0.).unwrap_or(&1.);
@@ -58,7 +58,7 @@ impl Binary for Lt {
         }
     }
 
-    fn backward(&self, _ctx: &Context, _d: f64) -> (f64, f64) {
+    fn backward(&self, _ctx: &Context<f64>, _d: f64) -> (f64, f64) {
         (0., 0.)
     }
 }
@@ -73,7 +73,7 @@ impl Binary for Eq {
         }
     }
 
-    fn backward(&self, _ctx: &Context, _d: f64) -> (f64, f64) {
+    fn backward(&self, _ctx: &Context<f64>, _d: f64) -> (f64, f64) {
         (0., 0.)
     }
 }
@@ -128,23 +128,20 @@ proptest! {
         let f = div.forward(a, b);
         if b == 0. {
             assert_eq!(f, 0.);
+        } else if f.abs() == f64::INFINITY {
+
+            assert_eq!((a / b).abs(), f64::INFINITY);
         } else {
-            if f.abs() == f64::INFINITY {
-                assert_eq!((a / b).abs(), f64::INFINITY);
-            } else {
-                assert!(is_close(a / b, f));
-            }
+            assert!(is_close(a / b, f));
         }
         let ctx2 = ctx.push(a).push(b);
         let back = div.backward(&ctx2, d);
         if b == 0. {
             assert_eq!(d, back.0);
+        } else if back.0.abs() == f64::INFINITY {
+            assert_eq!((d / b).abs(), f64::INFINITY);
         } else {
-            if back.0.abs() == f64::INFINITY {
-                assert_eq!((d / b).abs(), f64::INFINITY);
-            } else {
-                assert!(is_close(d / b, back.0));
-            }
+            assert!(is_close(d / b, back.0));
         }
         if back.1.abs() == f64::INFINITY {
             assert_eq!((a * d).abs(), f64::INFINITY);
