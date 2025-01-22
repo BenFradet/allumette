@@ -1,5 +1,6 @@
 use crate::scalar::scalar::Scalar;
 
+// TODO: abstract over scalar
 #[derive(Clone, Debug)]
 pub struct Parameter {
     pub name: String,

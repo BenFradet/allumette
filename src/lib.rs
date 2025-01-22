@@ -5,6 +5,7 @@
 pub mod autodiff;
 pub mod data;
 pub mod hof;
+pub mod module;
 pub mod optim;
 pub mod scalar;
 pub mod tensor;
