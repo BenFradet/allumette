@@ -1,12 +1,5 @@
-pub trait Binary {
-    fn forward(&self, a: f64, b: f64) -> f64;
-    // TODO: move to backward_a, backward_b
-    // TODO: remove ctx
-    fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64);
-}
-
 pub struct Add;
-impl Binary for Add {
+impl Binary<f64> for Add {
     fn forward(&self, a: f64, b: f64) -> f64 {
         a + b
     }
@@ -17,7 +10,7 @@ impl Binary for Add {
 }
 
 pub struct Mul;
-impl Binary for Mul {
+impl Binary<f64> for Mul {
     fn forward(&self, a: f64, b: f64) -> f64 {
         a * b
     }
@@ -31,7 +24,7 @@ impl Binary for Mul {
 }
 
 pub struct Div;
-impl Binary for Div {
+impl Binary<f64> for Div {
     fn forward(&self, a: f64, b: f64) -> f64 {
         if b == 0. {
             0.
@@ -49,7 +42,7 @@ impl Binary for Div {
 }
 
 pub struct Lt;
-impl Binary for Lt {
+impl Binary<f64> for Lt {
     fn forward(&self, a: f64, b: f64) -> f64 {
         if a < b {
             1.
@@ -64,7 +57,7 @@ impl Binary for Lt {
 }
 
 pub struct Eq;
-impl Binary for Eq {
+impl Binary<f64> for Eq {
     fn forward(&self, a: f64, b: f64) -> f64 {
         if a == b {
             1.
@@ -80,7 +73,7 @@ impl Binary for Eq {
 
 use proptest::prelude::*;
 
-use crate::autodiff::context::Context;
+use crate::{autodiff::context::Context, function::binary::Binary};
 
 fn is_close(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-4

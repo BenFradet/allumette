@@ -1,16 +1,16 @@
 use std::{fmt::Debug, rc::Rc};
 
-use super::ops::{binary_ops::Binary, unary_ops::Unary};
+use super::{binary::Binary, unary::Unary};
 
 // TODO: find a way to partial eq
 #[derive(Clone)]
-pub enum ScalarFunction {
-    U(Rc<dyn Unary>),
-    B(Rc<dyn Binary>),
+pub enum Function<A> {
+    U(Rc<dyn Unary<A>>),
+    B(Rc<dyn Binary<A>>),
 }
 
 // TODO: find a way to debug
-impl Debug for ScalarFunction {
+impl<A> Debug for Function<A> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::U(_) => write!(f, "Unary: ???"),

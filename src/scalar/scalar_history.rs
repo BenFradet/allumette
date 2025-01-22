@@ -1,16 +1,16 @@
-use crate::autodiff::context::Context;
+use crate::{autodiff::context::Context, function::function::Function};
 
-use super::{scalar::Scalar, scalar_function::ScalarFunction};
+use super::scalar::Scalar;
 
 #[derive(Clone, Debug, Default)]
 pub struct ScalarHistory {
-    pub last_fn: Option<ScalarFunction>,
+    pub last_fn: Option<Function<f64>>,
     pub ctx: Context<f64>,
     pub inputs: Vec<Scalar>,
 }
 
 impl ScalarHistory {
-    pub fn last_fn(mut self, f: ScalarFunction) -> Self {
+    pub fn last_fn(mut self, f: Function<f64>) -> Self {
         self.last_fn = Some(f);
         self
     }

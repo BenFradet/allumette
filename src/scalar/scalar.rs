@@ -10,10 +10,9 @@ use super::{
         binary_ops::{Add, Div, Eq, Lt, Mul},
         unary_ops::{Exp, Ln, Neg, Relu, Sig},
     },
-    scalar_function::ScalarFunction,
     scalar_history::ScalarHistory,
 };
-use crate::autodiff::forward::Forward;
+use crate::{autodiff::forward::Forward, function::function::Function};
 
 // TODO: abstract over f64
 #[derive(Clone, Debug)]
@@ -78,11 +77,11 @@ impl Scalar {
             .last_fn
             .as_ref()
             .map(|f| match f {
-                ScalarFunction::B(b) => {
+                Function::B(b) => {
                     let (da, db) = b.backward(&self.history.ctx, d);
                     vec![da, db]
                 }
-                ScalarFunction::U(u) => {
+                Function::U(u) => {
                     let da = u.backward(&self.history.ctx, d);
                     vec![da]
                 }
@@ -253,14 +252,11 @@ mod tests {
 
     use super::*;
     use crate::{
-        autodiff::context::Context,
-        scalar::{
-            ops::binary_ops::Binary, scalar_function::ScalarFunction, scalar_history::ScalarHistory,
-        },
+        autodiff::context::Context, function::binary::Binary, scalar::scalar_history::ScalarHistory
     };
 
     struct F1;
-    impl Binary for F1 {
+    impl Binary<f64> for F1 {
         fn forward(&self, a: f64, b: f64) -> f64 {
             a + b + 10.
         }
@@ -271,7 +267,7 @@ mod tests {
     }
 
     struct F2;
-    impl Binary for F2 {
+    impl Binary<f64> for F2 {
         fn forward(&self, a: f64, b: f64) -> f64 {
             a * b + a
         }
@@ -396,7 +392,7 @@ mod tests {
     #[test]
     fn chain_rule_test1() -> () {
         let hist = ScalarHistory::default()
-            .last_fn(ScalarFunction::B(Rc::new(F1 {})))
+            .last_fn(Function::B(Rc::new(F1 {})))
             .push_input(Scalar::new(0.))
             .push_input(Scalar::new(0.));
         let constant = Scalar::new(0.).history(hist);

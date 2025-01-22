@@ -4,6 +4,8 @@
 #![allow(dead_code)]
 pub mod autodiff;
 pub mod data;
+#[allow(clippy::module_inception)]
+pub mod function;
 pub mod hof;
 pub mod module;
 pub mod optim;

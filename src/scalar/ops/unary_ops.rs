@@ -1,13 +1,5 @@
-// TODO: abstract over f64
-pub trait Unary {
-    // need to have self otherwise can't be made into an object and can't dyn Unary
-    fn forward(&self, a: f64) -> f64;
-    // TODO: remove ctx
-    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64;
-}
-
 pub struct Ln;
-impl Unary for Ln {
+impl Unary<f64> for Ln {
     fn forward(&self, a: f64) -> f64 {
         if a <= 0. {
             0.
@@ -24,7 +16,7 @@ impl Unary for Ln {
 }
 
 pub struct Inv;
-impl Unary for Inv {
+impl Unary<f64> for Inv {
     fn forward(&self, a: f64) -> f64 {
         if a == 0. {
             0.
@@ -41,7 +33,7 @@ impl Unary for Inv {
 }
 
 pub struct Neg;
-impl Unary for Neg {
+impl Unary<f64> for Neg {
     fn forward(&self, a: f64) -> f64 {
         -a
     }
@@ -52,7 +44,7 @@ impl Unary for Neg {
 }
 
 pub struct Sig;
-impl Unary for Sig {
+impl Unary<f64> for Sig {
     fn forward(&self, a: f64) -> f64 {
         if a >= 0. {
             1. / (1. + (-a).exp())
@@ -71,7 +63,7 @@ impl Unary for Sig {
 }
 
 pub struct Relu;
-impl Unary for Relu {
+impl Unary<f64> for Relu {
     fn forward(&self, a: f64) -> f64 {
         a.max(0.)
     }
@@ -88,7 +80,7 @@ impl Unary for Relu {
 }
 
 pub struct Exp;
-impl Unary for Exp {
+impl Unary<f64> for Exp {
     fn forward(&self, a: f64) -> f64 {
         a.exp()
     }
@@ -102,7 +94,7 @@ impl Unary for Exp {
 
 use proptest::prelude::*;
 
-use crate::autodiff::context::Context;
+use crate::{autodiff::context::Context, function::unary::Unary};
 
 proptest! {
     #[test]
