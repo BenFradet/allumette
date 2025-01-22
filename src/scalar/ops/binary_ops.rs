@@ -80,7 +80,7 @@ impl Binary for Eq {
 
 use proptest::prelude::*;
 
-use crate::scalar::autodiff::context::Context;
+use crate::autodiff::context::Context;
 
 fn is_close(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-4

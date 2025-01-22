@@ -102,7 +102,7 @@ impl Unary for Exp {
 
 use proptest::prelude::*;
 
-use crate::scalar::autodiff::context::Context;
+use crate::autodiff::context::Context;
 
 proptest! {
     #[test]

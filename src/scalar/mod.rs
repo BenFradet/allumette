@@ -1,4 +1,3 @@
-pub mod autodiff;
 pub mod module;
 pub mod ops;
 #[allow(clippy::module_inception)]

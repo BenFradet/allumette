@@ -1,4 +1,6 @@
-use super::{autodiff::context::Context, scalar::Scalar, scalar_function::ScalarFunction};
+use crate::autodiff::context::Context;
+
+use super::{scalar::Scalar, scalar_function::ScalarFunction};
 
 #[derive(Clone, Debug, Default)]
 pub struct ScalarHistory {
