@@ -25,7 +25,7 @@ impl<const N: usize> Tensor<N> {
         }
     }
 
-    fn zeros(shape: Shape<N>) -> Self {
+    pub fn zeros(shape: Shape<N>) -> Self {
         let data = vec![0.; shape.size];
         let strides = (&shape).into();
         Tensor {
@@ -35,7 +35,17 @@ impl<const N: usize> Tensor<N> {
         }
     }
 
-    fn map(mut self, f: impl Fn(f64) -> f64) -> Self {
+    pub fn ones(shape: Shape<N>) -> Self {
+        let data = vec![1.; shape.size];
+        let strides = (&shape).into();
+        Tensor {
+            data: Arc::new(data),
+            shape,
+            strides,
+        }
+    }
+
+    pub fn map(mut self, f: impl Fn(f64) -> f64) -> Self {
         let len = self.size();
         let mut out = vec![0.; len];
         // TODO: add an iterator
@@ -62,7 +72,7 @@ impl<const N: usize> Tensor<N> {
     }
 
     // feature(generic_const_exprs)
-    fn zip<const M: usize>(
+    pub fn zip<const M: usize>(
         &self,
         other: Tensor<M>,
         f: impl Fn(f64, f64) -> f64,
@@ -88,7 +98,7 @@ impl<const N: usize> Tensor<N> {
         Some(Tensor::new(out, shape, strides))
     }
 
-    fn reduce<const M: usize>(&self, f: impl Fn(f64, f64) -> f64) -> Tensor<N>
+    pub fn reduce<const M: usize>(&self, f: impl Fn(f64, f64) -> f64) -> Tensor<N>
     where
         TypeIf<{ M < N }>: TypeTrue,
     {
