@@ -14,7 +14,6 @@ use super::{
 };
 use crate::{autodiff::forward::Forward, function::function::Function};
 
-// TODO: abstract over f64
 #[derive(Clone, Debug)]
 pub struct Scalar {
     pub v: f64,
@@ -252,30 +251,29 @@ mod tests {
 
     use super::*;
     use crate::{
-        autodiff::context::Context, function::binary::Binary, scalar::scalar_history::ScalarHistory
+        autodiff::context::Context, function::binary::Binary, scalar::scalar_history::ScalarHistory,
     };
 
     struct F1;
-    impl Binary<f64> for F1 {
+    impl Binary<f64, f64> for F1 {
         fn forward(&self, a: f64, b: f64) -> f64 {
             a + b + 10.
         }
 
-        fn backward(&self, _ctx: &Context<f64>, d: f64) -> (f64, f64) {
+        fn backward(&self, _ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
             (d, d)
         }
     }
 
     struct F2;
-    impl Binary<f64> for F2 {
+    impl Binary<f64, f64> for F2 {
         fn forward(&self, a: f64, b: f64) -> f64 {
             a * b + a
         }
 
-        fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64) {
-            let vs = &ctx.saved_values;
-            let a = vs.first().unwrap_or(&1.);
-            let b = vs.get(1).unwrap_or(&1.);
+        fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
+            let a = ctx.a.unwrap_or(1.);
+            let b = ctx.b.unwrap_or(1.);
             (d * (b + 1.), d * a)
         }
     }

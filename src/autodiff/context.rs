@@ -1,37 +1,36 @@
 #[derive(Clone, Debug, PartialEq)]
-pub struct Context<E> {
+pub struct Context<A, B> {
     pub grad: bool,
-    pub saved_values: Vec<E>,
+    pub a: Option<A>,
+    pub b: Option<B>,
 }
 
-impl<E> Default for Context<E> {
+impl<A, B> Default for Context<A, B> {
     fn default() -> Self {
         Self {
             grad: true,
-            saved_values: vec![],
+            a: None,
+            b: None,
         }
     }
 }
 
-impl<E: Clone> Context<E> {
-    fn new(grad: bool, values: &[E]) -> Self {
+impl<A: Clone, B: Clone> Context<A, B> {
+    fn new(grad: bool, a: A, b: B) -> Self {
         Self {
             grad,
-            saved_values: values.to_vec(),
+            a: Some(a),
+            b: Some(b),
         }
     }
 
-    fn update(mut self, values: &[E]) -> Self {
-        if self.grad {
-            self.saved_values = values.to_vec();
-            self
-        } else {
-            self
-        }
+    pub fn a(mut self, a: A) -> Self {
+        self.a = Some(a);
+        self
     }
 
-    pub fn push(mut self, value: E) -> Self {
-        self.saved_values.push(value);
+    pub fn b(mut self, b: B) -> Self {
+        self.b = Some(b);
         self
     }
 
@@ -46,7 +45,7 @@ impl<E: Clone> Context<E> {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.saved_values.is_empty()
+        self.a.is_none() && self.b.is_none()
     }
 }
 
@@ -56,41 +55,15 @@ mod tests {
 
     #[test]
     fn new_test() {
-        let a = [1., 2., 3.];
-        let c = Context::new(false, &a);
+        let c = Context::new(false, 1., 2.);
         assert!(!c.grad);
-        assert_eq!(a.to_vec(), c.saved_values);
     }
 
     #[test]
     fn default_test() {
-        let c = Context::default();
+        let c: Context<f64, f64> = Context::default();
         assert!(c.grad);
-        let exp: &[f64] = &[];
-        assert_eq!(exp, c.saved_values);
-    }
-
-    #[test]
-    fn update_test() {
-        let a = [1., 2., 3.];
-        let c = Context::new(false, &a);
-        assert!(!c.grad);
-        assert_eq!(a.to_vec(), c.saved_values);
-        let b = [2., 3., 4.];
-        let c2 = c.update(&b);
-        assert_eq!(a.to_vec(), c2.saved_values);
-        let c3 = c2.grad().update(&b);
-        assert!(c3.grad);
-        assert_eq!(b.to_vec(), c3.saved_values);
-    }
-
-    #[test]
-    fn push_test() {
-        let a = [1., 2., 3.];
-        let c = Context::new(false, &a);
-        assert!(!c.grad);
-        assert_eq!(a.to_vec(), c.saved_values);
-        let c2 = c.push(5.);
-        assert_eq!(vec![1., 2., 3., 5.], c2.saved_values);
+        assert!(c.a.is_none());
+        assert!(c.b.is_none());
     }
 }

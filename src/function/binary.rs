@@ -1,7 +1,6 @@
 use crate::autodiff::context::Context;
 
-pub trait Binary<A> {
-    fn forward(&self, a: A, b: A) -> A;
-    fn backward(&self, ctx: &Context<A>, d: A) -> (A, A);
+pub trait Binary<A, B> {
+    fn forward(&self, a: A, b: B) -> A;
+    fn backward(&self, ctx: &Context<A, B>, d: A) -> (A, A);
 }
-

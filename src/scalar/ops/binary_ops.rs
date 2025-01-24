@@ -1,30 +1,29 @@
 pub struct Add;
-impl Binary<f64> for Add {
+impl Binary<f64, f64> for Add {
     fn forward(&self, a: f64, b: f64) -> f64 {
         a + b
     }
 
-    fn backward(&self, _ctx: &Context<f64>, d: f64) -> (f64, f64) {
+    fn backward(&self, _ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
         (d, d)
     }
 }
 
 pub struct Mul;
-impl Binary<f64> for Mul {
+impl Binary<f64, f64> for Mul {
     fn forward(&self, a: f64, b: f64) -> f64 {
         a * b
     }
 
-    fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64) {
-        let vs = &ctx.saved_values;
-        let a = vs.first().unwrap_or(&1.);
-        let b = vs.get(1).unwrap_or(&1.);
+    fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
+        let a = ctx.a.unwrap_or(1.);
+        let b = ctx.b.unwrap_or(1.);
         (b * d, a * d)
     }
 }
 
 pub struct Div;
-impl Binary<f64> for Div {
+impl Binary<f64, f64> for Div {
     fn forward(&self, a: f64, b: f64) -> f64 {
         if b == 0. {
             0.
@@ -33,16 +32,15 @@ impl Binary<f64> for Div {
         }
     }
 
-    fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64) {
-        let vs = &ctx.saved_values;
-        let a = vs.first().unwrap_or(&1.);
-        let b = vs.get(1).filter(|v| **v != 0.).unwrap_or(&1.);
+    fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
+        let a = ctx.a.unwrap_or(1.);
+        let b = ctx.b.filter(|v| *v != 0.).unwrap_or(1.);
         (d / b, a * d)
     }
 }
 
 pub struct Lt;
-impl Binary<f64> for Lt {
+impl Binary<f64, f64> for Lt {
     fn forward(&self, a: f64, b: f64) -> f64 {
         if a < b {
             1.
@@ -51,13 +49,13 @@ impl Binary<f64> for Lt {
         }
     }
 
-    fn backward(&self, _ctx: &Context<f64>, _d: f64) -> (f64, f64) {
+    fn backward(&self, _ctx: &Context<f64, f64>, _d: f64) -> (f64, f64) {
         (0., 0.)
     }
 }
 
 pub struct Eq;
-impl Binary<f64> for Eq {
+impl Binary<f64, f64> for Eq {
     fn forward(&self, a: f64, b: f64) -> f64 {
         if a == b {
             1.
@@ -66,7 +64,7 @@ impl Binary<f64> for Eq {
         }
     }
 
-    fn backward(&self, _ctx: &Context<f64>, _d: f64) -> (f64, f64) {
+    fn backward(&self, _ctx: &Context<f64, f64>, _d: f64) -> (f64, f64) {
         (0., 0.)
     }
 }
@@ -100,7 +98,7 @@ proptest! {
         } else {
             assert!(is_close(a * b, f));
         }
-        let ctx2 = ctx.push(a).push(b);
+        let ctx2 = ctx.a(a).b(b);
         let back = mul.backward(&ctx2, d);
         if back.0.abs() == f64::INFINITY {
             assert_eq!((b * d).abs(), f64::INFINITY);
@@ -127,7 +125,7 @@ proptest! {
         } else {
             assert!(is_close(a / b, f));
         }
-        let ctx2 = ctx.push(a).push(b);
+        let ctx2 = ctx.a(a).b(b);
         let back = div.backward(&ctx2, d);
         if b == 0. {
             assert_eq!(d, back.0);
