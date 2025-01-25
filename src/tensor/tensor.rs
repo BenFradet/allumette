@@ -9,7 +9,7 @@ use crate::util::{
 
 use super::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Tensor<const N: usize> {
     pub data: Arc<Vec<f64>>,
     pub shape: Shape<N>,
@@ -74,7 +74,7 @@ impl<const N: usize> Tensor<N> {
     // feature(generic_const_exprs)
     pub fn zip<const M: usize>(
         &self,
-        other: Tensor<M>,
+        other: &Tensor<M>,
         f: impl Fn(f64, f64) -> f64,
     ) -> Option<Tensor<{ max(M, N) }>>
     where
@@ -96,6 +96,16 @@ impl<const N: usize> Tensor<N> {
             out[pos] = f(va, vb);
         }
         Some(Tensor::new(out, shape, strides))
+    }
+
+    pub fn zip_n(mut self, other: &Tensor<N>, f: impl Fn(f64, f64) -> f64) -> Tensor<N> {
+        let len = self.shape.size;
+        let mut out = vec![0.; len];
+        for (i, o) in out.iter_mut().enumerate() {
+            *o = f(self.data[i], other.data[i]);
+        }
+        self.data = Arc::new(out);
+        self
     }
 
     pub fn reduce<const M: usize>(&self, f: impl Fn(f64, f64) -> f64) -> Tensor<N>
