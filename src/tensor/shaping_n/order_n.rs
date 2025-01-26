@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
-use super::iter::Iter;
+use super::const_iter::ConstIter;
 
 #[derive(Debug)]
-pub struct Order<const N: usize> {
+pub struct OrderN<const N: usize> {
     data: [usize; N],
 }
 
-impl<const N: usize> Order<N> {
+impl<const N: usize> OrderN<N> {
     pub fn new(data: [usize; N]) -> Option<Self> {
         let s = Self { data };
         if s.fits() {
@@ -29,8 +29,8 @@ impl<const N: usize> Order<N> {
         self
     }
 
-    pub fn iter(&self) -> Iter {
-        Iter::new(&self.data)
+    pub fn iter(&self) -> ConstIter<N> {
+        ConstIter::new(&self.data)
     }
 
     pub fn fits(&self) -> bool {

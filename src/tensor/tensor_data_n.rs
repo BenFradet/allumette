@@ -7,38 +7,38 @@ use crate::util::{
     type_if::{TypeIf, TypeTrue},
 };
 
-use super::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
+use super::shaping_n::{idx_n::IdxN, order_n::OrderN, shape_n::ShapeN, strides_n::StridesN};
 
 #[derive(Clone, Debug)]
-pub struct Tensor<const N: usize> {
+pub struct TensorDataN<const N: usize> {
     pub data: Arc<Vec<f64>>,
-    pub shape: Shape<N>,
-    pub strides: Strides<N>,
+    pub shape: ShapeN<N>,
+    pub strides: StridesN<N>,
 }
 
-impl<const N: usize> Tensor<N> {
-    fn new(data: Vec<f64>, shape: Shape<N>, strides: Strides<N>) -> Self {
-        Tensor {
+impl<const N: usize> TensorDataN<N> {
+    fn new(data: Vec<f64>, shape: ShapeN<N>, strides: StridesN<N>) -> Self {
+        TensorDataN {
             data: Arc::new(data),
             shape,
             strides,
         }
     }
 
-    pub fn zeros(shape: Shape<N>) -> Self {
+    pub fn zeros(shape: ShapeN<N>) -> Self {
         let data = vec![0.; shape.size];
         let strides = (&shape).into();
-        Tensor {
+        TensorDataN {
             data: Arc::new(data),
             shape,
             strides,
         }
     }
 
-    pub fn ones(shape: Shape<N>) -> Self {
+    pub fn ones(shape: ShapeN<N>) -> Self {
         let data = vec![1.; shape.size];
         let strides = (&shape).into();
-        Tensor {
+        TensorDataN {
             data: Arc::new(data),
             shape,
             strides,
@@ -74,14 +74,14 @@ impl<const N: usize> Tensor<N> {
     // feature(generic_const_exprs)
     pub fn zip<const M: usize>(
         &self,
-        other: &Tensor<M>,
+        other: &TensorDataN<M>,
         f: impl Fn(f64, f64) -> f64,
-    ) -> Option<Tensor<{ max(M, N) }>>
+    ) -> Option<TensorDataN<{ max(M, N) }>>
     where
         [(); max(M, N)]:,
     {
         let shape = self.shape.broadcast(&other.shape)?;
-        let strides: Strides<_> = (&shape).into();
+        let strides: StridesN<_> = (&shape).into();
         let len = shape.size;
         let mut out = vec![0.; len];
         for i in 0..len {
@@ -95,10 +95,10 @@ impl<const N: usize> Tensor<N> {
             let pos = strides.position(&idx);
             out[pos] = f(va, vb);
         }
-        Some(Tensor::new(out, shape, strides))
+        Some(TensorDataN::new(out, shape, strides))
     }
 
-    pub fn zip_n(mut self, other: &Tensor<N>, f: impl Fn(f64, f64) -> f64) -> Tensor<N> {
+    pub fn zip_n(mut self, other: &TensorDataN<N>, f: impl Fn(f64, f64) -> f64) -> TensorDataN<N> {
         let len = self.shape.size;
         let mut out = vec![0.; len];
         for (i, o) in out.iter_mut().enumerate() {
@@ -108,14 +108,14 @@ impl<const N: usize> Tensor<N> {
         self
     }
 
-    pub fn reduce<const M: usize>(&self, f: impl Fn(f64, f64) -> f64) -> Tensor<N>
+    pub fn reduce<const M: usize>(&self, f: impl Fn(f64, f64) -> f64) -> TensorDataN<N>
     where
         TypeIf<{ M < N }>: TypeTrue,
     {
         let mut shape_data = *self.shape.data();
         shape_data[M] = 1;
-        let shape = Shape::new(shape_data);
-        let strides: Strides<_> = (&shape).into();
+        let shape = ShapeN::new(shape_data);
+        let strides: StridesN<_> = (&shape).into();
         let len = shape.size;
         let mut out = vec![0.; len];
         for i in 0..len {
@@ -130,7 +130,7 @@ impl<const N: usize> Tensor<N> {
                 out[out_pos] = f(v_out, v_self);
             }
         }
-        Tensor::new(out, shape, strides)
+        TensorDataN::new(out, shape, strides)
     }
 
     pub fn size(&self) -> usize {
@@ -138,11 +138,11 @@ impl<const N: usize> Tensor<N> {
     }
 
     // TODO: look into use<'_, N>
-    pub fn indices(&self) -> impl Iterator<Item = Idx<N>> + use<'_, N> {
+    pub fn indices(&self) -> impl Iterator<Item = IdxN<N>> + use<'_, N> {
         (0..self.size()).map(|i| self.strides.idx(i))
     }
 
-    fn permute(mut self, order: &Order<N>) -> Option<Self> {
+    fn permute(mut self, order: &OrderN<N>) -> Option<Self> {
         if order.fits() {
             let mut new_shape = [0; N];
             let mut new_strides = [0; N];
@@ -150,8 +150,8 @@ impl<const N: usize> Tensor<N> {
                 new_shape[idx] = self.shape[value];
                 new_strides[idx] = self.strides[value];
             }
-            self.shape = Shape::new(new_shape);
-            self.strides = Strides::new(new_strides);
+            self.shape = ShapeN::new(new_shape);
+            self.strides = StridesN::new(new_strides);
             Some(self)
         } else {
             None
@@ -172,16 +172,16 @@ impl<const N: usize> Tensor<N> {
         res.0
     }
 
-    pub fn arbitrary() -> impl Strategy<Value = Tensor<N>> {
-        Shape::arbitrary()
+    pub fn arbitrary() -> impl Strategy<Value = TensorDataN<N>> {
+        ShapeN::arbitrary()
             .prop_flat_map(|shape| {
                 let size = shape.size;
                 let data = collection::vec(0.0f64..1., size);
                 (data, Just(shape))
             })
             .prop_map(|(data, shape)| {
-                let strides: Strides<N> = (&shape).into();
-                Tensor::new(data, shape, strides)
+                let strides: StridesN<N> = (&shape).into();
+                TensorDataN::new(data, shape, strides)
             })
     }
 }
@@ -196,28 +196,28 @@ mod tests {
         // TODO: find a way to have arbitrary const generics?
 
         #[test]
-        fn map_test(shape in Shape::<4>::arbitrary(), f in -1_f64..1.) {
-            let map_ = Tensor::zeros(shape.clone()).map_(|z| z + f);
+        fn map_test(shape in ShapeN::<4>::arbitrary(), f in -1_f64..1.) {
+            let map_ = TensorDataN::zeros(shape.clone()).map_(|z| z + f);
             assert_eq!(shape.size, map_.data.len());
             assert!(map_.data.iter().all(|e| *e == f));
-            let map = Tensor::zeros(shape.clone()).map(|z| z + f);
+            let map = TensorDataN::zeros(shape.clone()).map(|z| z + f);
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
         }
 
 
         #[test]
-        fn zeros_test(shape in Shape::<4>::arbitrary()) {
-            let zeros = Tensor::zeros(shape.clone());
+        fn zeros_test(shape in ShapeN::<4>::arbitrary()) {
+            let zeros = TensorDataN::zeros(shape.clone());
             assert_eq!(shape.size, zeros.data.len());
             assert!(zeros.data.iter().all(|f| *f == 0.));
         }
 
         #[test]
-        fn permute_test(tensor_data in Tensor::<4>::arbitrary(), idx in Idx::<4>::arbitrary()) {
+        fn permute_test(tensor_data in TensorDataN::<4>::arbitrary(), idx in IdxN::<4>::arbitrary()) {
             let reversed_index = idx.clone().reverse();
             let pos = tensor_data.strides.position(&idx);
-            let order = Order::range().reverse();
+            let order = OrderN::range().reverse();
             let perm_opt = tensor_data.permute(&order);
             assert!(perm_opt.is_some());
             let perm = perm_opt.unwrap();
@@ -229,7 +229,7 @@ mod tests {
         }
 
         #[test]
-        fn enumeration_test(tensor_data in Tensor::<4>::arbitrary()) {
+        fn enumeration_test(tensor_data in TensorDataN::<4>::arbitrary()) {
             let indices: Vec<_> = tensor_data.indices().collect();
             let count = indices.len();
             assert_eq!(tensor_data.size(), count);
@@ -245,8 +245,8 @@ mod tests {
 
     #[test]
     fn idx_in_set_test() -> () {
-        let idx1 = Idx::new([1, 2]);
-        let idx2 = Idx::new([1, 2]);
+        let idx1 = IdxN::new([1, 2]);
+        let idx2 = IdxN::new([1, 2]);
         let mut set = HashSet::new();
         set.insert(idx1);
         let res = set.insert(idx2);
@@ -257,22 +257,22 @@ mod tests {
     #[test]
     fn layout_test1() -> () {
         let data = vec![0.; 15];
-        let shape = Shape::new([3, 5]);
-        let strides = Strides::new([5, 1]);
-        let tensor = Tensor::new(data, shape, strides);
+        let shape = ShapeN::new([3, 5]);
+        let strides = StridesN::new([5, 1]);
+        let tensor = TensorDataN::new(data, shape, strides);
         assert!(tensor.is_contiguous());
-        assert_eq!(Shape::new([3, 5]), tensor.shape);
-        assert_eq!(5, tensor.strides.position(&Idx::new([1, 0])));
-        assert_eq!(7, tensor.strides.position(&Idx::new([1, 2])));
+        assert_eq!(ShapeN::new([3, 5]), tensor.shape);
+        assert_eq!(5, tensor.strides.position(&IdxN::new([1, 0])));
+        assert_eq!(7, tensor.strides.position(&IdxN::new([1, 2])));
     }
 
     #[test]
     fn layout_test2() -> () {
         let data = vec![0.; 15];
-        let shape = Shape::new([5, 3]);
-        let strides = Strides::new([1, 5]);
-        let tensor = Tensor::new(data, shape, strides);
+        let shape = ShapeN::new([5, 3]);
+        let strides = StridesN::new([1, 5]);
+        let tensor = TensorDataN::new(data, shape, strides);
         assert!(!tensor.is_contiguous());
-        assert_eq!(Shape::new([5, 3]), tensor.shape);
+        assert_eq!(ShapeN::new([5, 3]), tensor.shape);
     }
 }

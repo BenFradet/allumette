@@ -1,41 +1,35 @@
 use std::ops::Index;
 
-use proptest::{array, prelude::Strategy};
+use proptest::prelude::Strategy;
 
 use crate::util::max::max;
 
-// Clone needed by proptest's Just
 #[derive(Clone, Debug, PartialEq)]
-pub struct Shape<const N: usize> {
-    data: [usize; N],
+pub struct Shape {
+    data: Vec<usize>,
     pub size: usize,
 }
 
-impl<const N: usize> Shape<N> {
-    pub fn new(data: [usize; N]) -> Self {
+impl Shape {
+    pub fn new(data: Vec<usize>) -> Self {
         let size = data.iter().product::<usize>();
         Self { data, size }
     }
 
-    pub fn data(&self) -> &[usize; N] {
+    pub fn data(&self) -> &[usize] {
         &self.data
     }
 
-    // feature(generic_const_exprs)
-    // https://github.com/rust-lang/rust/issues/76560
-    // https://users.rust-lang.org/t/operations-on-const-generic-parameters-as-a-generic-parameter/78865/2
-    // https://hackmd.io/OZG_XiLFRs2Xmw5s39jRzA
-    // "[(); Self::max(M, N)]:" const well-formed bound
-    pub fn broadcast<const M: usize>(&self, other: &Shape<M>) -> Option<Shape<{ max(M, N) }>>
-    where
-        [(); max(M, N)]:,
-    {
-        let padded_n = self.pad_left::<{ max(M, N) }>(1);
-        let padded_m = other.pad_left::<{ max(M, N) }>(1);
-        let mut res = [0; max(M, N)];
+    pub fn broadcast(&self, other: &Shape) -> Option<Shape> {
+        let n = self.data.len();
+        let m = other.data.len();
+        let max = max(m, n);
+        let padded_n = self.pad_left(max, 1);
+        let padded_m = other.pad_left(max, 1);
+        let mut res = vec![0; max];
         let mut flag = false;
 
-        for i in 0..max(M, N) {
+        for i in 0..max {
             let n = padded_n[i];
             let m = padded_m[i];
             if n == 1 {
@@ -61,27 +55,28 @@ impl<const N: usize> Shape<N> {
         }
     }
 
-    pub fn pad_left<const M: usize>(&self, cnst: usize) -> Shape<M> {
-        // TODO: can't do if N == M self because compiler doesn't know that
-        let mut res = [cnst; M];
-        if N < M {
-            let offset = M - N;
-            for (i, item) in res.iter_mut().enumerate().take(M).skip(offset) {
+    pub fn pad_left(&self, m: usize, cnst: usize) -> Shape {
+        let n = self.data.len();
+        let mut res = vec![cnst; m];
+        println!("{:?}", res);
+        if n < m {
+            let offset = m - n;
+            for (i, item) in res.iter_mut().enumerate().take(m).skip(offset) {
                 let ni = i - offset;
                 *item = self.data[ni];
             }
         } else {
-            res[..M].copy_from_slice(&self.data[..M]);
+            res[..m].copy_from_slice(&self.data[..m]);
         }
         Shape::new(res)
     }
 
-    pub fn arbitrary() -> impl Strategy<Value = Shape<N>> {
-        array::uniform(1usize..3).prop_map(Shape::new)
+    pub fn arbitrary() -> impl Strategy<Value = Shape> {
+        proptest::collection::vec(0_usize..10, 0..3).prop_map(Shape::new)
     }
 }
 
-impl<const N: usize> Index<usize> for Shape<N> {
+impl Index<usize> for Shape {
     type Output = usize;
     fn index(&self, index: usize) -> &Self::Output {
         &self.data[index]
@@ -94,55 +89,55 @@ mod tests {
 
     #[test]
     fn broadcast_test() -> () {
-        let s1 = Shape::new([2, 3, 1]);
-        let s2 = Shape::new([7, 2, 3, 5]);
-        assert_eq!(Some(Shape::new([7, 2, 3, 5])), s1.broadcast(&s2));
+        let s1 = Shape::new(vec![2, 3, 1]);
+        let s2 = Shape::new(vec![7, 2, 3, 5]);
+        assert_eq!(Some(Shape::new(vec![7, 2, 3, 5])), s1.broadcast(&s2));
 
-        let s1 = Shape::new([1]);
-        let s2 = Shape::new([5, 5]);
-        assert_eq!(Some(Shape::new([5, 5])), s1.broadcast(&s2));
+        let s1 = Shape::new(vec![1]);
+        let s2 = Shape::new(vec![5, 5]);
+        assert_eq!(Some(Shape::new(vec![5, 5])), s1.broadcast(&s2));
 
-        let s1 = Shape::new([5, 5]);
-        let s2 = Shape::new([1]);
-        assert_eq!(Some(Shape::new([5, 5])), s1.broadcast(&s2));
+        let s1 = Shape::new(vec![5, 5]);
+        let s2 = Shape::new(vec![1]);
+        assert_eq!(Some(Shape::new(vec![5, 5])), s1.broadcast(&s2));
 
-        let s1 = Shape::new([1, 5, 5]);
-        let s2 = Shape::new([5, 5]);
-        assert_eq!(Some(Shape::new([1, 5, 5])), s1.broadcast(&s2));
+        let s1 = Shape::new(vec![1, 5, 5]);
+        let s2 = Shape::new(vec![5, 5]);
+        assert_eq!(Some(Shape::new(vec![1, 5, 5])), s1.broadcast(&s2));
 
-        let s1 = Shape::new([5, 1, 5, 1]);
-        let s2 = Shape::new([1, 5, 1, 5]);
-        assert_eq!(Some(Shape::new([5, 5, 5, 5])), s1.broadcast(&s2));
+        let s1 = Shape::new(vec![5, 1, 5, 1]);
+        let s2 = Shape::new(vec![1, 5, 1, 5]);
+        assert_eq!(Some(Shape::new(vec![5, 5, 5, 5])), s1.broadcast(&s2));
 
-        let s1 = Shape::new([5, 7, 5, 1]);
-        let s2 = Shape::new([1, 5, 1, 5]);
+        let s1 = Shape::new(vec![5, 7, 5, 1]);
+        let s2 = Shape::new(vec![1, 5, 1, 5]);
         assert_eq!(None, s1.broadcast(&s2));
 
-        let s1 = Shape::new([5, 2]);
-        let s2 = Shape::new([5]);
+        let s1 = Shape::new(vec![5, 2]);
+        let s2 = Shape::new(vec![5]);
         assert_eq!(None, s1.broadcast(&s2));
 
-        let s1 = Shape::new([2, 5]);
-        let s2 = Shape::new([5]);
-        assert_eq!(Some(Shape::new([2, 5])), s1.broadcast(&s2));
+        let s1 = Shape::new(vec![2, 5]);
+        let s2 = Shape::new(vec![5]);
+        assert_eq!(Some(Shape::new(vec![2, 5])), s1.broadcast(&s2));
     }
 
     #[test]
     fn pad_left_test() -> () {
-        let s = Shape::new([1, 2, 1, 2]);
-        let pad = s.pad_left::<6>(0);
-        assert_eq!([0, 0, 1, 2, 1, 2], pad.data);
+        let s = Shape::new(vec![1, 2, 1, 2]);
+        let pad = s.pad_left(6, 0);
+        assert_eq!(vec![0, 0, 1, 2, 1, 2], pad.data);
 
-        let s = Shape::new([]);
-        let pad = s.pad_left::<6>(0);
-        assert_eq!([0, 0, 0, 0, 0, 0], pad.data);
+        let s = Shape::new(vec![]);
+        let pad = s.pad_left(6, 0);
+        assert_eq!(vec![0, 0, 0, 0, 0, 0], pad.data);
 
-        let s = Shape::new([1, 2, 1, 2]);
-        let pad = s.pad_left::<0>(0);
-        assert_eq!([0; 0], pad.data);
+        let s = Shape::new(vec![1, 2, 1, 2]);
+        let pad = s.pad_left(0, 0);
+        assert_eq!(vec![0; 0], pad.data);
 
-        let s = Shape::new([1, 2, 3, 4]);
-        let pad = s.pad_left::<2>(0);
-        assert_eq!([1, 2], pad.data);
+        let s = Shape::new(vec![1, 2, 3, 4]);
+        let pad = s.pad_left(2, 0);
+        assert_eq!(vec![1, 2], pad.data);
     }
 }
