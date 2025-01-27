@@ -3,24 +3,25 @@ use std::collections::HashSet;
 use super::iter::Iter;
 
 #[derive(Debug)]
-pub struct Order<const N: usize> {
-    data: [usize; N],
+pub struct Order {
+    data: Vec<usize>,
 }
 
-impl<const N: usize> Order<N> {
-    pub fn new(data: [usize; N]) -> Option<Self> {
+impl Order {
+    pub fn new(data: Vec<usize>) -> Option<Self> {
+        let len = data.len();
         let s = Self { data };
-        if s.fits() {
+        if s.fits(len) {
             Some(s)
         } else {
             None
         }
     }
 
-    pub fn range() -> Self {
+    pub fn range(n: usize) -> Self {
         // this should be safe
         Self {
-            data: (0..N).collect::<Vec<_>>().try_into().unwrap(),
+            data: (0..n).collect::<Vec<_>>().try_into().unwrap(),
         }
     }
 
@@ -33,9 +34,10 @@ impl<const N: usize> Order<N> {
         Iter::new(&self.data)
     }
 
-    pub fn fits(&self) -> bool {
-        let s1: HashSet<_> = self.data.into_iter().collect();
-        let s2: HashSet<_> = (0..N).collect();
+    // TODO: refactor
+    pub fn fits(&self, n: usize) -> bool {
+        let s1: HashSet<_> = self.data.iter().copied().collect();
+        let s2: HashSet<_> = (0..n).collect();
         s1 == s2
     }
 }

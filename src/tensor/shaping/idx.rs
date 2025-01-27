@@ -1,4 +1,4 @@
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 use proptest::prelude::Strategy;
 
@@ -55,6 +55,12 @@ impl Index<usize> for Idx {
     type Output = usize;
     fn index(&self, index: usize) -> &Self::Output {
         &self.data[index]
+    }
+}
+
+impl IndexMut<usize> for Idx {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.data[index]
     }
 }
 
