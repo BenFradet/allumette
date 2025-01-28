@@ -45,7 +45,7 @@ impl Idx {
     pub fn arbitrary() -> impl Strategy<Value = Idx> {
         Shape::arbitrary()
             .prop_flat_map(|shape: Shape| {
-                proptest::collection::vec(0usize..shape.size, 0usize..shape.data().len())
+                proptest::collection::vec(0usize..shape.size, shape.data().len())
             })
             .prop_map(Idx::new)
     }
