@@ -51,9 +51,12 @@ impl TensorData {
         self
     }
 
-    // feature(generic_const_exprs)
     pub fn zip(&self, other: &TensorData, f: impl Fn(f64, f64) -> f64) -> Option<TensorData> {
-        let shape = self.shape.broadcast(&other.shape)?;
+        let shape = if self.shape == other.shape {
+            self.shape.clone()
+        } else {
+            self.shape.broadcast(&other.shape)?
+        };
         let strides: Strides = (&shape).into();
         let len = shape.size;
         let mut out = vec![0.; len];
@@ -71,26 +74,28 @@ impl TensorData {
         Some(TensorData::new(out, shape, strides))
     }
 
-    pub fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize) -> TensorData {
-        let mut shape_data = self.shape.data().to_vec();
-        shape_data[dim] = 1;
-        let shape = Shape::new(shape_data);
-        let strides: Strides = (&shape).into();
-        let len = shape.size;
-        let mut out = vec![0.; len];
-        for i in 0..len {
-            let out_idx = strides.idx(i);
-            let out_pos = strides.position(&out_idx);
-            for j in 0..self.shape[dim] {
-                let mut self_idx = out_idx.clone();
-                self_idx[dim] = j;
-                let self_pos = self.strides.position(&self_idx);
-                let v_out = out[out_pos];
-                let v_self = self.data[self_pos];
-                out[out_pos] = f(v_out, v_self);
+    pub fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize) -> Option<TensorData> {
+        if dim < self.shape.data().len() {
+            let mut shape_data = self.shape.data().to_vec();
+            shape_data[dim] = 1;
+            let shape = Shape::new(shape_data);
+            let strides: Strides = (&shape).into();
+            let len = shape.size;
+            let mut out = vec![0.; len];
+            for i in 0..len {
+                let out_idx = strides.idx(i);
+                let out_pos = strides.position(&out_idx);
+                for j in 0..self.shape[dim] {
+                    let mut self_idx = out_idx.clone();
+                    self_idx[dim] = j;
+                    let self_pos = self.strides.position(&self_idx);
+                    let v_out = out[out_pos];
+                    let v_self = self.data[self_pos];
+                    out[out_pos] = f(v_out, v_self);
+                }
             }
-        }
-        TensorData::new(out, shape, strides)
+            Some(TensorData::new(out, shape, strides))
+        } else { None }
     }
 
     pub fn size(&self) -> usize {
@@ -153,7 +158,15 @@ mod tests {
     use super::*;
 
     proptest! {
-        // TODO: find a way to have arbitrary const generics?
+        #[test]
+        fn zip_test(t1 in TensorData::arbitrary(), t2 in TensorData::arbitrary()) {
+            // this works if f is commutative
+            let res1 = t1.zip(&t2, |a, b| a + b);
+            let res2 = t2.zip(&t1, |a, b| a + b);
+            assert_eq!(res1.as_ref().map(|t| t.shape.clone()), res2.as_ref().map(|t| t.shape.clone()));
+            assert_eq!(res1.as_ref().map(|t| t.strides.clone()), res2.as_ref().map(|t| t.strides.clone()));
+            assert_eq!(res1.map(|t| t.data), res2.map(|t| t.data));
+        }
 
         #[test]
         fn map_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
@@ -161,7 +174,6 @@ mod tests {
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
         }
-
 
         #[test]
         fn zeros_test(shape in Shape::arbitrary()) {

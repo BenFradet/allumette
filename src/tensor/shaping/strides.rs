@@ -2,7 +2,7 @@ use std::ops::Index;
 
 use super::{idx::Idx, iter::Iter, shape::Shape};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Strides {
     data: Vec<usize>,
 }

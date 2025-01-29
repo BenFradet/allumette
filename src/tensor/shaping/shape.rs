@@ -58,7 +58,6 @@ impl Shape {
     pub fn pad_left(&self, m: usize, cnst: usize) -> Shape {
         let n = self.data.len();
         let mut res = vec![cnst; m];
-        println!("{:?}", res);
         if n < m {
             let offset = m - n;
             for (i, item) in res.iter_mut().enumerate().take(m).skip(offset) {
