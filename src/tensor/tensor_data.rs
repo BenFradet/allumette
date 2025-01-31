@@ -157,15 +157,36 @@ mod tests {
 
     use super::*;
 
+    fn assert_tensor_eq(t1: &TensorData, t2: &TensorData) -> () {
+        assert_eq!(t1.shape, t2.shape);
+        assert_eq!(t1.strides, t2.strides);
+        assert_eq!(t1.data, t2.data);
+    }
+
     proptest! {
         #[test]
-        fn zip_test(t1 in TensorData::arbitrary(), t2 in TensorData::arbitrary()) {
+        fn zip_commutative_test(t1 in TensorData::arbitrary(), t2 in TensorData::arbitrary()) {
             // this works if f is commutative
             let res1 = t1.zip(&t2, |a, b| a + b);
             let res2 = t2.zip(&t1, |a, b| a + b);
-            assert_eq!(res1.as_ref().map(|t| t.shape.clone()), res2.as_ref().map(|t| t.shape.clone()));
-            assert_eq!(res1.as_ref().map(|t| t.strides.clone()), res2.as_ref().map(|t| t.strides.clone()));
-            assert_eq!(res1.map(|t| t.data), res2.map(|t| t.data));
+            match (res1, res2) {
+                (Some(r1), Some(r2)) => assert_tensor_eq(&r1, &r2),
+                (None, None) => (),
+                (r1, r2) => panic!("{:?} not equal to {:?}", r1, r2),
+            }
+        }
+
+        #[test]
+        fn map_identity_test(t in TensorData::arbitrary()) {
+            assert_tensor_eq(&t.clone(), &t.map(|f| f));
+        }
+
+        #[test]
+        fn map_composition_test(t in TensorData::arbitrary()) {
+            let f = |a: f64| a * 2.;
+            let g = |a: f64| a.powf(2.);
+            let fg = |a: f64| g(f(a));
+            assert_tensor_eq(&t.clone().map(f).map(g), &t.map(fg));
         }
 
         #[test]
