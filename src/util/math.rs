@@ -1,4 +1,4 @@
-fn ln(a: f64) -> f64 {
+pub fn ln(a: f64) -> f64 {
     if a <= 0. {
         0.
     } else {
@@ -6,7 +6,7 @@ fn ln(a: f64) -> f64 {
     }
 }
 
-fn ln_back(a: f64, d: f64) -> f64 {
+pub fn ln_back(a: f64, d: f64) -> f64 {
     if a == 0. {
         d
     } else {
@@ -14,7 +14,7 @@ fn ln_back(a: f64, d: f64) -> f64 {
     }
 }
 
-fn inv(a: f64) -> f64 {
+pub fn inv(a: f64) -> f64 {
     if a == 0. {
         0.
     } else {
@@ -22,7 +22,7 @@ fn inv(a: f64) -> f64 {
     }
 }
 
-fn inv_back(a: f64, d: f64) -> f64 {
+pub fn inv_back(a: f64, d: f64) -> f64 {
     if a == 0. {
         -d
     } else {
@@ -30,15 +30,15 @@ fn inv_back(a: f64, d: f64) -> f64 {
     }
 }
 
-fn neg(a: f64) -> f64 {
+pub fn neg(a: f64) -> f64 {
     -a
 }
 
-fn neg_back(d: f64) -> f64 {
+pub fn neg_back(d: f64) -> f64 {
     -d
 }
 
-fn sig(a: f64) -> f64 {
+pub fn sig(a: f64) -> f64 {
     if a >= 0. {
         1. / (1. + (-a).exp())
     } else {
@@ -47,16 +47,16 @@ fn sig(a: f64) -> f64 {
 }
 
 // sig'(x) = sig(x) * (1 - sig(x))
-fn sig_back(a: f64, d: f64) -> f64 {
+pub fn sig_back(a: f64, d: f64) -> f64 {
     let sig_a = sig(a);
     sig_a * (1. - sig_a) * d
 }
 
-fn relu(a: f64) -> f64 {
+pub fn relu(a: f64) -> f64 {
     a.max(0.)
 }
 
-fn relu_back(a: f64, d: f64) -> f64 {
+pub fn relu_back(a: f64, d: f64) -> f64 {
     if a > 0. {
         d
     } else {
@@ -64,11 +64,11 @@ fn relu_back(a: f64, d: f64) -> f64 {
     }
 }
 
-fn exp(a: f64) -> f64 {
+pub fn exp(a: f64) -> f64 {
     a.exp()
 }
 
-fn exp_back(a: f64, d: f64) -> f64 {
+pub fn exp_back(a: f64, d: f64) -> f64 {
     a.exp() * d
 }
 
