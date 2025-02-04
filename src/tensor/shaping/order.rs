@@ -19,9 +19,8 @@ impl Order {
     }
 
     pub fn range(n: usize) -> Self {
-        // this should be safe
         Self {
-            data: (0..n).collect::<Vec<_>>().try_into().unwrap(),
+            data: (0..n).collect::<Vec<_>>(),
         }
     }
 

@@ -72,7 +72,6 @@ fn exp_back(a: f64, d: f64) -> f64 {
     a.exp() * d
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

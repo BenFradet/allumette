@@ -95,7 +95,9 @@ impl TensorData {
                 }
             }
             Some(TensorData::new(out, shape, strides))
-        } else { None }
+        } else {
+            None
+        }
     }
 
     pub fn size(&self) -> usize {
