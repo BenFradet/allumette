@@ -1,31 +1,26 @@
-use crate::{autodiff::context::Context, function::unary::Unary, tensor::tensor_data::TensorData};
+use crate::{autodiff::context::Context, function::unary::Unary, tensor::tensor_data::TensorData, util::math};
 
 pub struct Neg;
 impl Unary<TensorData> for Neg {
     fn forward(&self, a: TensorData) -> TensorData {
-        a.map(|v| -v)
+        a.map(math::neg)
     }
 
     fn backward(&self, _ctx: &Context<TensorData, TensorData>, d: TensorData) -> TensorData {
-        d.map(|v| -v)
+        d.map(math::neg_back)
     }
 }
 
 pub struct Inv;
 impl Unary<TensorData> for Inv {
     fn forward(&self, a: TensorData) -> TensorData {
-        a.map(|v| if v == 0. { 0. } else { 1. / v })
+        a.map(math::inv)
     }
 
     fn backward(&self, ctx: &Context<TensorData, TensorData>, d: TensorData) -> TensorData {
         ctx.a
             .as_ref()
-            .and_then(|a| {
-                d.zip(a, |d, a| {
-                    let ap = if a == 0. { 1. } else { a };
-                    -d / ap.powf(2.)
-                })
-            })
+            .and_then(|a| a.zip(&d, math::inv_back))
             .unwrap_or(TensorData::ones(d.shape.clone()))
     }
 }
@@ -33,18 +28,13 @@ impl Unary<TensorData> for Inv {
 pub struct Ln;
 impl Unary<TensorData> for Ln {
     fn forward(&self, a: TensorData) -> TensorData {
-        a.map(|v| if v <= 0. { 0. } else { v.ln() })
+        a.map(math::ln)
     }
 
     fn backward(&self, ctx: &Context<TensorData, TensorData>, d: TensorData) -> TensorData {
         ctx.a
             .as_ref()
-            .and_then(|a| {
-                d.zip(a, |d, a| {
-                    let ap = if a == 0. { 1. } else { a };
-                    d / ap
-                })
-            })
+            .and_then(|a| a.zip(&d, math::ln_back))
             .unwrap_or(TensorData::ones(d.shape.clone()))
     }
 }
@@ -52,48 +42,42 @@ impl Unary<TensorData> for Ln {
 pub struct Sig;
 impl Unary<TensorData> for Sig {
     fn forward(&self, a: TensorData) -> TensorData {
-        a.map(|v| {
-            if v >= 0. {
-                1. / (1. + (-v).exp())
-            } else {
-                v.exp() / (1. + v.exp())
-            }
-        })
+        a.map(math::sig)
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
     fn backward(&self, ctx: &Context<TensorData, TensorData>, d: TensorData) -> TensorData {
         ctx.a
             .as_ref()
-            .and_then(|a| d.zip(a, |d, a| a * (1. - a) * d))
-            .unwrap_or(TensorData::zeros(d.shape.clone()))
+            .and_then(|a| a.zip(&d, math::sig_back))
+            .unwrap_or(TensorData::ones(d.shape.clone()))
     }
 }
 
 pub struct Relu;
 impl Unary<TensorData> for Relu {
     fn forward(&self, a: TensorData) -> TensorData {
-        a.map(|v| v.max(0.))
+        a.map(math::relu)
     }
 
     fn backward(&self, ctx: &Context<TensorData, TensorData>, d: TensorData) -> TensorData {
         ctx.a
             .as_ref()
-            .and_then(|a| d.zip(a, |d, a| if a > 0. { d } else { 0. }))
-            .unwrap_or(TensorData::zeros(d.shape.clone()))
+            .and_then(|a| a.zip(&d, math::relu_back))
+            .unwrap_or(TensorData::ones(d.shape.clone()))
     }
 }
 
 pub struct Exp;
 impl Unary<TensorData> for Exp {
     fn forward(&self, a: TensorData) -> TensorData {
-        a.map(|v| v.exp())
+        a.map(math::exp)
     }
 
     fn backward(&self, ctx: &Context<TensorData, TensorData>, d: TensorData) -> TensorData {
         ctx.a
             .as_ref()
-            .and_then(|a| d.zip(a, |d, a| a.exp() * d))
-            .unwrap_or(TensorData::zeros(d.shape.clone()))
+            .and_then(|a| a.zip(&d, math::exp_back))
+            .unwrap_or(TensorData::ones(d.shape.clone()))
     }
 }
