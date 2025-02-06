@@ -1,4 +1,7 @@
-use crate::{autodiff::context::Context, function::unary::Unary, tensor::tensor_data::TensorData, util::math_unary};
+use crate::{
+    autodiff::context::Context, function::unary::Unary, tensor::tensor_data::TensorData,
+    util::math_unary,
+};
 
 pub struct Neg;
 impl Unary<TensorData> for Neg {

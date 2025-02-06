@@ -1,52 +1,46 @@
+use crate::{autodiff::context::Context, function::binary::Binary, util::math_binary};
+
 pub struct Add;
 impl Binary<f64, f64> for Add {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        a + b
+        math_binary::add(a, b)
     }
 
     fn backward(&self, _ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
-        (d, d)
+        math_binary::add_back(d)
     }
 }
 
 pub struct Mul;
 impl Binary<f64, f64> for Mul {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        a * b
+        math_binary::mul(a, b)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
         let a = ctx.a.unwrap_or(1.);
         let b = ctx.b.unwrap_or(1.);
-        (b * d, a * d)
+        math_binary::mul_back(a, b, d)
     }
 }
 
 pub struct Div;
 impl Binary<f64, f64> for Div {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        if b == 0. {
-            0.
-        } else {
-            a / b
-        }
+        math_binary::div(a, b)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
         let a = ctx.a.unwrap_or(1.);
         let b = ctx.b.filter(|v| *v != 0.).unwrap_or(1.);
-        (d / b, a * d)
+        math_binary::div_back(a, b, d)
     }
 }
 
 pub struct Lt;
 impl Binary<f64, f64> for Lt {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        if a < b {
-            1.
-        } else {
-            0.
-        }
+        math_binary::lt(a, b)
     }
 
     fn backward(&self, _ctx: &Context<f64, f64>, _d: f64) -> (f64, f64) {
@@ -57,11 +51,7 @@ impl Binary<f64, f64> for Lt {
 pub struct Eq;
 impl Binary<f64, f64> for Eq {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        if a == b {
-            1.
-        } else {
-            0.
-        }
+        math_binary::eq(a, b)
     }
 
     fn backward(&self, _ctx: &Context<f64, f64>, _d: f64) -> (f64, f64) {
@@ -70,8 +60,6 @@ impl Binary<f64, f64> for Eq {
 }
 
 use proptest::prelude::*;
-
-use crate::{autodiff::context::Context, function::binary::Binary};
 
 fn is_close(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-4

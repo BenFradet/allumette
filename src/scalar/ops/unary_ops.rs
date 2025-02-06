@@ -72,6 +72,10 @@ impl Unary<f64> for Exp {
     }
 }
 
+fn is_close(a: f64, b: f64) -> bool {
+    (a - b).abs() < 1e-4
+}
+
 use proptest::prelude::*;
 
 proptest! {
@@ -102,7 +106,7 @@ proptest! {
         }
         let back = inv.backward(&ctx.a(a), a);
         let exp = if a == 0. { 1. } else { a };
-        assert_eq!((-1. / (exp.powf(2.))) * a, back);
+        assert_eq!(-a / (exp.powf(2.)), back);
     }
 
     #[test]

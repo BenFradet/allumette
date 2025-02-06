@@ -1,20 +1,20 @@
-fn add(a: f64, b: f64) -> f64 {
+pub fn add(a: f64, b: f64) -> f64 {
     a + b
 }
 
-fn add_back(d: f64) -> (f64, f64) {
+pub fn add_back(d: f64) -> (f64, f64) {
     (d, d)
 }
 
-fn mul(a: f64, b: f64) -> f64 {
+pub fn mul(a: f64, b: f64) -> f64 {
     a * b
 }
 
-fn mul_back(a: f64, b: f64, d: f64) -> (f64, f64) {
+pub fn mul_back(a: f64, b: f64, d: f64) -> (f64, f64) {
     (b * d, a * d)
 }
 
-fn div(a: f64, b: f64) -> f64 {
+pub fn div(a: f64, b: f64) -> f64 {
     if b == 0. {
         0.
     } else {
@@ -22,11 +22,15 @@ fn div(a: f64, b: f64) -> f64 {
     }
 }
 
-fn div_back(a: f64, b: f64, d: f64) -> (f64, f64) {
-    (d / b, a * d)
+pub fn div_back(a: f64, b: f64, d: f64) -> (f64, f64) {
+    if b == 0. {
+        (d, a * d)
+    } else {
+        (d / b, a * d)
+    }
 }
 
-fn lt(a: f64, b: f64) -> f64 {
+pub fn lt(a: f64, b: f64) -> f64 {
     if a < b {
         1.
     } else {
@@ -34,7 +38,7 @@ fn lt(a: f64, b: f64) -> f64 {
     }
 }
 
-fn eq(a: f64, b: f64) -> f64 {
+pub fn eq(a: f64, b: f64) -> f64 {
     if a == b {
         1.
     } else {
