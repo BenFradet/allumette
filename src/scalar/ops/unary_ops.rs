@@ -1,78 +1,78 @@
+use crate::{autodiff::context::Context, function::unary::Unary, util::math_unary};
+
 pub struct Ln;
 impl Unary<f64> for Ln {
     fn forward(&self, a: f64) -> f64 {
-        math::ln(a)
+        math_unary::ln(a)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.filter(|v| *v != 0.).unwrap_or(1.);
-        math::ln_back(a, d)
+        math_unary::ln_back(a, d)
     }
 }
 
 pub struct Inv;
 impl Unary<f64> for Inv {
     fn forward(&self, a: f64) -> f64 {
-        math::inv(a)
+        math_unary::inv(a)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.filter(|v| *v != 0.).unwrap_or(1.);
-        math::inv_back(a, d)
+        math_unary::inv_back(a, d)
     }
 }
 
 pub struct Neg;
 impl Unary<f64> for Neg {
     fn forward(&self, a: f64) -> f64 {
-        math::neg(a)
+        math_unary::neg(a)
     }
 
     fn backward(&self, _ctx: &Context<f64, f64>, d: f64) -> f64 {
-        math::neg_back(d)
+        math_unary::neg_back(d)
     }
 }
 
 pub struct Sig;
 impl Unary<f64> for Sig {
     fn forward(&self, a: f64) -> f64 {
-        math::sig(a)
+        math_unary::sig(a)
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.unwrap_or(0.);
-        math::sig_back(a, d)
+        math_unary::sig_back(a, d)
     }
 }
 
 pub struct Relu;
 impl Unary<f64> for Relu {
     fn forward(&self, a: f64) -> f64 {
-        math::relu(a)
+        math_unary::relu(a)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.unwrap_or(0.);
-        math::relu_back(a, d)
+        math_unary::relu_back(a, d)
     }
 }
 
 pub struct Exp;
 impl Unary<f64> for Exp {
     fn forward(&self, a: f64) -> f64 {
-        math::exp(a)
+        math_unary::exp(a)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.unwrap_or(0.);
-        math::exp_back(a, d)
+        math_unary::exp_back(a, d)
     }
 }
 
 use proptest::prelude::*;
-
-use crate::{autodiff::context::Context, function::unary::Unary, util::math};
 
 proptest! {
     #[test]
