@@ -1,4 +1,4 @@
-use crate::{autodiff::context::Context, function::binary::Binary, util::math_binary};
+use crate::{autodiff::context::Context, function::binary::Binary, math::math_binary};
 
 pub struct Add;
 impl Binary<f64, f64> for Add {

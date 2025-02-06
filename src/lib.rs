@@ -7,6 +7,7 @@ pub mod data;
 #[allow(clippy::module_inception)]
 pub mod function;
 pub mod hof;
+pub mod math;
 pub mod module;
 pub mod optim;
 pub mod scalar;

@@ -1,4 +1,4 @@
-use crate::{autodiff::context::Context, function::unary::Unary, util::math_unary};
+use crate::{autodiff::context::Context, function::unary::Unary, math::math_unary};
 
 pub struct Ln;
 impl Unary<f64> for Ln {

@@ -1,6 +1,6 @@
 use crate::{
-    autodiff::context::Context, function::unary::Unary, tensor::tensor_data::TensorData,
-    util::math_unary,
+    autodiff::context::Context, function::unary::Unary, math::math_unary,
+    tensor::tensor_data::TensorData,
 };
 
 pub struct Neg;
