@@ -1,74 +1,74 @@
-use crate::{autodiff::context::Context, function::unary::Unary, math::math_unary};
+use crate::{autodiff::context::Context, function::unary::Unary, math};
 
 pub struct Ln;
 impl Unary<f64> for Ln {
     fn forward(&self, a: f64) -> f64 {
-        math_unary::ln(a)
+        math::unary::ln(a)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.filter(|v| *v != 0.).unwrap_or(1.);
-        math_unary::ln_back(a, d)
+        math::unary::ln_back(a, d)
     }
 }
 
 pub struct Inv;
 impl Unary<f64> for Inv {
     fn forward(&self, a: f64) -> f64 {
-        math_unary::inv(a)
+        math::unary::inv(a)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.filter(|v| *v != 0.).unwrap_or(1.);
-        math_unary::inv_back(a, d)
+        math::unary::inv_back(a, d)
     }
 }
 
 pub struct Neg;
 impl Unary<f64> for Neg {
     fn forward(&self, a: f64) -> f64 {
-        math_unary::neg(a)
+        math::unary::neg(a)
     }
 
     fn backward(&self, _ctx: &Context<f64, f64>, d: f64) -> f64 {
-        math_unary::neg_back(d)
+        math::unary::neg_back(d)
     }
 }
 
 pub struct Sig;
 impl Unary<f64> for Sig {
     fn forward(&self, a: f64) -> f64 {
-        math_unary::sig(a)
+        math::unary::sig(a)
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.unwrap_or(0.);
-        math_unary::sig_back(a, d)
+        math::unary::sig_back(a, d)
     }
 }
 
 pub struct Relu;
 impl Unary<f64> for Relu {
     fn forward(&self, a: f64) -> f64 {
-        math_unary::relu(a)
+        math::unary::relu(a)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.unwrap_or(0.);
-        math_unary::relu_back(a, d)
+        math::unary::relu_back(a, d)
     }
 }
 
 pub struct Exp;
 impl Unary<f64> for Exp {
     fn forward(&self, a: f64) -> f64 {
-        math_unary::exp(a)
+        math::unary::exp(a)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
         let a = ctx.a.unwrap_or(0.);
-        math_unary::exp_back(a, d)
+        math::unary::exp_back(a, d)
     }
 }
 

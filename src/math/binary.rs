@@ -10,10 +10,6 @@ pub fn mul(a: f64, b: f64) -> f64 {
     a * b
 }
 
-pub fn mul_back(a: f64, b: f64, d: f64) -> (f64, f64) {
-    (b * d, a * d)
-}
-
 pub fn div(a: f64, b: f64) -> f64 {
     if b == 0. {
         0.
@@ -62,23 +58,12 @@ proptest! {
     }
 
     #[test]
-    fn mul_tests(a in any::<f64>(), b in any::<f64>(), d in any::<f64>()) {
+    fn mul_tests(a in any::<f64>(), b in any::<f64>()) {
         let f = mul(a, b);
         if f.abs() == f64::INFINITY {
             assert_eq!((a * b).abs(), f64::INFINITY);
         } else {
             assert!(is_close(a * b, f));
-        }
-        let back = mul_back(a, b, d);
-        if back.0.abs() == f64::INFINITY {
-            assert_eq!((b * d).abs(), f64::INFINITY);
-        } else {
-            assert!(is_close(b * d, back.0));
-        }
-        if back.1.abs() == f64::INFINITY {
-            assert_eq!((a * d).abs(), f64::INFINITY);
-        } else {
-            assert!(is_close(a * d, back.1));
         }
     }
 

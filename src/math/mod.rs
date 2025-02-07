@@ -1,2 +1,2 @@
-pub mod math_binary;
-pub mod math_unary;
+pub mod binary;
+pub mod unary;

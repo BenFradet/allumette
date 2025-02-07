@@ -1,46 +1,46 @@
-use crate::{autodiff::context::Context, function::binary::Binary, math::math_binary};
+use crate::{autodiff::context::Context, function::binary::Binary, math};
 
 pub struct Add;
 impl Binary<f64, f64> for Add {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        math_binary::add(a, b)
+        math::binary::add(a, b)
     }
 
     fn backward(&self, _ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
-        math_binary::add_back(d)
+        math::binary::add_back(d)
     }
 }
 
 pub struct Mul;
 impl Binary<f64, f64> for Mul {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        math_binary::mul(a, b)
+        math::binary::mul(a, b)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
         let a = ctx.a.unwrap_or(1.);
         let b = ctx.b.unwrap_or(1.);
-        math_binary::mul_back(a, b, d)
+        (math::binary::mul(d, b), math::binary::mul(d, a))
     }
 }
 
 pub struct Div;
 impl Binary<f64, f64> for Div {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        math_binary::div(a, b)
+        math::binary::div(a, b)
     }
 
     fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
         let a = ctx.a.unwrap_or(1.);
         let b = ctx.b.filter(|v| *v != 0.).unwrap_or(1.);
-        math_binary::div_back(a, b, d)
+        math::binary::div_back(a, b, d)
     }
 }
 
 pub struct Lt;
 impl Binary<f64, f64> for Lt {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        math_binary::lt(a, b)
+        math::binary::lt(a, b)
     }
 
     fn backward(&self, _ctx: &Context<f64, f64>, _d: f64) -> (f64, f64) {
@@ -51,7 +51,7 @@ impl Binary<f64, f64> for Lt {
 pub struct Eq;
 impl Binary<f64, f64> for Eq {
     fn forward(&self, a: f64, b: f64) -> f64 {
-        math_binary::eq(a, b)
+        math::binary::eq(a, b)
     }
 
     fn backward(&self, _ctx: &Context<f64, f64>, _d: f64) -> (f64, f64) {
