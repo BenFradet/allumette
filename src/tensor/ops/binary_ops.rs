@@ -80,3 +80,16 @@ impl Binary<TensorData, TensorData> for Eq {
         )
     }
 }
+
+pub struct Sum;
+impl Binary<TensorData, TensorData> for Sum {
+    fn forward(&self, a: TensorData, dim: TensorData) -> TensorData {
+        a.reduce(|acc, v| acc + v, dim.data[0] as usize)
+            .unwrap_or(TensorData::ones(a.shape.clone()))
+    }
+
+    fn backward(&self, _ctx: &Context<TensorData, TensorData>, d: TensorData) -> (TensorData, TensorData) {
+        let d_shape = d.shape.clone();
+        (d, TensorData::zeros(d_shape))
+    }
+}
