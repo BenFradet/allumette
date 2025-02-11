@@ -104,11 +104,15 @@ impl TensorData {
         self.shape.size
     }
 
+    pub fn dims(&self) -> usize {
+        self.shape.len()
+    }
+
     pub fn indices(&self) -> impl Iterator<Item = Idx> + use<'_> {
         (0..self.size()).map(|i| self.strides.idx(i))
     }
 
-    fn permute(mut self, order: &Order) -> Option<Self> {
+    pub fn permute(mut self, order: &Order) -> Option<Self> {
         let n = self.shape.data().len();
         if order.fits(n) {
             let mut new_shape = vec![0; n];

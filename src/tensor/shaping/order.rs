@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use crate::tensor::tensor_data::TensorData;
+
 use super::iter::Iter;
 
 #[derive(Debug)]
@@ -38,5 +40,29 @@ impl Order {
         let s1: HashSet<_> = self.data.iter().copied().collect();
         let s2: HashSet<_> = (0..n).collect();
         s1 == s2
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn index(&self, n: usize) -> Option<usize> {
+        self.data.iter().position(|i| *i == n)
+    }
+}
+
+impl From<TensorData> for Order {
+    fn from(td: TensorData) -> Self {
+        let ord_data = td.data.clone();
+        let len = ord_data.len();
+        Order::new(ord_data.iter().map(|f| *f as usize).collect()).unwrap_or(Order::range(len))
+    }
+}
+
+impl From<&TensorData> for Order {
+    fn from(td: &TensorData) -> Self {
+        let ord_data = td.data.clone();
+        let len = ord_data.len();
+        Order::new(ord_data.iter().map(|f| *f as usize).collect()).unwrap_or(Order::range(len))
     }
 }

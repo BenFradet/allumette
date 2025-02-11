@@ -70,6 +70,10 @@ impl Shape {
         Shape::new(res)
     }
 
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
     pub fn arbitrary() -> impl Strategy<Value = Shape> {
         proptest::collection::vec(1_usize..3, 4).prop_map(Shape::new)
     }

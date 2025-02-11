@@ -1,5 +1,8 @@
 use crate::{
-    autodiff::context::Context, function::binary::Binary, math, tensor::tensor_data::TensorData,
+    autodiff::context::Context,
+    function::binary::Binary,
+    math,
+    tensor::{shaping::order::Order, tensor_data::TensorData},
 };
 
 pub struct Add;
@@ -88,8 +91,45 @@ impl Binary<TensorData, TensorData> for Sum {
             .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData, TensorData>, d: TensorData) -> (TensorData, TensorData) {
+    fn backward(
+        &self,
+        _ctx: &Context<TensorData, TensorData>,
+        d: TensorData,
+    ) -> (TensorData, TensorData) {
         let d_shape = d.shape.clone();
         (d, TensorData::zeros(d_shape))
+    }
+}
+
+pub struct Permute;
+impl Binary<TensorData, TensorData> for Permute {
+    fn forward(&self, a: TensorData, order: TensorData) -> TensorData {
+        let ord: Order = order.into();
+        let a_shape = a.shape.clone();
+        a.permute(&ord).unwrap_or(TensorData::ones(a_shape))
+    }
+
+    fn backward(
+        &self,
+        ctx: &Context<TensorData, TensorData>,
+        d: TensorData,
+    ) -> (TensorData, TensorData) {
+        let order = ctx
+            .a
+            .as_ref()
+            .map(|o| o.into())
+            .unwrap_or(Order::range(d.dims()));
+        let mut inv = vec![];
+        for i in 0..order.len() {
+            let idx = order.index(i).unwrap_or(0);
+            inv.push(idx);
+        }
+        let inverse_order = Order::new(inv).unwrap_or(Order::range(order.len()));
+        let d_shape = d.shape.clone();
+        (
+            d.permute(&inverse_order)
+                .unwrap_or(TensorData::ones(d_shape.clone())),
+            TensorData::zeros(d_shape),
+        )
     }
 }

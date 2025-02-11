@@ -42,11 +42,11 @@ pub fn eq(a: f64, b: f64) -> f64 {
     }
 }
 
-use proptest::prelude::*;
-
 fn is_close(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-4
 }
+
+use proptest::prelude::*;
 
 proptest! {
     #[test]
