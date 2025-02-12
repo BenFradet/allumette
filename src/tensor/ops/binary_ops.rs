@@ -133,3 +133,15 @@ impl Binary<TensorData, TensorData> for Permute {
         )
     }
 }
+
+pub struct IsClose;
+impl Binary<TensorData, TensorData> for IsClose {
+    fn forward(&self, a: TensorData, b: TensorData) -> TensorData {
+        a.zip(&b, |a, b| if math::binary::is_close(a, b) { 1. } else { 0. })
+            .unwrap_or(TensorData::ones(a.shape.clone()))
+    }
+
+    fn backward(&self, _ctx: &Context<TensorData, TensorData>, d: TensorData) -> (TensorData, TensorData) {
+        (TensorData::zeros(d.shape.clone()), TensorData::zeros(d.shape))
+    }
+}

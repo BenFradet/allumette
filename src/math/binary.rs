@@ -42,7 +42,7 @@ pub fn eq(a: f64, b: f64) -> f64 {
     }
 }
 
-fn is_close(a: f64, b: f64) -> bool {
+pub fn is_close(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-4
 }
 
