@@ -1,36 +1,36 @@
 #[derive(Clone, Debug, PartialEq)]
-pub struct Context<A, B> {
+pub struct Context<A> {
     pub grad: bool,
-    pub a: Option<A>,
-    pub b: Option<B>,
+    pub fst: Option<A>,
+    pub snd: Option<A>,
 }
 
-impl<A, B> Default for Context<A, B> {
+impl<A> Default for Context<A> {
     fn default() -> Self {
         Self {
             grad: true,
-            a: None,
-            b: None,
+            fst: None,
+            snd: None,
         }
     }
 }
 
-impl<A: Clone, B: Clone> Context<A, B> {
-    fn new(grad: bool, a: A, b: B) -> Self {
+impl<A: Clone> Context<A> {
+    fn new(grad: bool, fst: A, snd: A) -> Self {
         Self {
             grad,
-            a: Some(a),
-            b: Some(b),
+            fst: Some(fst),
+            snd: Some(snd),
         }
     }
 
-    pub fn a(mut self, a: A) -> Self {
-        self.a = Some(a);
+    pub fn fst(mut self, a: A) -> Self {
+        self.fst = Some(a);
         self
     }
 
-    pub fn b(mut self, b: B) -> Self {
-        self.b = Some(b);
+    pub fn snd(mut self, a: A) -> Self {
+        self.snd = Some(a);
         self
     }
 
@@ -45,7 +45,7 @@ impl<A: Clone, B: Clone> Context<A, B> {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.a.is_none() && self.b.is_none()
+        self.fst.is_none() && self.snd.is_none()
     }
 }
 
@@ -61,9 +61,9 @@ mod tests {
 
     #[test]
     fn default_test() {
-        let c: Context<f64, f64> = Context::default();
+        let c: Context<f64> = Context::default();
         assert!(c.grad);
-        assert!(c.a.is_none());
-        assert!(c.b.is_none());
+        assert!(c.fst.is_none());
+        assert!(c.snd.is_none());
     }
 }

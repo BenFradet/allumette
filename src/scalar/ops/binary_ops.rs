@@ -1,60 +1,60 @@
 use crate::{autodiff::context::Context, function::binary::Binary, math};
 
 pub struct Add;
-impl Binary<f64, f64> for Add {
+impl Binary<f64> for Add {
     fn forward(&self, a: f64, b: f64) -> f64 {
         math::binary::add(a, b)
     }
 
-    fn backward(&self, _ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
+    fn backward(&self, _ctx: &Context<f64>, d: f64) -> (f64, f64) {
         math::binary::add_back(d)
     }
 }
 
 pub struct Mul;
-impl Binary<f64, f64> for Mul {
+impl Binary<f64> for Mul {
     fn forward(&self, a: f64, b: f64) -> f64 {
         math::binary::mul(a, b)
     }
 
-    fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
-        let a = ctx.a.unwrap_or(1.);
-        let b = ctx.b.unwrap_or(1.);
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64) {
+        let a = ctx.fst.unwrap_or(1.);
+        let b = ctx.snd.unwrap_or(1.);
         (math::binary::mul(d, b), math::binary::mul(d, a))
     }
 }
 
 pub struct Div;
-impl Binary<f64, f64> for Div {
+impl Binary<f64> for Div {
     fn forward(&self, a: f64, b: f64) -> f64 {
         math::binary::div(a, b)
     }
 
-    fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> (f64, f64) {
-        let a = ctx.a.unwrap_or(1.);
-        let b = ctx.b.filter(|v| *v != 0.).unwrap_or(1.);
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64) {
+        let a = ctx.fst.unwrap_or(1.);
+        let b = ctx.snd.filter(|v| *v != 0.).unwrap_or(1.);
         math::binary::div_back(a, b, d)
     }
 }
 
 pub struct Lt;
-impl Binary<f64, f64> for Lt {
+impl Binary<f64> for Lt {
     fn forward(&self, a: f64, b: f64) -> f64 {
         math::binary::lt(a, b)
     }
 
-    fn backward(&self, _ctx: &Context<f64, f64>, _d: f64) -> (f64, f64) {
+    fn backward(&self, _ctx: &Context<f64>, _d: f64) -> (f64, f64) {
         (0., 0.)
     }
 }
 
 pub struct Eq;
-impl Binary<f64, f64> for Eq {
+impl Binary<f64> for Eq {
     fn forward(&self, a: f64, b: f64) -> f64 {
         math::binary::eq(a, b)
     }
 
-    fn backward(&self, _ctx: &Context<f64, f64>, _d: f64) -> (f64, f64) {
+    fn backward(&self, _ctx: &Context<f64>, _d: f64) -> (f64, f64) {
         (0., 0.)
     }
 }
@@ -86,7 +86,7 @@ proptest! {
         } else {
             assert!(is_close(a * b, f));
         }
-        let ctx2 = ctx.a(a).b(b);
+        let ctx2 = ctx.fst(a).snd(b);
         let back = mul.backward(&ctx2, d);
         if back.0.abs() == f64::INFINITY {
             assert_eq!((b * d).abs(), f64::INFINITY);
@@ -113,7 +113,7 @@ proptest! {
         } else {
             assert!(is_close(a / b, f));
         }
-        let ctx2 = ctx.a(a).b(b);
+        let ctx2 = ctx.fst(a).snd(b);
         let back = div.backward(&ctx2, d);
         if b == 0. {
             assert_eq!(d, back.0);

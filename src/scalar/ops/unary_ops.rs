@@ -6,8 +6,8 @@ impl Unary<f64> for Ln {
         math::unary::ln(a)
     }
 
-    fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
-        let a = ctx.a.filter(|v| *v != 0.).unwrap_or(1.);
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
+        let a = ctx.fst.filter(|v| *v != 0.).unwrap_or(1.);
         math::unary::ln_back(a, d)
     }
 }
@@ -18,8 +18,8 @@ impl Unary<f64> for Inv {
         math::unary::inv(a)
     }
 
-    fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
-        let a = ctx.a.filter(|v| *v != 0.).unwrap_or(1.);
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
+        let a = ctx.fst.filter(|v| *v != 0.).unwrap_or(1.);
         math::unary::inv_back(a, d)
     }
 }
@@ -30,7 +30,7 @@ impl Unary<f64> for Neg {
         math::unary::neg(a)
     }
 
-    fn backward(&self, _ctx: &Context<f64, f64>, d: f64) -> f64 {
+    fn backward(&self, _ctx: &Context<f64>, d: f64) -> f64 {
         math::unary::neg_back(d)
     }
 }
@@ -42,8 +42,8 @@ impl Unary<f64> for Sig {
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
-    fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
-        let a = ctx.a.unwrap_or(0.);
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
+        let a = ctx.fst.unwrap_or(0.);
         math::unary::sig_back(a, d)
     }
 }
@@ -54,8 +54,8 @@ impl Unary<f64> for Relu {
         math::unary::relu(a)
     }
 
-    fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
-        let a = ctx.a.unwrap_or(0.);
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
+        let a = ctx.fst.unwrap_or(0.);
         math::unary::relu_back(a, d)
     }
 }
@@ -66,8 +66,8 @@ impl Unary<f64> for Exp {
         math::unary::exp(a)
     }
 
-    fn backward(&self, ctx: &Context<f64, f64>, d: f64) -> f64 {
-        let a = ctx.a.unwrap_or(0.);
+    fn backward(&self, ctx: &Context<f64>, d: f64) -> f64 {
+        let a = ctx.fst.unwrap_or(0.);
         math::unary::exp_back(a, d)
     }
 }
@@ -89,7 +89,7 @@ proptest! {
         } else {
             assert_eq!(a.ln(), f);
         }
-        let back = log.backward(&ctx.a(a), a);
+        let back = log.backward(&ctx.fst(a), a);
         let exp = if a == 0. { 1. } else { a };
         assert_eq!(a / exp, back);
     }
@@ -104,7 +104,7 @@ proptest! {
         } else {
             assert_eq!(1. / a, f);
         }
-        let back = inv.backward(&ctx.a(a), a);
+        let back = inv.backward(&ctx.fst(a), a);
         let exp = if a == 0. { 1. } else { a };
         assert_eq!(-a / (exp.powf(2.)), back);
     }
@@ -129,7 +129,7 @@ proptest! {
         } else {
             assert_eq!(a.exp() / (1. + a.exp()), f);
         }
-        let back = sig.backward(&ctx.a(a), a);
+        let back = sig.backward(&ctx.fst(a), a);
         assert_eq!(f * (1. - f) * a, back);
     }
 
@@ -143,7 +143,7 @@ proptest! {
         } else {
             assert_eq!(0., f);
         }
-        let back = relu.backward(&ctx.a(a), a);
+        let back = relu.backward(&ctx.fst(a), a);
         if a > 0. {
             assert_eq!(a, back);
         } else {
@@ -157,7 +157,7 @@ proptest! {
         let ctx = Context::default();
         let f = exp.forward(a);
         assert_eq!(a.exp(), f);
-        let back = exp.backward(&ctx.a(a), a);
+        let back = exp.backward(&ctx.fst(a), a);
         assert_eq!(a.exp() * a, back);
     }
 }

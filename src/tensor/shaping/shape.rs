@@ -74,6 +74,10 @@ impl Shape {
         self.data.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     pub fn arbitrary() -> impl Strategy<Value = Shape> {
         proptest::collection::vec(1_usize..3, 4).prop_map(Shape::new)
     }

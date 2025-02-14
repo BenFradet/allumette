@@ -4,13 +4,13 @@ use super::scalar::Scalar;
 
 #[derive(Clone, Debug, Default)]
 pub struct ScalarHistory {
-    pub last_fn: Option<Function<f64, f64>>,
-    pub ctx: Context<f64, f64>,
+    pub last_fn: Option<Function<f64>>,
+    pub ctx: Context<f64>,
     pub inputs: Vec<Scalar>,
 }
 
 impl ScalarHistory {
-    pub fn last_fn(mut self, f: Function<f64, f64>) -> Self {
+    pub fn last_fn(mut self, f: Function<f64>) -> Self {
         self.last_fn = Some(f);
         self
     }
@@ -20,7 +20,7 @@ impl ScalarHistory {
         self
     }
 
-    pub fn context(mut self, c: Context<f64, f64>) -> Self {
+    pub fn context(mut self, c: Context<f64>) -> Self {
         self.ctx = c;
         self
     }

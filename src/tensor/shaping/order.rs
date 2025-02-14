@@ -46,6 +46,10 @@ impl Order {
         self.data.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     pub fn index(&self, n: usize) -> Option<usize> {
         self.data.iter().position(|i| *i == n)
     }

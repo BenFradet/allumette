@@ -1,14 +1,14 @@
 use crate::{autodiff::context::Context, function::function::Function};
 
 #[derive(Clone, Debug, Default)]
-pub struct History<A, B> {
-    pub last_fn: Option<Function<A, B>>,
-    pub ctx: Context<A, B>,
+pub struct History<A> {
+    pub last_fn: Option<Function<A>>,
+    pub ctx: Context<A>,
     pub inputs: Vec<A>,
 }
 
-impl<A: Clone, B: Clone> History<A, B> {
-    pub fn last_fn(mut self, f: Function<A, B>) -> Self {
+impl<A: Clone> History<A> {
+    pub fn last_fn(mut self, f: Function<A>) -> Self {
         self.last_fn = Some(f);
         self
     }
@@ -18,7 +18,7 @@ impl<A: Clone, B: Clone> History<A, B> {
         self
     }
 
-    pub fn context(mut self, c: Context<A, B>) -> Self {
+    pub fn context(mut self, c: Context<A>) -> Self {
         self.ctx = c;
         self
     }
@@ -26,4 +26,8 @@ impl<A: Clone, B: Clone> History<A, B> {
     pub fn is_empty(&self) -> bool {
         self.inputs.is_empty() && self.last_fn.is_none() && self.ctx.is_empty()
     }
+}
+
+pub trait HasHistory {
+    fn history<A>(self, history: History<A>) -> Self;
 }
