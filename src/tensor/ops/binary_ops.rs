@@ -127,3 +127,18 @@ impl Binary<TensorData> for IsClose {
         )
     }
 }
+
+pub struct All;
+impl Binary<TensorData> for All {
+    fn forward(&self, a: TensorData, dim: TensorData) -> TensorData {
+        a.reduce(|acc, v| acc * v, dim.data[0] as usize)
+            .unwrap_or(TensorData::ones(a.shape.clone()))
+    }
+
+    fn backward(&self, _ctx: &Context<TensorData>, d: TensorData) -> (TensorData, TensorData) {
+        (
+            TensorData::zeros(d.shape.clone()),
+            TensorData::zeros(d.shape.clone()),
+        )
+    }
+}
