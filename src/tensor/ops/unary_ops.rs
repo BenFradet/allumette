@@ -83,3 +83,14 @@ impl Unary<TensorData> for Exp {
             .unwrap_or(TensorData::ones(d.shape.clone()))
     }
 }
+
+pub struct Copy;
+impl Unary<TensorData> for Copy {
+    fn forward(&self, a: TensorData) -> TensorData {
+        a
+    }
+
+    fn backward(&self, _ctx: &Context<TensorData>, d: TensorData) -> TensorData {
+        d
+    }
+}
