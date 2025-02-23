@@ -1,10 +1,16 @@
 use crate::{autodiff::context::Context, function::function::Function};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct History<A> {
     pub last_fn: Option<Function<A>>,
     pub ctx: Context<A>,
     pub inputs: Vec<A>,
+}
+
+impl<A> Default for History<A> {
+    fn default() -> Self {
+        Self { last_fn: Default::default(), ctx: Default::default(), inputs: Default::default() }
+    }
 }
 
 impl<A: Clone> History<A> {
@@ -26,8 +32,4 @@ impl<A: Clone> History<A> {
     pub fn is_empty(&self) -> bool {
         self.inputs.is_empty() && self.last_fn.is_none() && self.ctx.is_empty()
     }
-}
-
-pub trait HasHistory {
-    fn history<A>(self, history: History<A>) -> Self;
 }

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops, sync::Arc};
 
 use proptest::{collection, prelude::*};
 
@@ -38,6 +38,13 @@ impl TensorData {
             shape,
             strides,
         }
+    }
+
+    pub fn shape(mut self, shape: Shape) -> Self {
+        let strides = (&shape).into();
+        self.shape = shape;
+        self.strides = strides;
+        self
     }
 
     pub fn map(mut self, f: impl Fn(f64) -> f64) -> Self {
@@ -154,6 +161,14 @@ impl TensorData {
                 let strides: Strides = (&shape).into();
                 TensorData::new(data, shape, strides)
             })
+    }
+}
+
+impl ops::Add<TensorData> for TensorData {
+    type Output = TensorData;
+
+    fn add(self, rhs: TensorData) -> Self::Output {
+        todo!()
     }
 }
 

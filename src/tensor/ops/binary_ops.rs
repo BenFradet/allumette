@@ -148,19 +148,17 @@ impl Binary<TensorData> for View {
     fn forward(&self, lhs: TensorData, s: TensorData) -> TensorData {
         assert!(lhs.is_contiguous(), "mut be contiguous to view");
         let shape = Shape::new(s.data.iter().map(|f| *f as usize).collect());
-        let strides = (&shape).into();
-        // TODO: fn shape(mut self, shape) -> Self (also mutates strides)
-        TensorData::new(lhs.data.to_vec(), shape, strides)
+        lhs.shape(shape)
     }
 
     fn backward(&self, ctx: &Context<TensorData>, d: TensorData) -> (TensorData, TensorData) {
+        let d_shape = d.shape.clone();
+        let zeros = TensorData::zeros(d.shape.clone());
         let shape = ctx
             .fst
             .as_ref()
             .map(|o| o.shape.clone())
-            .unwrap_or(d.shape.clone());
-        let strides = (&shape).into();
-        // TODO: fn shape(mut self, shape) -> Self (also mutates strides)
-        (TensorData::new(d.data.to_vec(), shape, strides), TensorData::zeros(d.shape.clone()))
+            .unwrap_or(d_shape);
+        (d.shape(shape), zeros)
     }
 }

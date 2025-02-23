@@ -6,13 +6,12 @@ use std::{
 use rand::{thread_rng, Rng};
 
 use super::{
-    ops::{
+    forward::Forward, ops::{
         binary_ops::{Add, Div, Eq, Lt, Mul},
         unary_ops::{Exp, Ln, Neg, Relu, Sig},
-    },
-    scalar_history::ScalarHistory,
+    }, scalar_history::ScalarHistory
 };
-use crate::{autodiff::forward::Forward, function::function::Function};
+use crate::function::function::Function;
 
 #[derive(Clone, Debug)]
 pub struct Scalar {
