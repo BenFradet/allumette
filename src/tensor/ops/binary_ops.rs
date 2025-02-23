@@ -2,7 +2,7 @@ use crate::{
     autodiff::context::Context,
     function::binary::Binary,
     math,
-    tensor::{shaping::order::Order, tensor_data::TensorData},
+    tensor::{shaping::{order::Order, shape::Shape}, tensor_data::TensorData},
 };
 
 pub struct Add;
@@ -91,7 +91,7 @@ impl Binary<TensorData> for Permute {
 
     fn backward(&self, ctx: &Context<TensorData>, d: TensorData) -> (TensorData, TensorData) {
         let order = ctx
-            .fst
+            .snd
             .as_ref()
             .map(|o| o.into())
             .unwrap_or(Order::range(d.dims()));
@@ -140,5 +140,27 @@ impl Binary<TensorData> for All {
             TensorData::zeros(d.shape.clone()),
             TensorData::zeros(d.shape.clone()),
         )
+    }
+}
+
+pub struct View;
+impl Binary<TensorData> for View {
+    fn forward(&self, lhs: TensorData, s: TensorData) -> TensorData {
+        assert!(lhs.is_contiguous(), "mut be contiguous to view");
+        let shape = Shape::new(s.data.iter().map(|f| *f as usize).collect());
+        let strides = (&shape).into();
+        // TODO: fn shape(mut self, shape) -> Self (also mutates strides)
+        TensorData::new(lhs.data.to_vec(), shape, strides)
+    }
+
+    fn backward(&self, ctx: &Context<TensorData>, d: TensorData) -> (TensorData, TensorData) {
+        let shape = ctx
+            .fst
+            .as_ref()
+            .map(|o| o.shape.clone())
+            .unwrap_or(d.shape.clone());
+        let strides = (&shape).into();
+        // TODO: fn shape(mut self, shape) -> Self (also mutates strides)
+        (TensorData::new(d.data.to_vec(), shape, strides), TensorData::zeros(d.shape.clone()))
     }
 }

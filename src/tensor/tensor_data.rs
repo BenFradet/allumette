@@ -12,7 +12,7 @@ pub struct TensorData {
 }
 
 impl TensorData {
-    fn new(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
+    pub fn new(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
         TensorData {
             data: Arc::new(data),
             shape,
@@ -129,7 +129,7 @@ impl TensorData {
         }
     }
 
-    fn is_contiguous(&self) -> bool {
+    pub fn is_contiguous(&self) -> bool {
         let res = self
             .strides
             .iter()
