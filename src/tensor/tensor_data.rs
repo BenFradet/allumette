@@ -1,4 +1,4 @@
-use std::{ops, sync::Arc};
+use std::sync::Arc;
 
 use proptest::{collection, prelude::*};
 
@@ -13,6 +13,26 @@ pub struct TensorData {
 
 impl TensorData {
     pub fn new(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
+        TensorData {
+            data: Arc::new(data),
+            shape,
+            strides,
+        }
+    }
+
+    pub fn scalar(data: f64) -> Self {
+        let shape = Shape::new(vec![1]);
+        let strides = (&shape).into();
+        TensorData {
+            data: Arc::new(vec![data]),
+            shape,
+            strides,
+        }
+    }
+
+    pub fn vec(data: Vec<f64>) -> Self {
+        let shape = Shape::new(vec![data.len()]);
+        let strides = (&shape).into();
         TensorData {
             data: Arc::new(data),
             shape,
@@ -161,14 +181,6 @@ impl TensorData {
                 let strides: Strides = (&shape).into();
                 TensorData::new(data, shape, strides)
             })
-    }
-}
-
-impl ops::Add<TensorData> for TensorData {
-    type Output = TensorData;
-
-    fn add(self, rhs: TensorData) -> Self::Output {
-        todo!()
     }
 }
 

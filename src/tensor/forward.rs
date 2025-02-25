@@ -1,13 +1,20 @@
 use std::rc::Rc;
 
-use crate::{autodiff::{context::Context, history::History}, function::{binary::Binary, function::Function, unary::Unary}};
+use crate::{
+    autodiff::{context::Context, history::History},
+    function::{binary::Binary, function::Function, unary::Unary},
+};
 
 use super::{tensor::Tensor, tensor_data::TensorData};
 
 pub struct Forward;
 
 impl Forward {
-    pub fn binary(b: impl Binary<TensorData> + 'static, lhs: TensorData, rhs: TensorData) -> Tensor {
+    pub fn binary(
+        b: impl Binary<TensorData> + 'static,
+        lhs: TensorData,
+        rhs: TensorData,
+    ) -> Tensor {
         let res = b.forward(lhs.clone(), rhs.clone());
         let ctx = Context::default().fst(lhs.clone()).snd(rhs.clone());
         let new_history = History::default()

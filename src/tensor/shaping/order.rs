@@ -6,7 +6,7 @@ use super::iter::Iter;
 
 #[derive(Debug)]
 pub struct Order {
-    data: Vec<usize>,
+    pub data: Vec<usize>,
 }
 
 impl Order {

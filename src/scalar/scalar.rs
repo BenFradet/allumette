@@ -6,10 +6,12 @@ use std::{
 use rand::{thread_rng, Rng};
 
 use super::{
-    forward::Forward, ops::{
+    forward::Forward,
+    ops::{
         binary_ops::{Add, Div, Eq, Lt, Mul},
         unary_ops::{Exp, Ln, Neg, Relu, Sig},
-    }, scalar_history::ScalarHistory
+    },
+    scalar_history::ScalarHistory,
 };
 use crate::function::function::Function;
 

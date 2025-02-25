@@ -2,7 +2,10 @@ use crate::{
     autodiff::context::Context,
     function::binary::Binary,
     math,
-    tensor::{shaping::{order::Order, shape::Shape}, tensor_data::TensorData},
+    tensor::{
+        shaping::{order::Order, shape::Shape},
+        tensor_data::TensorData,
+    },
 };
 
 pub struct Add;
@@ -154,11 +157,7 @@ impl Binary<TensorData> for View {
     fn backward(&self, ctx: &Context<TensorData>, d: TensorData) -> (TensorData, TensorData) {
         let d_shape = d.shape.clone();
         let zeros = TensorData::zeros(d.shape.clone());
-        let shape = ctx
-            .fst
-            .as_ref()
-            .map(|o| o.shape.clone())
-            .unwrap_or(d_shape);
+        let shape = ctx.fst.as_ref().map(|o| o.shape.clone()).unwrap_or(d_shape);
         (d.shape(shape), zeros)
     }
 }

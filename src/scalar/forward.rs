@@ -1,7 +1,9 @@
 use std::rc::Rc;
 
 use crate::{
-    autodiff::context::Context, function::{binary::Binary, function::Function, unary::Unary}, scalar::{scalar::Scalar, scalar_history::ScalarHistory}
+    autodiff::context::Context,
+    function::{binary::Binary, function::Function, unary::Unary},
+    scalar::{scalar::Scalar, scalar_history::ScalarHistory},
 };
 
 pub struct Forward;

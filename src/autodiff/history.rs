@@ -9,7 +9,11 @@ pub struct History<A> {
 
 impl<A> Default for History<A> {
     fn default() -> Self {
-        Self { last_fn: Default::default(), ctx: Default::default(), inputs: Default::default() }
+        Self {
+            last_fn: Default::default(),
+            ctx: Default::default(),
+            inputs: Default::default(),
+        }
     }
 }
 
