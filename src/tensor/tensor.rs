@@ -29,6 +29,18 @@ impl Tensor {
         }
     }
 
+    pub fn size(&self) -> usize {
+        self.data.size()
+    }
+
+    pub fn item(&self) -> Option<f64> {
+        if self.size() == 1 {
+            Some(self.data.data[0])
+        } else {
+            None
+        }
+    }
+
     pub fn lt(self, rhs: Tensor) -> Self {
         Forward::binary(Lt {}, self.data, rhs.data)
     }
@@ -125,5 +137,24 @@ impl ops::Neg for Tensor {
 
     fn neg(self) -> Self::Output {
         Forward::unary(Neg {}, self.data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_reduce_forward_one_dim() -> () {
+        let shape = Shape::new(vec![3, 2]);
+        let strides = (&shape).into();
+        let td = TensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
+        let tensor = Tensor::from_tensor_data(td);
+        let summed = tensor.sum(0);
+        let exp = Tensor::from_tensor_data(TensorData::vec(vec![11., 16.]));
+
+        let is_close = summed.is_close(exp);
+        let shape = Shape::new(vec![is_close.size()]);
+        assert_eq!(Some(1.), is_close.view(shape).all(0).item());
     }
 }
