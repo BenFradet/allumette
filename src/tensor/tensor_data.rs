@@ -101,14 +101,14 @@ impl TensorData {
         Some(TensorData::new(out, shape, strides))
     }
 
-    pub fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize) -> Option<TensorData> {
+    pub fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<TensorData> {
         if dim < self.shape.data().len() {
             let mut shape_data = self.shape.data().to_vec();
             shape_data[dim] = 1;
             let shape = Shape::new(shape_data);
             let strides: Strides = (&shape).into();
             let len = shape.size;
-            let mut out = vec![0.; len];
+            let mut out = vec![init; len];
             for i in 0..len {
                 let out_idx = strides.idx(i);
                 let out_pos = strides.position(&out_idx);
@@ -198,12 +198,23 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce_test(t1 in TensorData::arbitrary()) {
+        fn reduce_test_sum(t1 in TensorData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
-                t1p = t1p.reduce(|a, b| a + b, i).unwrap();
+                t1p = t1p.reduce(|a, b| a + b, i, 0.).unwrap();
             }
             let res = t1.data.clone().iter().fold(0., |acc, a| acc + a);
+            assert_eq!(1, t1p.data.len());
+            assert!((res - t1p.data[0]).abs() < f64::EPSILON * 10_f64.powf(2.));
+        }
+
+        #[test]
+        fn reduce_test_mul(t1 in TensorData::arbitrary()) {
+            let mut t1p = t1.clone();
+            for i in 0..t1.shape.data().len() {
+                t1p = t1p.reduce(|a, b| a * b, i, 1.).unwrap();
+            }
+            let res = t1.data.clone().iter().fold(1., |acc, a| acc * a);
             assert_eq!(1, t1p.data.len());
             assert!((res - t1p.data[0]).abs() < f64::EPSILON * 10_f64.powf(2.));
         }

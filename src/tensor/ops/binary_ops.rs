@@ -74,7 +74,7 @@ impl Binary<TensorData> for Eq {
 pub struct Sum;
 impl Binary<TensorData> for Sum {
     fn forward(&self, a: TensorData, dim: TensorData) -> TensorData {
-        a.reduce(|acc, v| acc + v, dim.data[0] as usize)
+        a.reduce(|acc, v| acc + v, dim.data[0] as usize, 0.)
             .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
@@ -134,7 +134,7 @@ impl Binary<TensorData> for IsClose {
 pub struct All;
 impl Binary<TensorData> for All {
     fn forward(&self, a: TensorData, dim: TensorData) -> TensorData {
-        a.reduce(|acc, v| acc * v, dim.data[0] as usize)
+        a.reduce(|acc, v| acc * v, dim.data[0] as usize, 1.)
             .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
