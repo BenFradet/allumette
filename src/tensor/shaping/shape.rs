@@ -16,6 +16,11 @@ impl Shape {
         Self { data, size }
     }
 
+    pub fn scalar(size: usize) -> Self {
+        let data = vec![size];
+        Self { data, size }
+    }
+
     pub fn data(&self) -> &[usize] {
         &self.data
     }
