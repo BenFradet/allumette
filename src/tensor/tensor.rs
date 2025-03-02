@@ -151,8 +151,24 @@ mod tests {
         let td = TensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
         let tensor = Tensor::from_tensor_data(td);
         let summed = tensor.sum(0);
-        let exp = Tensor::from_tensor_data(TensorData::vec(vec![11., 16.]));
 
+        let exp = Tensor::from_tensor_data(TensorData::vec(vec![11., 16.]));
+        let is_close = summed.is_close(exp);
+        let shape = Shape::new(vec![is_close.size()]);
+        assert_eq!(Some(1.), is_close.view(shape).all(0).item());
+    }
+
+    #[test]
+    fn test_reduce_forward_one_dim_2() -> () {
+        let shape = Shape::new(vec![3, 2]);
+        let strides = (&shape).into();
+        let td = TensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
+        let tensor = Tensor::from_tensor_data(td);
+        let summed = tensor.sum(1);
+
+        let exp = Tensor::from_tensor_data(
+            TensorData::matrix(vec![vec![5.], vec![10.], vec![12.]]).unwrap(),
+        );
         let is_close = summed.is_close(exp);
         let shape = Shape::new(vec![is_close.size()]);
         assert_eq!(Some(1.), is_close.view(shape).all(0).item());

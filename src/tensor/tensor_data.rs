@@ -12,6 +12,7 @@ pub struct TensorData {
 }
 
 impl TensorData {
+    // TODO: accept any collection
     pub fn new(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
         TensorData {
             data: Arc::new(data),
@@ -30,6 +31,7 @@ impl TensorData {
         }
     }
 
+    // TODO: accept any collection
     pub fn vec(data: Vec<f64>) -> Self {
         let shape = Shape::new(vec![data.len()]);
         let strides = (&shape).into();
@@ -37,6 +39,27 @@ impl TensorData {
             data: Arc::new(data),
             shape,
             strides,
+        }
+    }
+
+    // TODO: accept any collection
+    pub fn matrix(data: Vec<Vec<f64>>) -> Option<Self> {
+        if data.is_empty() {
+            None
+        } else {
+            let rows = data[0].len();
+            if !data.iter().all(|v| v.len() == rows) {
+                None
+            } else {
+                let cols = data.len();
+                let shape = Shape::new(vec![cols, rows]);
+                let strides = (&shape).into();
+                Some(TensorData {
+                    data: Arc::new(data.concat()),
+                    shape,
+                    strides,
+                })
+            }
         }
     }
 
