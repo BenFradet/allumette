@@ -149,7 +149,7 @@ impl Binary<TensorData> for All {
 pub struct View;
 impl Binary<TensorData> for View {
     fn forward(&self, lhs: TensorData, s: TensorData) -> TensorData {
-        assert!(lhs.is_contiguous(), "mut be contiguous to view");
+        assert!(lhs.is_contiguous(), "must be contiguous to view");
         let shape = Shape::new(s.data.iter().map(|f| *f as usize).collect());
         lhs.shape(shape)
     }

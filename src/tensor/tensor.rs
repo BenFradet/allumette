@@ -5,7 +5,7 @@ use super::{
     forward::Forward,
     ops::{
         binary_ops::{Add, All, Eq, IsClose, Lt, Mul, Permute, Sum, View},
-        unary_ops::{Exp, Inv, Ln, Neg, Relu, Sig},
+        unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
     shaping::{order::Order, shape::Shape},
     tensor_data::TensorData,
@@ -75,6 +75,10 @@ impl Tensor {
         let fs = shape.data().iter().map(|u| *u as f64).collect();
         let td = TensorData::vec(fs);
         Forward::binary(View {}, self.data, td)
+    }
+
+    pub fn contiguous(self) -> Self {
+        Forward::unary(Copy {}, self.data)
     }
 
     pub fn is_close(self, rhs: Tensor) -> Self {

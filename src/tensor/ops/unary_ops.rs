@@ -1,5 +1,5 @@
 use crate::{
-    autodiff::context::Context, function::unary::Unary, math, tensor::tensor_data::TensorData,
+    autodiff::context::Context, function::unary::Unary, math, tensor::{shaping::shape::Shape, tensor_data::TensorData},
 };
 
 pub struct Neg;
@@ -84,10 +84,14 @@ impl Unary<TensorData> for Exp {
     }
 }
 
+// make contiguous
 pub struct Copy;
 impl Unary<TensorData> for Copy {
     fn forward(&self, a: TensorData) -> TensorData {
-        a
+        let mut vec = vec![1; a.shape.data().len()];
+        vec[0] = a.size();
+        let shape = Shape::new(vec);
+        a.shape(shape)
     }
 
     fn backward(&self, _ctx: &Context<TensorData>, d: TensorData) -> TensorData {
