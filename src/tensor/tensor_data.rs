@@ -180,17 +180,18 @@ impl TensorData {
     }
 
     pub fn is_contiguous(&self) -> bool {
-        let res = self
-            .strides
-            .iter()
-            .fold((true, usize::MAX), |(is_contiguous, last), stride| {
-                if !is_contiguous || stride > last {
-                    (false, stride)
-                } else {
-                    (true, stride)
+        if self.strides.is_empty() {
+            false
+        } else {
+            let mut last = self.strides[0];
+            for stride in self.strides.iter() {
+                if stride > last {
+                    return false;
                 }
-            });
-        res.0
+                last = stride;
+            }
+            true
+        }
     }
 
     pub fn arbitrary() -> impl Strategy<Value = TensorData> {

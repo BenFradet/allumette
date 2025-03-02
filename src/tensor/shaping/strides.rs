@@ -35,6 +35,10 @@ impl Strides {
     pub fn iter(&self) -> Iter {
         Iter::new(&self.data)
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
 }
 
 impl Index<usize> for Strides {
