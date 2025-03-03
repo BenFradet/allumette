@@ -1,6 +1,5 @@
-use proptest::prelude::Strategy;
-
 use crate::autodiff::history::History;
+use proptest::{collection, prelude::*};
 use std::ops;
 
 use super::{
@@ -111,8 +110,7 @@ impl Tensor {
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Tensor> {
-        TensorData::arbitrary()
-            .prop_map(Tensor::from_data)
+        TensorData::arbitrary().prop_map(Tensor::from_data)
     }
 }
 
@@ -160,7 +158,28 @@ impl ops::Neg for Tensor {
 
 #[cfg(test)]
 mod tests {
+    use crate::math::binary::is_close;
+
     use super::*;
+
+    fn unary_assert<FT, FF>(t: Tensor, ft: FT, ff: FF)
+    where
+        FT: Fn(Tensor) -> Tensor,
+        FF: Fn(f64) -> f64,
+    {
+        let data = t.data.clone();
+        let res = ft(t);
+        for idx in res.data.indices() {
+            assert!(is_close(res.data[idx.clone()], ff(data[idx])));
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn neg_tests(t in Tensor::arbitrary()) {
+            unary_assert(t, |t| -t, |f| -f);
+        }
+    }
 
     #[test]
     fn test_reduce_forward_one_dim() -> () {
