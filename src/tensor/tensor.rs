@@ -22,7 +22,7 @@ impl Tensor {
         Self { data, history }
     }
 
-    pub fn from_tensor_data(data: TensorData) -> Self {
+    pub fn from_data(data: TensorData) -> Self {
         Self {
             data,
             history: History::default(),
@@ -69,7 +69,7 @@ impl Tensor {
     }
 
     pub fn mean(self, dim: usize) -> Self {
-        self.sum(Some(dim)) / Self::from_tensor_data(TensorData::scalar(dim as f64))
+        self.sum(Some(dim)) / Self::from_data(TensorData::scalar(dim as f64))
     }
 
     pub fn permute(self, order: Order) -> Self {
@@ -160,10 +160,10 @@ mod tests {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
         let td = TensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
-        let tensor = Tensor::from_tensor_data(td);
+        let tensor = Tensor::from_data(td);
         let summed = tensor.sum(Some(0));
 
-        let exp = Tensor::from_tensor_data(TensorData::vec(vec![11., 16.]));
+        let exp = Tensor::from_data(TensorData::vec(vec![11., 16.]));
         let is_close = summed.is_close(exp);
         let shape = Shape::scalar(is_close.size());
         assert_eq!(Some(1.), is_close.view(shape).all(0).item());
@@ -174,12 +174,11 @@ mod tests {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
         let td = TensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
-        let tensor = Tensor::from_tensor_data(td);
+        let tensor = Tensor::from_data(td);
         let summed = tensor.sum(Some(1));
 
-        let exp = Tensor::from_tensor_data(
-            TensorData::matrix(vec![vec![5.], vec![10.], vec![12.]]).unwrap(),
-        );
+        let exp =
+            Tensor::from_data(TensorData::matrix(vec![vec![5.], vec![10.], vec![12.]]).unwrap());
         let is_close = summed.is_close(exp);
         let shape = Shape::new(vec![is_close.size()]);
         assert_eq!(Some(1.), is_close.view(shape).all(0).item());
@@ -189,7 +188,7 @@ mod tests {
     fn test_reduce_forward_all_dim() -> () {
         let shape = Shape::new(vec![3, 2]);
         let td = TensorData::vec(vec![2., 3., 4., 6., 5., 7.]).shape(shape);
-        let tensor = Tensor::from_tensor_data(td);
+        let tensor = Tensor::from_data(td);
         let summed = tensor.sum(None);
         assert_eq!(Some(27.), summed.item());
     }
