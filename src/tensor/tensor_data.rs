@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Index, sync::Arc};
 
 use proptest::{collection, prelude::*};
 
@@ -205,6 +205,14 @@ impl TensorData {
                 let strides: Strides = (&shape).into();
                 TensorData::new(data, shape, strides)
             })
+    }
+}
+
+impl Index<Idx> for TensorData {
+    type Output = f64;
+
+    fn index(&self, index: Idx) -> &Self::Output {
+        &self.data[self.strides.position(&index)]
     }
 }
 
