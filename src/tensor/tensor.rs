@@ -1,3 +1,5 @@
+use proptest::prelude::Strategy;
+
 use crate::autodiff::history::History;
 use std::ops;
 
@@ -106,6 +108,11 @@ impl Tensor {
 
     pub fn exp(self) -> Self {
         Forward::unary(Exp {}, self.data)
+    }
+
+    pub fn arbitrary() -> impl Strategy<Value = Tensor> {
+        TensorData::arbitrary()
+            .prop_map(Tensor::from_data)
     }
 }
 
