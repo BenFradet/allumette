@@ -32,13 +32,17 @@ impl TensorData {
     }
 
     // TODO: accept any collection
-    pub fn vec(data: Vec<f64>) -> Self {
-        let shape = Shape::new(vec![data.len()]);
-        let strides = (&shape).into();
-        TensorData {
-            data: Arc::new(data),
-            shape,
-            strides,
+    pub fn vec(data: Vec<f64>) -> Option<Self> {
+        if data.is_empty() {
+            None
+        } else {
+            let shape = Shape::new(vec![data.len()]);
+            let strides = (&shape).into();
+            Some(TensorData {
+                data: Arc::new(data),
+                shape,
+                strides,
+            })
         }
     }
 

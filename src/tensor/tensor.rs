@@ -30,6 +30,18 @@ impl Tensor {
         }
     }
 
+    pub fn scalar(data: f64) -> Self {
+        Self::from_data(TensorData::scalar(data))
+    }
+
+    pub fn vec(data: Vec<f64>) -> Option<Self> {
+        TensorData::vec(data).map(Self::from_data)
+    }
+
+    pub fn matrix(data: Vec<Vec<f64>>) -> Option<Self> {
+        TensorData::matrix(data).map(Self::from_data)
+    }
+
     pub fn size(&self) -> usize {
         self.data.size()
     }
@@ -63,7 +75,7 @@ impl Tensor {
             Some(d) => Forward::binary(Sum {}, self.data, TensorData::scalar(d as f64)),
             None => {
                 let shape = Shape::scalar(self.size());
-                let t = self.contiguous().view(shape);
+                let t = self.contiguous().view(shape).unwrap();
                 Forward::binary(Sum {}, t.data, TensorData::scalar(0.))
             }
         }
@@ -73,16 +85,16 @@ impl Tensor {
         self.sum(Some(dim)) / Self::from_data(TensorData::scalar(dim as f64))
     }
 
-    pub fn permute(self, order: Order) -> Self {
+    pub fn permute(self, order: Order) -> Option<Self> {
         let fs = order.data.iter().map(|u| *u as f64).collect();
-        let td = TensorData::vec(fs);
-        Forward::binary(Permute {}, self.data, td)
+        TensorData::vec(fs)
+            .map(|td| Forward::binary(Permute {}, self.data, td))
     }
 
-    pub fn view(self, shape: Shape) -> Self {
+    pub fn view(self, shape: Shape) -> Option<Self> {
         let fs = shape.data().iter().map(|u| *u as f64).collect();
-        let td = TensorData::vec(fs);
-        Forward::binary(View {}, self.data, td)
+        TensorData::vec(fs)
+            .map(|td| Forward::binary(View {}, self.data, td))
     }
 
     pub fn contiguous(self) -> Self {
@@ -210,6 +222,10 @@ mod tests {
         }
 
         #[test]
+        fn unary_complex_tests(t in Tensor::arbitrary()) {
+        }
+
+        #[test]
         fn unary_tests(t in Tensor::arbitrary()) {
             unary_assert(t.clone(), |t| -t, |f| -f);
             unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
@@ -230,10 +246,10 @@ mod tests {
         let tensor = Tensor::from_data(td);
         let summed = tensor.sum(Some(0));
 
-        let exp = Tensor::from_data(TensorData::vec(vec![11., 16.]));
+        let exp = Tensor::vec(vec![11., 16.]).unwrap();
         let is_close = summed.is_close(exp);
         let shape = Shape::scalar(is_close.size());
-        assert_eq!(Some(1.), is_close.view(shape).all(0).item());
+        assert_eq!(Some(1.), is_close.view(shape).unwrap().all(0).item());
     }
 
     #[test]
@@ -248,13 +264,13 @@ mod tests {
             Tensor::from_data(TensorData::matrix(vec![vec![5.], vec![10.], vec![12.]]).unwrap());
         let is_close = summed.is_close(exp);
         let shape = Shape::new(vec![is_close.size()]);
-        assert_eq!(Some(1.), is_close.view(shape).all(0).item());
+        assert_eq!(Some(1.), is_close.view(shape).unwrap().all(0).item());
     }
 
     #[test]
     fn test_reduce_forward_all_dim() -> () {
         let shape = Shape::new(vec![3, 2]);
-        let td = TensorData::vec(vec![2., 3., 4., 6., 5., 7.]).shape(shape);
+        let td = TensorData::vec(vec![2., 3., 4., 6., 5., 7.]).unwrap().shape(shape);
         let tensor = Tensor::from_data(td);
         let summed = tensor.sum(None);
         assert_eq!(Some(27.), summed.item());
