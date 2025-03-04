@@ -163,7 +163,7 @@ impl ops::Neg for Tensor {
 #[cfg(test)]
 mod tests {
     use crate::math::{
-        binary::is_close,
+        binary::{div, eq, is_close, lt},
         unary::{exp, inv, ln, relu, sig},
     };
 
@@ -181,7 +181,34 @@ mod tests {
         }
     }
 
+    fn binary_assert<FT, FF>(t1: Tensor, t2: Tensor, ft: FT, ff: FF)
+    where
+        FT: Fn(Tensor, Tensor) -> Tensor,
+        FF: Fn(f64, f64) -> f64,
+    {
+        let data1 = t1.data.clone();
+        let data2 = t2.data.clone();
+        let res = ft(t1, t2);
+        for idx in res.data.indices() {
+            assert!(is_close(
+                res.data[idx.clone()],
+                ff(data1[idx.clone()], data2[idx])
+            ));
+        }
+    }
+
     proptest! {
+        #[test]
+        fn binary_tests(t1 in Tensor::arbitrary(), t2 in Tensor::arbitrary()) {
+            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
+            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
+            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
+            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 / t2, div);
+            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2), |f1, f2| lt(f2, f1));
+            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2), lt);
+            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2), eq);
+        }
+
         #[test]
         fn unary_tests(t in Tensor::arbitrary()) {
             unary_assert(t.clone(), |t| -t, |f| -f);
