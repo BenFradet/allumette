@@ -42,6 +42,11 @@ impl Tensor {
         TensorData::matrix(data).map(Self::from_data)
     }
 
+    pub fn reshape(mut self, shape: Shape) -> Self {
+        self.data = self.data.reshape(shape);
+        self
+    }
+
     pub fn size(&self) -> usize {
         self.data.size()
     }
@@ -87,14 +92,12 @@ impl Tensor {
 
     pub fn permute(self, order: Order) -> Option<Self> {
         let fs = order.data.iter().map(|u| *u as f64).collect();
-        TensorData::vec(fs)
-            .map(|td| Forward::binary(Permute {}, self.data, td))
+        TensorData::vec(fs).map(|td| Forward::binary(Permute {}, self.data, td))
     }
 
     pub fn view(self, shape: Shape) -> Option<Self> {
         let fs = shape.data().iter().map(|u| *u as f64).collect();
-        TensorData::vec(fs)
-            .map(|td| Forward::binary(View {}, self.data, td))
+        TensorData::vec(fs).map(|td| Forward::binary(View {}, self.data, td))
     }
 
     pub fn contiguous(self) -> Self {
@@ -270,8 +273,9 @@ mod tests {
     #[test]
     fn test_reduce_forward_all_dim() -> () {
         let shape = Shape::new(vec![3, 2]);
-        let td = TensorData::vec(vec![2., 3., 4., 6., 5., 7.]).unwrap().shape(shape);
-        let tensor = Tensor::from_data(td);
+        let tensor = Tensor::vec(vec![2., 3., 4., 6., 5., 7.])
+            .unwrap()
+            .reshape(shape);
         let summed = tensor.sum(None);
         assert_eq!(Some(27.), summed.item());
     }

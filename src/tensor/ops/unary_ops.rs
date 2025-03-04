@@ -94,7 +94,7 @@ impl Unary<TensorData> for Copy {
         let mut vec = vec![1; a.shape.data().len()];
         vec[0] = a.size();
         let shape = Shape::new(vec);
-        a.shape(shape)
+        a.reshape(shape)
     }
 
     fn backward(&self, _ctx: &Context<TensorData>, d: TensorData) -> TensorData {

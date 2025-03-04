@@ -151,13 +151,13 @@ impl Binary<TensorData> for View {
     fn forward(&self, lhs: TensorData, s: TensorData) -> TensorData {
         assert!(lhs.is_contiguous(), "must be contiguous to view");
         let shape = Shape::new(s.data.iter().map(|f| *f as usize).collect());
-        lhs.shape(shape)
+        lhs.reshape(shape)
     }
 
     fn backward(&self, ctx: &Context<TensorData>, d: TensorData) -> (TensorData, TensorData) {
         let d_shape = d.shape.clone();
         let zeros = TensorData::zeros(d.shape.clone());
         let shape = ctx.fst.as_ref().map(|o| o.shape.clone()).unwrap_or(d_shape);
-        (d.shape(shape), zeros)
+        (d.reshape(shape), zeros)
     }
 }

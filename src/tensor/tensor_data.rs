@@ -87,7 +87,7 @@ impl TensorData {
         }
     }
 
-    pub fn shape(mut self, shape: Shape) -> Self {
+    pub fn reshape(mut self, shape: Shape) -> Self {
         let strides = (&shape).into();
         self.shape = shape;
         self.strides = strides;
