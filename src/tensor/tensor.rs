@@ -1,5 +1,5 @@
 use crate::autodiff::history::History;
-use proptest::{collection, prelude::*};
+use proptest::prelude::*;
 use std::ops;
 
 use super::{
@@ -109,6 +109,10 @@ impl Tensor {
         Forward::unary(Exp {}, self.data)
     }
 
+    pub fn inv(self) -> Self {
+        Forward::unary(Inv {}, self.data)
+    }
+
     pub fn arbitrary() -> impl Strategy<Value = Tensor> {
         TensorData::arbitrary().prop_map(Tensor::from_data)
     }
@@ -158,7 +162,10 @@ impl ops::Neg for Tensor {
 
 #[cfg(test)]
 mod tests {
-    use crate::math::binary::is_close;
+    use crate::math::{
+        binary::is_close,
+        unary::{exp, inv, ln, relu, sig},
+    };
 
     use super::*;
 
@@ -176,8 +183,15 @@ mod tests {
 
     proptest! {
         #[test]
-        fn neg_tests(t in Tensor::arbitrary()) {
-            unary_assert(t, |t| -t, |f| -f);
+        fn unary_tests(t in Tensor::arbitrary()) {
+            unary_assert(t.clone(), |t| -t, |f| -f);
+            unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
+            unary_assert(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
+            unary_assert(t.clone(), |t| t.inv(), inv);
+            unary_assert(t.clone(), |t| t.sigmoid(), sig);
+            unary_assert(t.clone(), |t| t.ln(), ln);
+            unary_assert(t.clone(), |t| t.relu(), relu);
+            unary_assert(t.clone(), |t| t.exp(), exp);
         }
     }
 
