@@ -225,7 +225,25 @@ mod tests {
         }
 
         #[test]
-        fn unary_complex_tests(t in Tensor::arbitrary()) {
+        fn unary_complex_test1(t in Tensor::arbitrary()) {
+            let ft = |t: Tensor| (t.clone() + Tensor::scalar(100000.).ln() + (t - Tensor::scalar(200.).exp()));
+            let ff = |f| ln(f + 100000.) + exp(f - 200.);
+            unary_assert(t.clone(), ft, ff);
+        }
+
+        #[test]
+        fn unary_complex_test2(t in Tensor::arbitrary()) {
+            let ft = |t: Tensor| (
+                (
+                    (
+                        (
+                            t * Tensor::scalar(10.) + Tensor::scalar(7.)
+                        ).relu() * Tensor::scalar(6.) + Tensor::scalar(5.)
+                    ).relu() * Tensor::scalar(10.)
+                ).sigmoid()
+            ).ln() / Tensor::scalar(50.);
+            let ff = |f| ln(sig(relu(relu(f * 10. + 7.) * 6. + 5.) * 10.)) / 50.;
+            unary_assert(t.clone(), ft, ff);
         }
 
         #[test]
