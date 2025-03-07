@@ -1,4 +1,4 @@
-use crate::autodiff::history::History;
+use crate::function::function::Function;
 use proptest::prelude::*;
 use std::ops;
 
@@ -9,24 +9,24 @@ use super::{
         unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
     shaping::{order::Order, shape::Shape},
-    tensor_data::TensorData,
+    tensor_data::TensorData, tensor_history::TensorHistory,
 };
 
 #[derive(Clone, Debug)]
 pub struct Tensor {
     pub data: TensorData,
-    pub history: History<TensorData>,
+    pub history: TensorHistory,
 }
 
 impl Tensor {
-    pub fn new(data: TensorData, history: History<TensorData>) -> Self {
+    pub fn new(data: TensorData, history: TensorHistory) -> Self {
         Self { data, history }
     }
 
     pub fn from_data(data: TensorData) -> Self {
         Self {
             data,
-            history: History::default(),
+            history: TensorHistory::default(),
         }
     }
 
@@ -60,28 +60,28 @@ impl Tensor {
     }
 
     pub fn lt(self, rhs: Tensor) -> Self {
-        Forward::binary(Lt {}, self.data, rhs.data)
+        Forward::binary(Lt {}, self, rhs)
     }
 
     pub fn gt(self, rhs: Tensor) -> Self {
-        Forward::binary(Lt {}, rhs.data, self.data)
+        Forward::binary(Lt {}, rhs, self)
     }
 
     pub fn eq(self, rhs: Tensor) -> Self {
-        Forward::binary(Eq {}, self.data, rhs.data)
+        Forward::binary(Eq {}, self, rhs)
     }
 
     pub fn all(self, dim: usize) -> Self {
-        Forward::binary(All {}, self.data, TensorData::scalar(dim as f64))
+        Forward::binary(All {}, self, Tensor::scalar(dim as f64))
     }
 
     pub fn sum(self, dim: Option<usize>) -> Self {
         match dim {
-            Some(d) => Forward::binary(Sum {}, self.data, TensorData::scalar(d as f64)),
+            Some(d) => Forward::binary(Sum {}, self, Tensor::scalar(d as f64)),
             None => {
                 let shape = Shape::scalar(self.size());
                 let t = self.contiguous().view(shape).unwrap();
-                Forward::binary(Sum {}, t.data, TensorData::scalar(0.))
+                Forward::binary(Sum {}, t, Tensor::scalar(0.))
             }
         }
     }
@@ -92,40 +92,40 @@ impl Tensor {
 
     pub fn permute(self, order: Order) -> Option<Self> {
         let fs = order.data.iter().map(|u| *u as f64).collect();
-        TensorData::vec(fs).map(|td| Forward::binary(Permute {}, self.data, td))
+        Tensor::vec(fs).map(|td| Forward::binary(Permute {}, self, td))
     }
 
     pub fn view(self, shape: Shape) -> Option<Self> {
         let fs = shape.data().iter().map(|u| *u as f64).collect();
-        TensorData::vec(fs).map(|td| Forward::binary(View {}, self.data, td))
+        Tensor::vec(fs).map(|td| Forward::binary(View {}, self, td))
     }
 
     pub fn contiguous(self) -> Self {
-        Forward::unary(Copy {}, self.data)
+        Forward::unary(Copy {}, self)
     }
 
     pub fn is_close(self, rhs: Tensor) -> Self {
-        Forward::binary(IsClose {}, self.data, rhs.data)
+        Forward::binary(IsClose {}, self, rhs)
     }
 
     pub fn sigmoid(self) -> Self {
-        Forward::unary(Sig {}, self.data)
+        Forward::unary(Sig {}, self)
     }
 
     pub fn relu(self) -> Self {
-        Forward::unary(Relu {}, self.data)
+        Forward::unary(Relu {}, self)
     }
 
     pub fn ln(self) -> Self {
-        Forward::unary(Ln {}, self.data)
+        Forward::unary(Ln {}, self)
     }
 
     pub fn exp(self) -> Self {
-        Forward::unary(Exp {}, self.data)
+        Forward::unary(Exp {}, self)
     }
 
     pub fn inv(self) -> Self {
-        Forward::unary(Inv {}, self.data)
+        Forward::unary(Inv {}, self)
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Tensor> {
@@ -137,7 +137,7 @@ impl ops::Add<Tensor> for Tensor {
     type Output = Tensor;
 
     fn add(self, rhs: Tensor) -> Self::Output {
-        Forward::binary(Add {}, self.data, rhs.data)
+        Forward::binary(Add {}, self, rhs)
     }
 }
 
@@ -145,8 +145,8 @@ impl ops::Sub<Tensor> for Tensor {
     type Output = Tensor;
 
     fn sub(self, rhs: Tensor) -> Self::Output {
-        let new_rhs = Forward::unary(Neg {}, rhs.data);
-        Forward::binary(Add {}, self.data, new_rhs.data)
+        let new_rhs = Forward::unary(Neg {}, rhs);
+        Forward::binary(Add {}, self, new_rhs)
     }
 }
 
@@ -154,7 +154,7 @@ impl ops::Mul<Tensor> for Tensor {
     type Output = Tensor;
 
     fn mul(self, rhs: Tensor) -> Self::Output {
-        Forward::binary(Mul {}, self.data, rhs.data)
+        Forward::binary(Mul {}, self, rhs)
     }
 }
 
@@ -162,8 +162,8 @@ impl ops::Div<Tensor> for Tensor {
     type Output = Tensor;
 
     fn div(self, rhs: Tensor) -> Self::Output {
-        let new_rhs = Forward::unary(Inv {}, rhs.data);
-        Forward::binary(Mul {}, self.data, new_rhs.data)
+        let new_rhs = Forward::unary(Inv {}, rhs);
+        Forward::binary(Mul {}, self, new_rhs)
     }
 }
 
@@ -171,7 +171,7 @@ impl ops::Neg for Tensor {
     type Output = Tensor;
 
     fn neg(self) -> Self::Output {
-        Forward::unary(Neg {}, self.data)
+        Forward::unary(Neg {}, self)
     }
 }
 

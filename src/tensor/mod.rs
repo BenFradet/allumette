@@ -6,3 +6,4 @@ pub mod shaping_n;
 pub mod tensor;
 pub mod tensor_data;
 pub mod tensor_data_n;
+pub mod tensor_history;
