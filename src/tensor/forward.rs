@@ -10,13 +10,11 @@ use super::{tensor::Tensor, tensor_data::TensorData, tensor_history::TensorHisto
 pub struct Forward;
 
 impl Forward {
-    pub fn binary(
-        b: impl Binary<TensorData> + 'static,
-        lhs: Tensor,
-        rhs: Tensor,
-    ) -> Tensor {
+    pub fn binary(b: impl Binary<TensorData> + 'static, lhs: Tensor, rhs: Tensor) -> Tensor {
         let res = b.forward(lhs.data.clone(), rhs.data.clone());
-        let ctx = Context::default().fst(lhs.data.clone()).snd(rhs.data.clone());
+        let ctx = Context::default()
+            .fst(lhs.data.clone())
+            .snd(rhs.data.clone());
         let new_history = TensorHistory::default()
             .last_fn(Function::B(Rc::new(b)))
             .context(ctx)

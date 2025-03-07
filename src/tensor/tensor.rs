@@ -9,7 +9,8 @@ use super::{
         unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
     shaping::{order::Order, shape::Shape},
-    tensor_data::TensorData, tensor_history::TensorHistory,
+    tensor_data::TensorData,
+    tensor_history::TensorHistory,
 };
 
 #[derive(Clone, Debug)]
@@ -40,6 +41,26 @@ impl Tensor {
 
     pub fn matrix(data: Vec<Vec<f64>>) -> Option<Self> {
         TensorData::matrix(data).map(Self::from_data)
+    }
+
+    fn chain_rule(&self, d: Tensor) -> impl Iterator<Item = (&Self, TensorData)> {
+        let derivatives = self
+            .history
+            .last_fn
+            .as_ref()
+            .map(|f| match f {
+                Function::B(b) => {
+                    let (da, db) = b.backward(&self.history.ctx, d.data);
+                    vec![da, db]
+                }
+                Function::U(u) => {
+                    let da = u.backward(&self.history.ctx, d.data);
+                    vec![da]
+                }
+            })
+            .unwrap_or_default();
+        let inputs = &self.history.inputs;
+        inputs.iter().zip(derivatives)
     }
 
     pub fn reshape(mut self, shape: Shape) -> Self {

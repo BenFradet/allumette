@@ -2,21 +2,11 @@ use crate::{autodiff::context::Context, function::function::Function};
 
 use super::{tensor::Tensor, tensor_data::TensorData};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TensorHistory {
     pub last_fn: Option<Function<TensorData>>,
     pub ctx: Context<TensorData>,
     pub inputs: Vec<Tensor>,
-}
-
-impl Default for TensorHistory {
-    fn default() -> Self {
-        Self {
-            last_fn: Default::default(),
-            ctx: Default::default(),
-            inputs: Default::default(),
-        }
-    }
 }
 
 impl TensorHistory {
