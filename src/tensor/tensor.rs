@@ -16,6 +16,7 @@ use super::{
 #[derive(Clone, Debug)]
 pub struct Tensor {
     pub data: TensorData,
+    pub grad: Option<Box<Tensor>>,
     pub history: TensorHistory,
     pub id: String,
 }
@@ -23,13 +24,14 @@ pub struct Tensor {
 impl Tensor {
     pub fn new(data: TensorData, history: TensorHistory) -> Self {
         let id = rand::thread_rng().gen::<u64>().to_string();
-        Self { data, history, id }
+        Self { data, grad: None, history, id }
     }
 
     pub fn from_data(data: TensorData) -> Self {
         let id = rand::thread_rng().gen::<u64>().to_string();
         Self {
             data,
+            grad: None,
             history: TensorHistory::default(),
             id,
         }
@@ -45,6 +47,15 @@ impl Tensor {
 
     pub fn matrix(data: Vec<Vec<f64>>) -> Option<Self> {
         TensorData::matrix(data).map(Self::from_data)
+    }
+
+    fn accumulate_derivative(mut self, d: Tensor) -> Self {
+        if self.is_leaf() {
+            self.grad = Some(Box::new(self.grad.map(|t| *t + d.clone()).unwrap_or(d)));
+            self
+        } else {
+            self
+        }
     }
 
     fn chain_rule(&self, d: Tensor) -> impl Iterator<Item = (&Self, TensorData)> {
@@ -103,6 +114,10 @@ impl Tensor {
 
     fn parents(&self) -> impl Iterator<Item = &Self> {
         self.history.inputs.iter()
+    }
+
+    fn is_leaf(&self) -> bool {
+        self.history.last_fn.is_none()
     }
 
     pub fn lt(self, rhs: Tensor) -> Self {
