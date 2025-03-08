@@ -1,6 +1,6 @@
 use crate::function::function::Function;
 use proptest::prelude::*;
-use std::ops;
+use std::{collections::{HashSet, VecDeque}, ops};
 
 use super::{
     forward::Forward,
@@ -17,17 +17,21 @@ use super::{
 pub struct Tensor {
     pub data: TensorData,
     pub history: TensorHistory,
+    pub id: String,
 }
 
 impl Tensor {
     pub fn new(data: TensorData, history: TensorHistory) -> Self {
-        Self { data, history }
+        let id = rand::thread_rng().gen::<u64>().to_string();
+        Self { data, history, id }
     }
 
     pub fn from_data(data: TensorData) -> Self {
+        let id = rand::thread_rng().gen::<u64>().to_string();
         Self {
             data,
             history: TensorHistory::default(),
+            id,
         }
     }
 
@@ -63,6 +67,23 @@ impl Tensor {
         inputs.iter().zip(derivatives)
     }
 
+    fn topological_sort(&self) -> impl Iterator<Item = &Self> {
+        let mut queue = VecDeque::new();
+        queue.push_back(self);
+        let mut visited: HashSet<String> = HashSet::from([self.id.clone()]);
+        let mut result = Vec::new();
+        while let Some(var) = queue.pop_front() {
+            for parent in var.parents() {
+                if !visited.contains(&parent.id) {
+                    visited.insert(parent.id.clone());
+                    queue.push_back(parent);
+                }
+            }
+            result.push(var);
+        }
+        result.into_iter()
+    }
+
     pub fn reshape(mut self, shape: Shape) -> Self {
         self.data = self.data.reshape(shape);
         self
@@ -78,6 +99,10 @@ impl Tensor {
         } else {
             None
         }
+    }
+
+    fn parents(&self) -> impl Iterator<Item = &Self> {
+        self.history.inputs.iter()
     }
 
     pub fn lt(self, rhs: Tensor) -> Self {
