@@ -1,6 +1,9 @@
 use crate::function::function::Function;
 use proptest::prelude::*;
-use std::{collections::{HashSet, VecDeque}, ops};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    ops,
+};
 
 use super::{
     forward::Forward,
@@ -24,7 +27,12 @@ pub struct Tensor {
 impl Tensor {
     pub fn new(data: TensorData, history: TensorHistory) -> Self {
         let id = rand::thread_rng().gen::<u64>().to_string();
-        Self { data, grad: None, history, id }
+        Self {
+            data,
+            grad: None,
+            history,
+            id,
+        }
     }
 
     pub fn from_data(data: TensorData) -> Self {
@@ -47,6 +55,33 @@ impl Tensor {
 
     pub fn matrix(data: Vec<Vec<f64>>) -> Option<Self> {
         TensorData::matrix(data).map(Self::from_data)
+    }
+
+    pub fn backprop(&self, d: Tensor) -> HashMap<String, Self> {
+        let sorted = self.topological_sort();
+        let mut derivs = HashMap::from([(self.id.clone(), d)]);
+        let mut res: HashMap<String, Self> = HashMap::new();
+        for s in sorted {
+            if let Some(current_deriv) = derivs.get(&s.id).cloned() {
+                for (parent, grad) in s.chain_rule(current_deriv) {
+                    let grad_tensor = Tensor::from_data(grad);
+                    if parent.is_leaf() {
+                        let new = match res.get(&parent.id) {
+                            // TODO: remove clones
+                            Some(s) => s.clone().accumulate_derivative(grad_tensor),
+                            None => parent.clone().accumulate_derivative(grad_tensor),
+                        };
+                        res.insert(parent.id.clone(), new);
+                    } else {
+                        match derivs.remove(&parent.id) {
+                            Some(e) => derivs.insert(parent.id.clone(), e + grad_tensor),
+                            None => derivs.insert(parent.id.clone(), grad_tensor),
+                        };
+                    }
+                }
+            }
+        }
+        res
     }
 
     fn accumulate_derivative(mut self, d: Tensor) -> Self {
