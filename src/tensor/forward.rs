@@ -11,7 +11,7 @@ pub struct Forward;
 
 impl Forward {
     pub fn binary(b: impl Binary<TensorData> + 'static, lhs: Tensor, rhs: Tensor) -> Tensor {
-        let res = b.forward(lhs.data.clone(), rhs.data.clone());
+        let res = b.forward(&lhs.data, &rhs.data);
         let ctx = Context::default()
             .fst(lhs.data.clone())
             .snd(rhs.data.clone());

@@ -100,7 +100,7 @@ impl Tensor {
             .as_ref()
             .map(|f| match f {
                 Function::B(b) => {
-                    let (da, db) = b.backward(&self.history.ctx, d.data);
+                    let (da, db) = b.backward(&self.history.ctx, &d.data);
                     vec![da, db]
                 }
                 Function::U(u) => {

@@ -78,7 +78,7 @@ impl Scalar {
             .as_ref()
             .map(|f| match f {
                 Function::B(b) => {
-                    let (da, db) = b.backward(&self.history.ctx, d);
+                    let (da, db) = b.backward(&self.history.ctx, &d);
                     vec![da, db]
                 }
                 Function::U(u) => {
@@ -257,22 +257,22 @@ mod tests {
 
     struct F1;
     impl Binary<f64> for F1 {
-        fn forward(&self, a: f64, b: f64) -> f64 {
+        fn forward(&self, a: &f64, b: &f64) -> f64 {
             a + b + 10.
         }
 
-        fn backward(&self, _ctx: &Context<f64>, d: f64) -> (f64, f64) {
-            (d, d)
+        fn backward(&self, _ctx: &Context<f64>, d: &f64) -> (f64, f64) {
+            (*d, *d)
         }
     }
 
     struct F2;
     impl Binary<f64> for F2 {
-        fn forward(&self, a: f64, b: f64) -> f64 {
+        fn forward(&self, a: &f64, b: &f64) -> f64 {
             a * b + a
         }
 
-        fn backward(&self, ctx: &Context<f64>, d: f64) -> (f64, f64) {
+        fn backward(&self, ctx: &Context<f64>, d: &f64) -> (f64, f64) {
             let a = ctx.fst.unwrap_or(1.);
             let b = ctx.snd.unwrap_or(1.);
             (d * (b + 1.), d * a)

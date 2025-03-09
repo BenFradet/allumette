@@ -9,7 +9,7 @@ use crate::{
 pub struct Forward;
 impl Forward {
     pub fn binary(b: impl Binary<f64> + 'static, lhs: &Scalar, rhs: &Scalar) -> Scalar {
-        let res = b.forward(lhs.v, rhs.v);
+        let res = b.forward(&lhs.v, &rhs.v);
         let ctx = Context::default().fst(lhs.v).snd(rhs.v);
         let new_history = ScalarHistory::default()
             .last_fn(Function::B(Rc::new(b)))
