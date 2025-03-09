@@ -11,7 +11,7 @@ use crate::{
 pub struct Add;
 impl Binary<TensorData> for Add {
     fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
-        a.zip(&b, math::binary::add)
+        a.zip(b, math::binary::add)
             .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
@@ -23,7 +23,7 @@ impl Binary<TensorData> for Add {
 pub struct Mul;
 impl Binary<TensorData> for Mul {
     fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
-        a.zip(&b, math::binary::mul)
+        a.zip(b, math::binary::mul)
             .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
@@ -31,11 +31,11 @@ impl Binary<TensorData> for Mul {
         (
             ctx.snd
                 .as_ref()
-                .and_then(|b| b.zip(&d, math::binary::mul))
+                .and_then(|b| b.zip(d, math::binary::mul))
                 .unwrap_or(TensorData::ones(d.shape.clone())),
             ctx.fst
                 .as_ref()
-                .and_then(|a| a.zip(&d, math::binary::mul))
+                .and_then(|a| a.zip(d, math::binary::mul))
                 .unwrap_or(TensorData::ones(d.shape.clone())),
         )
     }
@@ -44,7 +44,7 @@ impl Binary<TensorData> for Mul {
 pub struct Lt;
 impl Binary<TensorData> for Lt {
     fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
-        a.zip(&b, math::binary::lt)
+        a.zip(b, math::binary::lt)
             .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
@@ -59,7 +59,7 @@ impl Binary<TensorData> for Lt {
 pub struct Eq;
 impl Binary<TensorData> for Eq {
     fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
-        a.zip(&b, math::binary::eq)
+        a.zip(b, math::binary::eq)
             .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
@@ -118,7 +118,7 @@ pub struct IsClose;
 impl Binary<TensorData> for IsClose {
     fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
         a.zip(
-            &b,
+            b,
             |a, b| if math::binary::is_close(a, b) { 1. } else { 0. },
         )
         .unwrap_or(TensorData::ones(a.shape.clone()))
