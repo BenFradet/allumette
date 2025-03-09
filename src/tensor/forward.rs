@@ -24,7 +24,7 @@ impl Forward {
     }
 
     pub fn unary(u: impl Unary<TensorData> + 'static, a: Tensor) -> Tensor {
-        let res = u.forward(a.data.clone());
+        let res = u.forward(&a.data);
         let ctx = Context::default().fst(a.data.clone());
         let new_history = TensorHistory::default()
             .last_fn(Function::U(Rc::new(u)))

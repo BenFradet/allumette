@@ -82,7 +82,7 @@ impl Scalar {
                     vec![da, db]
                 }
                 Function::U(u) => {
-                    let da = u.backward(&self.history.ctx, d);
+                    let da = u.backward(&self.history.ctx, &d);
                     vec![da]
                 }
             })

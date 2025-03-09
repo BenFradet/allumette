@@ -20,7 +20,7 @@ impl Forward {
     }
 
     pub fn unary(u: impl Unary<f64> + 'static, s: &Scalar) -> Scalar {
-        let res = u.forward(s.v);
+        let res = u.forward(&s.v);
         let ctx = Context::default().fst(s.v);
         let new_history = ScalarHistory::default()
             .last_fn(Function::U(Rc::new(u)))

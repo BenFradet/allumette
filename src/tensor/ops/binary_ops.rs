@@ -89,7 +89,7 @@ impl Binary<TensorData> for Permute {
     fn forward(&self, a: &TensorData, order: &TensorData) -> TensorData {
         let ord: Order = order.into();
         let a_shape = a.shape.clone();
-        a.clone().permute(&ord).unwrap_or(TensorData::ones(a_shape))
+        a.permute(&ord).unwrap_or(TensorData::ones(a_shape))
     }
 
     fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
@@ -106,8 +106,7 @@ impl Binary<TensorData> for Permute {
         let inverse_order = Order::new(inv).unwrap_or(Order::range(order.len()));
         let d_shape = d.shape.clone();
         (
-            d.clone()
-                .permute(&inverse_order)
+            d.permute(&inverse_order)
                 .unwrap_or(TensorData::ones(d_shape.clone())),
             TensorData::zeros(d_shape),
         )
@@ -117,11 +116,8 @@ impl Binary<TensorData> for Permute {
 pub struct IsClose;
 impl Binary<TensorData> for IsClose {
     fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
-        a.zip(
-            b,
-            |a, b| if math::binary::is_close(a, b) { 1. } else { 0. },
-        )
-        .unwrap_or(TensorData::ones(a.shape.clone()))
+        a.zip(b, |a, b| if math::binary::is_close(a, b) { 1. } else { 0. })
+            .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
     fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {

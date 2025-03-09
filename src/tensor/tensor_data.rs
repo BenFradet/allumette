@@ -14,7 +14,7 @@ pub struct TensorData {
 impl TensorData {
     // TODO: accept any collection
     pub fn new(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
-        TensorData {
+        Self {
             data: Arc::new(data),
             shape,
             strides,
@@ -24,7 +24,7 @@ impl TensorData {
     pub fn scalar(data: f64) -> Self {
         let shape = Shape::new(vec![1]);
         let strides = (&shape).into();
-        TensorData {
+        Self {
             data: Arc::new(vec![data]),
             shape,
             strides,
@@ -38,7 +38,7 @@ impl TensorData {
         } else {
             let shape = Shape::new(vec![data.len()]);
             let strides = (&shape).into();
-            Some(TensorData {
+            Some(Self {
                 data: Arc::new(data),
                 shape,
                 strides,
@@ -58,7 +58,7 @@ impl TensorData {
                 let cols = data.len();
                 let shape = Shape::new(vec![cols, rows]);
                 let strides = (&shape).into();
-                Some(TensorData {
+                Some(Self {
                     data: Arc::new(data.concat()),
                     shape,
                     strides,
@@ -70,7 +70,7 @@ impl TensorData {
     pub fn zeros(shape: Shape) -> Self {
         let data = vec![0.; shape.size];
         let strides = (&shape).into();
-        TensorData {
+        Self {
             data: Arc::new(data),
             shape,
             strides,
@@ -80,29 +80,34 @@ impl TensorData {
     pub fn ones(shape: Shape) -> Self {
         let data = vec![1.; shape.size];
         let strides = (&shape).into();
-        TensorData {
+        Self {
             data: Arc::new(data),
             shape,
             strides,
         }
     }
 
-    pub fn reshape(mut self, shape: Shape) -> Self {
+    pub fn reshape(&self, shape: Shape) -> Self {
         let strides = (&shape).into();
-        self.shape = shape;
-        self.strides = strides;
-        self
+        Self {
+            data: Arc::clone(&self.data),
+            shape,
+            strides,
+        }
     }
 
-    pub fn map(mut self, f: impl Fn(f64) -> f64) -> Self {
+    pub fn map(&self, f: impl Fn(f64) -> f64) -> Self {
         let len = self.size();
         let mut out = vec![0.; len];
         // TODO: add an iterator
         for (i, d) in self.data.iter().enumerate() {
             out[i] = f(*d);
         }
-        self.data = Arc::new(out);
-        self
+        Self {
+            data: Arc::new(out),
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+        }
     }
 
     pub fn zip(&self, other: &TensorData, f: impl Fn(f64, f64) -> f64) -> Option<TensorData> {
@@ -166,7 +171,7 @@ impl TensorData {
         (0..self.size()).map(|i| self.strides.idx(i))
     }
 
-    pub fn permute(mut self, order: &Order) -> Option<Self> {
+    pub fn permute(&self, order: &Order) -> Option<Self> {
         let n = self.shape.data().len();
         if order.fits(n) {
             let mut new_shape = vec![0; n];
@@ -175,9 +180,11 @@ impl TensorData {
                 new_shape[idx] = self.shape[value];
                 new_strides[idx] = self.strides[value];
             }
-            self.shape = Shape::new(new_shape);
-            self.strides = Strides::new(new_strides);
-            Some(self)
+            Some(Self {
+                data: Arc::clone(&self.data),
+                shape: Shape::new(new_shape),
+                strides: Strides::new(new_strides),
+            })
         } else {
             None
         }

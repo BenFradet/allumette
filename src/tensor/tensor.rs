@@ -104,7 +104,7 @@ impl Tensor {
                     vec![da, db]
                 }
                 Function::U(u) => {
-                    let da = u.backward(&self.history.ctx, d.data);
+                    let da = u.backward(&self.history.ctx, &d.data);
                     vec![da]
                 }
             })
