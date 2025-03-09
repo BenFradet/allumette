@@ -1,5 +1,5 @@
 use crate::function::function::Function;
-use proptest::prelude::*;
+use proptest::{collection, prelude::*};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     ops,
@@ -11,7 +11,7 @@ use super::{
         binary_ops::{Add, All, Eq, IsClose, Lt, Mul, Permute, Sum, View},
         unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
-    shaping::{order::Order, shape::Shape},
+    shaping::{order::Order, shape::Shape, strides::Strides},
     tensor_data::TensorData,
     tensor_history::TensorHistory,
 };
@@ -227,6 +227,23 @@ impl Tensor {
     pub fn arbitrary() -> impl Strategy<Value = Tensor> {
         TensorData::arbitrary().prop_map(Tensor::from_data)
     }
+
+    pub fn arbitrary_tuple() -> impl Strategy<Value = (Tensor, Tensor)> {
+        Shape::arbitrary()
+            .prop_flat_map(|shape| {
+                let size = shape.size;
+                let data1 = collection::vec(0.0f64..1., size);
+                let data2 = collection::vec(0.0f64..1., size);
+                (data1, data2, Just(shape))
+            })
+            .prop_map(|(data1, data2, shape)| {
+                let strides: Strides = (&shape).into();
+                (
+                    Tensor::from_data(TensorData::new(data1, shape.clone(), strides.clone())),
+                    Tensor::from_data(TensorData::new(data2, shape, strides)),
+                )
+            })
+    }
 }
 
 impl ops::Add<Tensor> for Tensor {
@@ -310,7 +327,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn binary_tests(t1 in Tensor::arbitrary(), t2 in Tensor::arbitrary()) {
+        fn binary_tests((t1, t2) in Tensor::arbitrary_tuple()) {
             binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
             binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
             binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
@@ -322,7 +339,7 @@ mod tests {
 
         #[test]
         fn unary_complex_test1(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor| (t.clone() + Tensor::scalar(100000.).ln() + (t - Tensor::scalar(200.).exp()));
+            let ft = |t: Tensor| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
             let ff = |f| ln(f + 100000.) + exp(f - 200.);
             unary_assert(t.clone(), ft, ff);
         }
