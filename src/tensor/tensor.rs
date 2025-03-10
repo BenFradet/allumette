@@ -290,12 +290,29 @@ impl ops::Neg for Tensor {
 
 #[cfg(test)]
 mod tests {
-    use crate::math::{
-        binary::{div, eq, is_close, lt},
-        unary::{exp, inv, ln, relu, sig},
+    use crate::{
+        math::{
+            binary::{div, eq, is_close, lt},
+            unary::{exp, inv, ln, relu, sig},
+        },
+        tensor::shaping::idx::Idx,
     };
 
     use super::*;
+
+    fn unary_grad_central_difference<F>(tensor: Tensor, f: F, index: Idx) -> f64
+    where
+        F: Fn(Tensor) -> Tensor,
+    {
+        let eps = 1e-6;
+        let shape = tensor.data.shape.clone();
+        let up = Tensor::from_data(TensorData::epsilon(shape, index, eps));
+        let add = tensor.clone() + up.clone();
+        let sub = tensor - up;
+        let delta = f(add).sum(None) - f(sub).sum(None);
+
+        delta.item().unwrap_or(0.) / (2. * eps)
+    }
 
     fn unary_assert<FT, FF>(t: Tensor, ft: FT, ff: FF)
     where
