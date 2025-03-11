@@ -314,6 +314,38 @@ mod tests {
         delta.item().unwrap_or(0.) / (2. * eps)
     }
 
+    fn binary_grad_central_difference<F>(
+        tensor1: Tensor,
+        tensor2: Tensor,
+        f: F,
+        index: Idx,
+        first: bool,
+    ) -> f64
+    where
+        F: Fn(Tensor, Tensor) -> Tensor,
+    {
+        let eps = 1e-6;
+        let shape = if first {
+            tensor1.data.shape.clone()
+        } else {
+            tensor2.data.shape.clone()
+        };
+        let up = Tensor::from_data(TensorData::epsilon(shape, index, eps));
+        let (add1, add2) = if first {
+            (tensor1.clone() + up.clone(), tensor2.clone())
+        } else {
+            (tensor1.clone(), tensor2.clone() + up.clone())
+        };
+        let (sub1, sub2) = if first {
+            (tensor1 - up, tensor2)
+        } else {
+            (tensor1, tensor2 - up)
+        };
+        let delta = f(add1, add2).sum(None) - f(sub1, sub2).sum(None);
+
+        delta.item().unwrap_or(0.) / (2. * eps)
+    }
+
     fn unary_assert<FT, FF>(t: Tensor, ft: FT, ff: FF)
     where
         FT: Fn(Tensor) -> Tensor,
