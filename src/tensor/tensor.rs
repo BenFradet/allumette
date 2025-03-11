@@ -57,6 +57,24 @@ impl Tensor {
         TensorData::matrix(data).map(Self::from_data)
     }
 
+    pub fn history(mut self, h: TensorHistory) -> Self {
+        self.history = h;
+        self
+    }
+
+    pub fn grad(mut self, grad: Option<Tensor>) -> Self {
+        self.grad = grad.map(Box::new);
+        self
+    }
+
+    pub fn backward(&self) -> HashMap<String, Self> {
+        assert!(
+            self.data.shape == Shape::new(vec![1]),
+            "use backprop for non-scalar tensors"
+        );
+        self.backprop(Self::scalar(1.))
+    }
+
     pub fn backprop(&self, d: Tensor) -> HashMap<String, Self> {
         let sorted = self.topological_sort();
         let mut derivs = HashMap::from([(self.id.clone(), d)]);
@@ -300,7 +318,28 @@ mod tests {
 
     use super::*;
 
-    fn unary_grad_central_difference<F>(tensor: Tensor, f: F, index: Idx) -> f64
+    fn unary_grad_assert<F>(tensor: Tensor, f: F)
+    where
+        F: Fn(Tensor) -> Tensor,
+    {
+        let id = &tensor.id.clone();
+        let reset_tensor = tensor.history(TensorHistory::default()).grad(None);
+        let idx = reset_tensor.data.shape.sample();
+        let out = f(reset_tensor);
+        let mut res = out.sum(None).backward();
+        let tensor_after = res.remove(id);
+        assert!(tensor_after.is_some(), "tensor should be in backprop map");
+        let unwrapped = tensor_after.unwrap();
+        let check = unary_grad_central_diff(unwrapped.clone(), f, &idx);
+        assert!(unwrapped.grad.is_some(), "tensor should have a grad");
+        let grad = unwrapped.grad.unwrap().data[idx];
+        assert!(
+            is_close(grad, check),
+            "tensor grad should be close to central diff"
+        );
+    }
+
+    fn unary_grad_central_diff<F>(tensor: Tensor, f: F, index: &Idx) -> f64
     where
         F: Fn(Tensor) -> Tensor,
     {
@@ -314,7 +353,7 @@ mod tests {
         delta.item().unwrap_or(0.) / (2. * eps)
     }
 
-    fn binary_grad_central_difference<F>(
+    fn binary_grad_central_diff<F>(
         tensor1: Tensor,
         tensor2: Tensor,
         f: F,
@@ -330,7 +369,7 @@ mod tests {
         } else {
             tensor2.data.shape.clone()
         };
-        let up = Tensor::from_data(TensorData::epsilon(shape, index, eps));
+        let up = Tensor::from_data(TensorData::epsilon(shape, &index, eps));
         let (add1, add2) = if first {
             (tensor1.clone() + up.clone(), tensor2.clone())
         } else {
@@ -374,7 +413,29 @@ mod tests {
         }
     }
 
+    #[test]
+    fn repro_test() {
+        let shape = Shape::new(vec![1, 1, 2, 1]);
+        let strides = Strides::new(vec![2, 2, 1, 1]);
+        let td = TensorData::new(vec![0., 0.], shape, strides);
+        let t = Tensor::from_data(td);
+        let res = t.clone() * t;
+        let _m = res.sum(None).backward();
+    }
+
     proptest! {
+        #[test]
+        fn unary_grad_tests(t in Tensor::arbitrary()) {
+            //unary_grad_assert(t.clone(), |t| -t);
+            unary_grad_assert(t.clone(), |t| t.clone() * t);
+            //unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
+            //unary_grad_assert(t.clone(), |t| t.inv());
+            //unary_grad_assert(t.clone(), |t| t.sigmoid());
+            //unary_grad_assert(t.clone(), |t| t.ln());
+            //unary_grad_assert(t.clone(), |t| t.relu());
+            //unary_grad_assert(t.clone(), |t| t.exp());
+        }
+
         #[test]
         fn binary_tests((t1, t2) in Tensor::arbitrary_tuple()) {
             binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);

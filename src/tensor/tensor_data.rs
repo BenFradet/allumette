@@ -77,10 +77,10 @@ impl TensorData {
         }
     }
 
-    pub fn epsilon(shape: Shape, idx: Idx, eps: f64) -> Self {
+    pub fn epsilon(shape: Shape, idx: &Idx, eps: f64) -> Self {
         let strides: Strides = (&shape).into();
         let mut data = vec![0.; shape.size];
-        data[strides.position(&idx)] = eps;
+        data[strides.position(idx)] = eps;
         Self {
             data: Arc::new(data),
             shape,
