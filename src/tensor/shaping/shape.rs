@@ -1,8 +1,11 @@
 use std::ops::Index;
 
 use proptest::prelude::Strategy;
+use rand::Rng;
 
 use crate::util::max::max;
+
+use super::idx::Idx;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shape {
@@ -73,6 +76,19 @@ impl Shape {
             res[..m].copy_from_slice(&self.data[..m]);
         }
         Shape::new(res)
+    }
+
+    pub fn sample(&self) -> Idx {
+        let mut idx = vec![];
+        for s in &self.data {
+            let r = if *s == 1 {
+                0
+            } else {
+                rand::thread_rng().gen_range(0..s - 1)
+            };
+            idx.push(r);
+        }
+        Idx::new(idx)
     }
 
     pub fn len(&self) -> usize {
