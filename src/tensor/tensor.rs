@@ -129,6 +129,7 @@ impl Tensor {
             .unwrap_or_default();
         let inputs = &self.history.inputs;
         inputs.iter().zip(derivatives)
+        // expand derivatives b/c out of bwd is a different size than the in of fwd
     }
 
     fn topological_sort(&self) -> impl Iterator<Item = &Self> {
