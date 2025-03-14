@@ -302,7 +302,14 @@ mod tests {
 
         #[test]
         fn map_identity_test(t in TensorData::arbitrary()) {
-            assert_tensor_eq(&t.clone(), &t.map(|f| f));
+            assert_tensor_eq(&t, &t.map(|f| f));
+        }
+
+        #[test]
+        fn map_broadcast_identity_test(t in TensorData::arbitrary()) {
+            let bc = t.map_broadcast(&t, |f| f);
+            assert!(bc.is_some());
+            assert_tensor_eq(&t, bc.as_ref().unwrap());
         }
 
         #[test]
@@ -314,8 +321,30 @@ mod tests {
         }
 
         #[test]
+        fn map_broadcast_composition_test(t in TensorData::arbitrary()) {
+            let f = |a: f64| a * 2.;
+            let g = |a: f64| a.powf(2.);
+            let fg = |a: f64| g(f(a));
+            let t1 = &t.clone().map_broadcast(&t, f).and_then(|t| t.map_broadcast(&t, g));
+            let t2 = &t.map_broadcast(&t, fg);
+            assert!(t1.is_some());
+            assert!(t2.is_some());
+            assert_tensor_eq(t1.as_ref().unwrap(), t2.as_ref().unwrap());
+        }
+
+        #[test]
         fn map_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
             let map = TensorData::zeros(shape.clone()).map(|z| z + f);
+            assert_eq!(shape.size, map.data.len());
+            assert!(map.data.iter().all(|e| *e == f));
+        }
+
+        #[test]
+        fn map_broadcast_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
+            let t = TensorData::zeros(shape.clone());
+            let res = t.map_broadcast(&t, |z| z + f);
+            assert!(res.is_some());
+            let map = res.unwrap();
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
         }
