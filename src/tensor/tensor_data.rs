@@ -121,6 +121,21 @@ impl TensorData {
         }
     }
 
+    pub fn map_broadcast(&self, out: &TensorData, f: impl Fn(f64) -> f64) -> Option<Self> {
+        let strides: Strides = (&out.shape).into();
+        let len = out.shape.size;
+        let mut out_vec = vec![0.; len];
+        for i in 0..len {
+            let out_idx = strides.idx(i);
+            let idx_bc = out_idx.broadcast(&self.shape)?;
+            let pos_in = self.strides.position(&idx_bc);
+            let v = self.data[pos_in];
+            let pos_out = out.strides.position(&out_idx);
+            out_vec[pos_out] = f(v);
+        }
+        Some(TensorData::new(out_vec, out.shape.clone(), strides))
+    }
+
     pub fn zip(&self, other: &TensorData, f: impl Fn(f64, f64) -> f64) -> Option<TensorData> {
         let shape = if self.shape == other.shape {
             self.shape.clone()
