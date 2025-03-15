@@ -86,7 +86,7 @@ impl Tensor {
         let mut res: HashMap<String, Self> = HashMap::new();
         for s in sorted {
             if let Some(current_deriv) = derivs.get(&s.id).cloned() {
-                for (parent, grad) in s.chain_rule(current_deriv) {
+                for (parent, grad) in s.chain_rule(&current_deriv.data) {
                     let grad_tensor = Tensor::from_data(grad);
                     if parent.is_leaf() {
                         let new = match res.get(&parent.id) {
@@ -116,18 +116,18 @@ impl Tensor {
         }
     }
 
-    fn chain_rule(&self, d: Tensor) -> impl Iterator<Item = (&Self, TensorData)> {
+    fn chain_rule(&self, d: &TensorData) -> impl Iterator<Item = (&Self, TensorData)> {
         let derivatives = self
             .history
             .last_fn
             .as_ref()
             .map(|f| match f {
                 Function::B(b) => {
-                    let (da, db) = b.backward(&self.history.ctx, &d.data);
+                    let (da, db) = b.backward(&self.history.ctx, d);
                     vec![da, db]
                 }
                 Function::U(u) => {
-                    let da = u.backward(&self.history.ctx, &d.data);
+                    let da = u.backward(&self.history.ctx, d);
                     vec![da]
                 }
             })
@@ -424,12 +424,11 @@ mod tests {
 
     #[test]
     fn repro_test() {
-        let shape = Shape::new(vec![1, 1, 2, 1]);
-        let strides = Strides::new(vec![2, 2, 1, 1]);
-        let td = TensorData::new(vec![0., 0.], shape, strides);
+        let shape = Shape::new(vec![1, 1, 1, 1]);
+        let strides = Strides::new(vec![1, 1, 1, 1]);
+        let td = TensorData::new(vec![0.], shape, strides);
         let t = Tensor::from_data(td);
-        let res = t.clone() * t;
-        let _m = res.sum(None).backward();
+        unary_grad_assert(t, |t| t.inv());
     }
 
     proptest! {
@@ -438,7 +437,7 @@ mod tests {
             //unary_grad_assert(t.clone(), |t| -t);
             //unary_grad_assert(t.clone(), |t| t.clone() * t);
             //unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
-            //unary_grad_assert(t.clone(), |t| t.inv());
+            unary_grad_assert(t.clone(), |t| t.inv());
             //unary_grad_assert(t.clone(), |t| t.sigmoid());
             //unary_grad_assert(t.clone(), |t| t.ln());
             //unary_grad_assert(t.clone(), |t| t.relu());
