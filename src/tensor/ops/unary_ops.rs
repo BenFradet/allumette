@@ -91,10 +91,7 @@ impl Unary<TensorData> for Exp {
 pub struct Copy;
 impl Unary<TensorData> for Copy {
     fn forward(&self, a: &TensorData) -> TensorData {
-        let mut vec = vec![1; a.shape.data().len()];
-        vec[0] = a.size();
-        let shape = Shape::new(vec);
-        a.reshape(shape)
+        a.map_broadcast(&TensorData::zeros(a.shape.clone()), |f| f).unwrap_or(a.map(|f| f))
     }
 
     fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
