@@ -159,7 +159,7 @@ impl TensorData {
         Some(TensorData::new(out, shape, strides))
     }
 
-    pub fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<TensorData> {
+    pub fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<Self> {
         if dim < self.shape.data().len() {
             let mut shape_data = self.shape.data().to_vec();
             shape_data[dim] = 1;
@@ -183,6 +183,40 @@ impl TensorData {
         } else {
             None
         }
+    }
+
+    // output of backward not the same size as the input of forward
+    pub fn expand(&self, other: Self) -> Option<Self> {
+        if self.shape == other.shape {
+            return Some(other);
+        }
+
+        let bc_shape = self.shape.broadcast(&other.shape)?;
+        let mut out = TensorData::zeros(bc_shape);
+        let bc = other.map_broadcast(&out, |f| f)?;
+        if self.shape == out.shape {
+            return Some(bc);
+        }
+
+        let orig_shape = Shape::new(
+            [
+                vec![1; out.shape.len() - self.shape.len()],
+                self.shape.data().to_vec(),
+            ]
+            .concat(),
+        );
+        for (dim, shape) in out.shape.clone().data().iter().enumerate() {
+            if orig_shape.data()[dim] == 1 && *shape != 1 {
+                out = out.reduce(|a, b| a + b, dim, 0.)?;
+            }
+        }
+        assert!(
+            out.size() == self.size(),
+            "out shape: {:?}, self shape: {:?}",
+            out.shape,
+            self.shape
+        );
+        Some(out)
     }
 
     pub fn size(&self) -> usize {
