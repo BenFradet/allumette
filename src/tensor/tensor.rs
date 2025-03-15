@@ -72,40 +72,6 @@ impl Tensor {
         self
     }
 
-    // output of backward not the same size as the input of forward
-    pub fn expand(self, other: Self) -> Option<Self> {
-        if self.data.shape == other.data.shape {
-            return Some(other);
-        }
-
-        let bc_shape = self.data.shape.broadcast(&other.data.shape)?;
-        let mut out = TensorData::zeros(bc_shape);
-        let bc = other.data.map_broadcast(&out, |f| f)?;
-        if self.data.shape == out.shape {
-            return Some(self.data(bc));
-        }
-
-        let orig_shape = Shape::new(
-            [
-                vec![1; out.shape.len() - self.data.shape.len()],
-                self.data.shape.data().to_vec(),
-            ]
-            .concat(),
-        );
-        for (dim, shape) in out.shape.clone().data().iter().enumerate() {
-            if orig_shape.data()[dim] == 1 && *shape != 1 {
-                out = out.reduce(|a, b| a + b, dim, 0.)?;
-            }
-        }
-        assert!(
-            out.size() == self.size(),
-            "out shape: {:?}, self shape: {:?}",
-            out.shape,
-            self.data.shape
-        );
-        Some(self.data(out))
-    }
-
     pub fn backward(&self) -> HashMap<String, Self> {
         assert!(
             self.data.shape == Shape::new(vec![1]),
@@ -167,8 +133,11 @@ impl Tensor {
             })
             .unwrap_or_default();
         let inputs = &self.history.inputs;
-        inputs.iter().zip(derivatives)
         // expand derivatives b/c out of bwd is a different size than the in of fwd
+        inputs
+            .iter()
+            .zip(derivatives)
+            .filter_map(|(i, d)| i.data.expand(d).map(|o| (i, o)))
     }
 
     fn topological_sort(&self) -> impl Iterator<Item = &Self> {
