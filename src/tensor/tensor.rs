@@ -344,7 +344,9 @@ mod tests {
         let grad = unwrapped.grad.unwrap().data[idx];
         assert!(
             is_close(grad, check),
-            "tensor grad should be close to central diff"
+            "tensor grad ({:?}) should be close to central diff ({:?})",
+            grad,
+            check,
         );
     }
 
@@ -426,7 +428,7 @@ mod tests {
     fn repro_test() {
         let shape = Shape::new(vec![1, 1, 1, 1]);
         let strides = Strides::new(vec![1, 1, 1, 1]);
-        let td = TensorData::new(vec![0.], shape, strides);
+        let td = TensorData::new(vec![3.5], shape, strides);
         let t = Tensor::from_data(td);
         unary_grad_assert(t, |t| t.inv());
     }
@@ -434,14 +436,14 @@ mod tests {
     proptest! {
         #[test]
         fn unary_grad_tests(t in Tensor::arbitrary()) {
-            //unary_grad_assert(t.clone(), |t| -t);
-            //unary_grad_assert(t.clone(), |t| t.clone() * t);
-            //unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
-            unary_grad_assert(t.clone(), |t| t.inv());
-            //unary_grad_assert(t.clone(), |t| t.sigmoid());
-            //unary_grad_assert(t.clone(), |t| t.ln());
-            //unary_grad_assert(t.clone(), |t| t.relu());
-            //unary_grad_assert(t.clone(), |t| t.exp());
+            unary_grad_assert(t.clone(), |t| -t);
+            unary_grad_assert(t.clone(), |t| t.clone() * t);
+            unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
+            unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(3.5)).inv());
+            unary_grad_assert(t.clone(), |t| t.sigmoid());
+            unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(100000.)).ln());
+            unary_grad_assert(t.clone(), |t| t.relu());
+            unary_grad_assert(t.clone(), |t| t.exp());
         }
 
         #[test]

@@ -1,8 +1,5 @@
 use crate::{
-    autodiff::context::Context,
-    function::unary::Unary,
-    math,
-    tensor::{shaping::shape::Shape, tensor_data::TensorData},
+    autodiff::context::Context, function::unary::Unary, math, tensor::tensor_data::TensorData,
 };
 
 pub struct Neg;
@@ -91,7 +88,8 @@ impl Unary<TensorData> for Exp {
 pub struct Copy;
 impl Unary<TensorData> for Copy {
     fn forward(&self, a: &TensorData) -> TensorData {
-        a.map_broadcast(&TensorData::zeros(a.shape.clone()), |f| f).unwrap_or(a.map(|f| f))
+        a.map_broadcast(&TensorData::zeros(a.shape.clone()), |f| f)
+            .unwrap_or(a.map(|f| f))
     }
 
     fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
