@@ -332,9 +332,8 @@ mod tests {
         F: Fn(Tensor) -> Tensor,
     {
         let id = &tensor.id.clone();
-        let reset_tensor = tensor.history(TensorHistory::default()).grad(None);
-        let idx = reset_tensor.data.shape.sample();
-        let out = f(reset_tensor);
+        let idx = tensor.data.shape.sample();
+        let out = f(tensor);
         let mut res = out.sum(None).backward();
         let tensor_after = res.remove(id);
         assert!(tensor_after.is_some(), "tensor should be in backprop map");
@@ -347,6 +346,46 @@ mod tests {
             "tensor grad ({:?}) should be close to central diff ({:?})",
             grad,
             check,
+        );
+    }
+
+    fn binary_grad_assert<F>(tensor1: Tensor, tensor2: Tensor, f: F)
+    where
+        F: Fn(Tensor, Tensor) -> Tensor,
+    {
+        let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
+        let (idx1, idx2) = (tensor1.data.shape.sample(), tensor2.data.shape.sample());
+        let out = f(tensor1, tensor2);
+        let mut res = out.sum(None).backward();
+        let (after1, after2) = (res.remove(id1), res.remove(id2));
+        assert!(
+            after1.is_some() && after2.is_some(),
+            "tensors should be in backprop map"
+        );
+        let (unwrapped1, unwrapped2) = (after1.unwrap(), after2.unwrap());
+        let (check1, check2) = (
+            binary_grad_central_diff(unwrapped1.clone(), unwrapped2.clone(), &f, &idx1, true),
+            binary_grad_central_diff(unwrapped1.clone(), unwrapped2.clone(), f, &idx2, false),
+        );
+        assert!(
+            unwrapped1.grad.is_some() && unwrapped2.grad.is_some(),
+            "tensors should have grads"
+        );
+        let (grad1, grad2) = (
+            unwrapped1.grad.unwrap().data[idx1],
+            unwrapped2.grad.unwrap().data[idx2],
+        );
+        assert!(
+            is_close(grad1, check1),
+            "tensor 1 grad ({:?}) should be close to central diff ({:?})",
+            grad1,
+            check1,
+        );
+        assert!(
+            is_close(grad2, check2),
+            "tensor 2 grad ({:?}) should be close to central diff ({:?})",
+            grad2,
+            check2,
         );
     }
 
@@ -368,7 +407,7 @@ mod tests {
         tensor1: Tensor,
         tensor2: Tensor,
         f: F,
-        index: Idx,
+        index: &Idx,
         first: bool,
     ) -> f64
     where
@@ -380,7 +419,7 @@ mod tests {
         } else {
             tensor2.data.shape.clone()
         };
-        let up = Tensor::from_data(TensorData::epsilon(shape, &index, eps));
+        let up = Tensor::from_data(TensorData::epsilon(shape, index, eps));
         let (add1, add2) = if first {
             (tensor1.clone() + up.clone(), tensor2.clone())
         } else {
