@@ -209,8 +209,17 @@ impl Tensor {
         }
     }
 
-    pub fn mean(self, dim: usize) -> Self {
-        self.sum(Some(dim)) / Self::from_data(TensorData::scalar(dim as f64))
+    pub fn mean(self, dim: Option<usize>) -> Self {
+        match dim {
+            Some(d) => {
+                let div = Self::from_data(TensorData::scalar(self.data.shape[d] as f64));
+                self.sum(dim) / div
+            }
+            None => {
+                let div = Self::from_data(TensorData::scalar(self.size() as f64));
+                self.sum(None) / div
+            }
+        }
     }
 
     pub fn permute(self, order: Order) -> Option<Self> {
@@ -463,16 +472,12 @@ mod tests {
         }
     }
 
-    #[test]
-    fn repro_test() {
-        let shape = Shape::new(vec![1, 1, 1, 1]);
-        let strides = Strides::new(vec![1, 1, 1, 1]);
-        let td = TensorData::new(vec![3.5], shape, strides);
-        let t = Tensor::from_data(td);
-        unary_grad_assert(t, |t| t.inv());
-    }
-
     proptest! {
+        fn reduce_grad_tests(t1 in Tensor::arbitrary()) {
+            unary_grad_assert(t1.clone(), |t| t.sum(Some(0)));
+            unary_grad_assert(t1.clone(), |t| t.mean(Some(0)));
+            unary_grad_assert(t1.clone(), |t| t.mean(None));
+        }
 
         #[test]
         fn binary_grad_tests((t1, t2) in Tensor::arbitrary_tuple()) {
