@@ -473,16 +473,16 @@ mod tests {
     }
 
     proptest! {
+
         #[test]
-        fn unary_grad_tests(t in Tensor::arbitrary()) {
-            unary_grad_assert(t.clone(), |t| -t);
-            unary_grad_assert(t.clone(), |t| t.clone() * t);
-            unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
-            unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(3.5)).inv());
-            unary_grad_assert(t.clone(), |t| t.sigmoid());
-            unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(100000.)).ln());
-            unary_grad_assert(t.clone(), |t| t.relu());
-            unary_grad_assert(t.clone(), |t| t.exp());
+        fn binary_grad_tests((t1, t2) in Tensor::arbitrary_tuple()) {
+            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
+            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
+            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
+            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 / (t2 + Tensor::scalar(5.5)));
+            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
+            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
+            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
         }
 
         #[test]
@@ -503,6 +503,18 @@ mod tests {
                 ).sigmoid()
             ).ln() / Tensor::scalar(50.);
             unary_grad_assert(t.clone(), ft);
+        }
+
+        #[test]
+        fn unary_grad_tests(t in Tensor::arbitrary()) {
+            unary_grad_assert(t.clone(), |t| -t);
+            unary_grad_assert(t.clone(), |t| t.clone() * t);
+            unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
+            unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(3.5)).inv());
+            unary_grad_assert(t.clone(), |t| t.sigmoid());
+            unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(100000.)).ln());
+            unary_grad_assert(t.clone(), |t| t.relu());
+            unary_grad_assert(t.clone(), |t| t.exp());
         }
 
         #[test]
