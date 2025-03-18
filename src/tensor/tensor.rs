@@ -260,11 +260,11 @@ impl Tensor {
         Forward::unary(Inv {}, self)
     }
 
-    pub fn arbitrary() -> impl Strategy<Value = Tensor> {
-        TensorData::arbitrary().prop_map(Tensor::from_data)
+    pub fn arbitrary() -> impl Strategy<Value = Self> {
+        TensorData::arbitrary().prop_map(Self::from_data)
     }
 
-    pub fn arbitrary_tuple() -> impl Strategy<Value = (Tensor, Tensor)> {
+    pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
         Shape::arbitrary()
             .prop_flat_map(|shape| {
                 let size = shape.size;
@@ -275,9 +275,20 @@ impl Tensor {
             .prop_map(|(data1, data2, shape)| {
                 let strides: Strides = (&shape).into();
                 (
-                    Tensor::from_data(TensorData::new(data1, shape.clone(), strides.clone())),
-                    Tensor::from_data(TensorData::new(data2, shape, strides)),
+                    Self::from_data(TensorData::new(data1, shape.clone(), strides.clone())),
+                    Self::from_data(TensorData::new(data2, shape, strides)),
                 )
+            })
+    }
+
+    pub fn arbitrary_with_order() -> impl Strategy<Value = (Tensor, Order)> {
+        Self::arbitrary()
+            .prop_flat_map(|t| {
+                let len = t.data.shape.len();
+                let ord = collection::vec(0..len, len)
+                    .prop_shuffle()
+                    .prop_filter_map("order does not fit", Order::new);
+                (Just(t), ord)
             })
     }
 }
@@ -473,10 +484,14 @@ mod tests {
     }
 
     proptest! {
-        fn reduce_grad_tests(t1 in Tensor::arbitrary()) {
-            unary_grad_assert(t1.clone(), |t| t.sum(Some(0)));
-            unary_grad_assert(t1.clone(), |t| t.mean(Some(0)));
-            unary_grad_assert(t1.clone(), |t| t.mean(None));
+        fn permute_grad_tests(t in Tensor::arbitrary(), ) {
+
+        }
+
+        fn reduce_grad_tests(t in Tensor::arbitrary()) {
+            unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
+            unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
+            unary_grad_assert(t.clone(), |t| t.mean(None));
         }
 
         #[test]
