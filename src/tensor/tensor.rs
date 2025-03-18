@@ -486,6 +486,26 @@ mod tests {
         }
 
         #[test]
+        fn unary_grad_complex_test1(t in Tensor::arbitrary()) {
+            let ft = |t: Tensor| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
+            unary_grad_assert(t.clone(), ft);
+        }
+
+        #[test]
+        fn unary_grad_complex_test2(t in Tensor::arbitrary()) {
+            let ft = |t: Tensor| (
+                (
+                    (
+                        (
+                            t * Tensor::scalar(10.) + Tensor::scalar(7.)
+                        ).relu() * Tensor::scalar(6.) + Tensor::scalar(5.)
+                    ).relu() * Tensor::scalar(10.)
+                ).sigmoid()
+            ).ln() / Tensor::scalar(50.);
+            unary_grad_assert(t.clone(), ft);
+        }
+
+        #[test]
         fn binary_tests((t1, t2) in Tensor::arbitrary_tuple()) {
             binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
             binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
