@@ -482,6 +482,16 @@ mod tests {
         }
     }
 
+    #[test]
+    fn repro_test() {
+        let shape = Shape::new(vec![1, 1, 1, 1]);
+        let strides: Strides = (&shape).into();
+        let t1 = Tensor::from_data(TensorData::new(vec![0.], shape.clone(), strides.clone()));
+        let t2 = Tensor::from_data(TensorData::new(vec![0.], shape.clone(), strides.clone()));
+        // t1 id is not in bp map
+        binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 + t2);
+    }
+
     proptest! {
         fn permute_grad_tests((t, o) in Tensor::arbitrary_with_order()) {
             unary_grad_assert(t, move |t| t.permute(o.clone()).unwrap());
@@ -502,6 +512,24 @@ mod tests {
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
+        }
+
+        #[test]
+        fn binary_grad_broadcast_tests((t1, t2) in Tensor::arbitrary_tuple()) {
+            binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 + t2);
+            //binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 + t2);
+            //binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 - t2);
+            //binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 - t2);
+            //binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 * t2);
+            //binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 * t2);
+            //binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 / (t2 + Tensor::scalar(5.5)));
+            //binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 / (t2 + Tensor::scalar(5.5)));
+            //binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.gt(t2));
+            //binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.gt(t2));
+            //binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.lt(t2));
+            //binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.lt(t2));
+            //binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.eq(t2));
+            //binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.eq(t2));
         }
 
         #[test]
