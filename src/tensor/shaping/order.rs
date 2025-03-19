@@ -6,7 +6,7 @@ use crate::tensor::tensor_data::TensorData;
 
 use super::iter::Iter;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Order {
     pub data: Vec<usize>,
 }

@@ -282,14 +282,13 @@ impl Tensor {
     }
 
     pub fn arbitrary_with_order() -> impl Strategy<Value = (Tensor, Order)> {
-        Self::arbitrary()
-            .prop_flat_map(|t| {
-                let len = t.data.shape.len();
-                let ord = collection::vec(0..len, len)
-                    .prop_shuffle()
-                    .prop_filter_map("order does not fit", Order::new);
-                (Just(t), ord)
-            })
+        Self::arbitrary().prop_flat_map(|t| {
+            let len = t.data.shape.len();
+            let ord = collection::vec(0..len, len)
+                .prop_shuffle()
+                .prop_filter_map("order does not fit", Order::new);
+            (Just(t), ord)
+        })
     }
 }
 
@@ -484,8 +483,8 @@ mod tests {
     }
 
     proptest! {
-        fn permute_grad_tests(t in Tensor::arbitrary(), ) {
-
+        fn permute_grad_tests((t, o) in Tensor::arbitrary_with_order()) {
+            unary_grad_assert(t, move |t| t.permute(o.clone()).unwrap());
         }
 
         fn reduce_grad_tests(t in Tensor::arbitrary()) {
