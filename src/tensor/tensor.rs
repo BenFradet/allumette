@@ -72,6 +72,11 @@ impl Tensor {
         self
     }
 
+    pub fn id(mut self, id: String) -> Self {
+        self.id = id;
+        self
+    }
+
     pub fn backward(&self) -> HashMap<String, Self> {
         assert!(
             self.data.shape == Shape::new(vec![1]),
@@ -351,8 +356,9 @@ mod tests {
         F: Fn(Tensor) -> Tensor,
     {
         let id = &tensor.id.clone();
-        let idx = tensor.data.shape.sample();
-        let out = f(tensor);
+        let reset = tensor.grad(None).history(TensorHistory::default());
+        let idx = reset.data.shape.sample();
+        let out = f(reset);
         let mut res = out.sum(None).backward();
         let tensor_after = res.remove(id);
         assert!(tensor_after.is_some(), "tensor should be in backprop map");
@@ -373,8 +379,12 @@ mod tests {
         F: Fn(Tensor, Tensor) -> Tensor,
     {
         let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
-        let (idx1, idx2) = (tensor1.data.shape.sample(), tensor2.data.shape.sample());
-        let out = f(tensor1, tensor2);
+        let (reset1, reset2) = (
+            tensor1.grad(None).history(TensorHistory::default()),
+            tensor2.grad(None).history(TensorHistory::default()),
+        );
+        let (idx1, idx2) = (reset1.data.shape.sample(), reset2.data.shape.sample());
+        let out = f(reset1, reset2);
         let mut res = out.sum(None).backward();
         let (after1, after2) = (res.remove(id1), res.remove(id2));
         assert!(
@@ -488,8 +498,8 @@ mod tests {
         let strides: Strides = (&shape).into();
         let t1 = Tensor::from_data(TensorData::new(vec![0.], shape.clone(), strides.clone()));
         let t2 = Tensor::from_data(TensorData::new(vec![0.], shape.clone(), strides.clone()));
-        // t1 id is not in bp map
-        binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 + t2);
+        let t1p = t1.clone().sum(Some(0));
+        binary_grad_assert(t1p, t2.clone(), |t1, t2| t1 + t2);
     }
 
     proptest! {
