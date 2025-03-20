@@ -404,6 +404,10 @@ mod tests {
             unwrapped1.grad.unwrap().data[idx1],
             unwrapped2.grad.unwrap().data[idx2],
         );
+        println!("grad1 {grad1}");
+        println!("check1 {check1}");
+        println!("check2 {check2}");
+        println!("grad2 {grad2}");
         assert!(
             is_close(grad1, check1),
             "tensor 1 grad ({:?}) should be close to central diff ({:?})",
@@ -459,9 +463,16 @@ mod tests {
         } else {
             (tensor1, tensor2 - up)
         };
+        println!("add1: {:#?}", add1.data.data);
+        println!("add2: {:#?}", add2.data.data);
+        println!("sub1: {:#?}", sub1.data.data);
+        println!("sub2: {:#?}", sub2.data.data);
         let delta = f(add1, add2).sum(None) - f(sub1, sub2).sum(None);
+        println!("delta: {:#?}", delta.data.data);
 
-        delta.item().unwrap_or(0.) / (2. * eps)
+        let res = delta.item().unwrap_or(0.) / (2. * eps);
+        println!("res {res}\n");
+        res
     }
 
     fn unary_assert<FT, FF>(t: Tensor, ft: FT, ff: FF)
@@ -494,10 +505,10 @@ mod tests {
 
     #[test]
     fn repro_test() {
-        let shape = Shape::new(vec![1, 1, 1, 1]);
+        let shape = Shape::new(vec![2, 1, 1, 1]);
         let strides: Strides = (&shape).into();
-        let t1 = Tensor::from_data(TensorData::new(vec![0.], shape.clone(), strides.clone()));
-        let t2 = Tensor::from_data(TensorData::new(vec![0.], shape.clone(), strides.clone()));
+        let t1 = Tensor::from_data(TensorData::new(vec![0., 0.], shape.clone(), strides.clone()));
+        let t2 = Tensor::from_data(TensorData::new(vec![0., 0.], shape.clone(), strides.clone()));
         let t1p = t1.clone().sum(Some(0));
         binary_grad_assert(t1p, t2.clone(), |t1, t2| t1 + t2);
     }
