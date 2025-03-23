@@ -199,8 +199,15 @@ impl Tensor {
         Forward::binary(Eq {}, self, rhs)
     }
 
-    pub fn all(self, dim: usize) -> Self {
-        Forward::binary(All {}, self, Tensor::scalar(dim as f64))
+    pub fn all(self, dim: Option<usize>) -> Self {
+        match dim {
+            Some(d) => Forward::binary(All {}, self, Tensor::scalar(d as f64)),
+            None => {
+                let shape = Shape::scalar(self.size());
+                let t = self.view(shape).unwrap();
+                Forward::binary(All {}, t, Tensor::scalar(0.))
+            }
+        }
     }
 
     pub fn sum(self, dim: Option<usize>) -> Self {
@@ -632,6 +639,21 @@ mod tests {
     }
 
     #[test]
+    fn test_view() {
+        let t = Tensor::matrix(vec![vec![2., 3., 4.], vec![4., 5., 7.]]).unwrap();
+        assert_eq!(Shape::new(vec![2, 3]), t.data.shape);
+        let t2 = t.clone().view(Shape::new(vec![6])).unwrap();
+        assert_eq!(Shape::new(vec![6]), t2.data.shape);
+        let t3 = t2.view(Shape::new(vec![1, 6])).unwrap();
+        assert_eq!(Shape::new(vec![1, 6]), t3.data.shape);
+        let t4 = t3.view(Shape::new(vec![6, 1])).unwrap();
+        assert_eq!(Shape::new(vec![6, 1]), t4.data.shape);
+        let t5 = t4.view(Shape::new(vec![2, 3])).unwrap();
+        assert_eq!(Shape::new(vec![2, 3]), t5.data.shape);
+        assert_eq!(Some(1.), t.is_close(t5).all(None).item());
+    }
+
+    #[test]
     fn test_reduce_forward_one_dim() -> () {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
@@ -642,7 +664,7 @@ mod tests {
         let exp = Tensor::vec(vec![11., 16.]).unwrap();
         let is_close = summed.is_close(exp);
         let shape = Shape::scalar(is_close.size());
-        assert_eq!(Some(1.), is_close.view(shape).unwrap().all(0).item());
+        assert_eq!(Some(1.), is_close.view(shape).unwrap().all(Some(0)).item());
     }
 
     #[test]
@@ -657,7 +679,7 @@ mod tests {
             Tensor::from_data(TensorData::matrix(vec![vec![5.], vec![10.], vec![12.]]).unwrap());
         let is_close = summed.is_close(exp);
         let shape = Shape::new(vec![is_close.size()]);
-        assert_eq!(Some(1.), is_close.view(shape).unwrap().all(0).item());
+        assert_eq!(Some(1.), is_close.view(shape).unwrap().all(Some(0)).item());
     }
 
     #[test]
