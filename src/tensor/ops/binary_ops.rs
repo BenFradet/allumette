@@ -79,8 +79,7 @@ impl Binary<TensorData> for Sum {
     }
 
     fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
-        let d_shape = d.shape.clone();
-        (d.clone(), TensorData::zeros(d_shape))
+        (d.clone(), TensorData::scalar(0.))
     }
 }
 
@@ -104,11 +103,10 @@ impl Binary<TensorData> for Permute {
             inv.push(idx);
         }
         let inverse_order = Order::new(inv).unwrap_or(Order::range(order.len()));
-        let d_shape = d.shape.clone();
         (
             d.permute(&inverse_order)
-                .unwrap_or(TensorData::ones(d_shape.clone())),
-            TensorData::zeros(d_shape),
+                .unwrap_or(TensorData::ones(d.shape.clone())),
+            TensorData::scalar(0.),
         )
     }
 }
@@ -120,10 +118,10 @@ impl Binary<TensorData> for IsClose {
             .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
+    fn backward(&self, _ctx: &Context<TensorData>, _d: &TensorData) -> (TensorData, TensorData) {
         (
-            TensorData::zeros(d.shape.clone()),
-            TensorData::zeros(d.shape.clone()),
+            TensorData::scalar(0.),
+            TensorData::scalar(0.),
         )
     }
 }
@@ -135,10 +133,10 @@ impl Binary<TensorData> for All {
             .unwrap_or(TensorData::ones(a.shape.clone()))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
+    fn backward(&self, _ctx: &Context<TensorData>, _d: &TensorData) -> (TensorData, TensorData) {
         (
-            TensorData::zeros(d.shape.clone()),
-            TensorData::zeros(d.shape.clone()),
+            TensorData::scalar(0.),
+            TensorData::scalar(0.),
         )
     }
 }
@@ -153,9 +151,7 @@ impl Binary<TensorData> for View {
     }
 
     fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
-        let d_shape = d.shape.clone();
-        let zeros = TensorData::zeros(d.shape.clone());
-        let shape = ctx.fst.as_ref().map(|o| o.shape.clone()).unwrap_or(d_shape);
-        (d.clone().reshape(shape), zeros)
+        let shape = ctx.fst.as_ref().map(|o| o.shape.clone()).unwrap_or(d.shape.clone());
+        (d.clone().reshape(shape), TensorData::scalar(0.))
     }
 }
