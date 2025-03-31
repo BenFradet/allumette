@@ -522,8 +522,16 @@ mod tests {
     fn repro_test() {
         let shape = Shape::new(vec![2, 1, 1, 1]);
         let strides: Strides = (&shape).into();
-        let t1 = Tensor::from_data(TensorData::new(vec![0., 0.], shape.clone(), strides.clone()));
-        let t2 = Tensor::from_data(TensorData::new(vec![0., 0.], shape.clone(), strides.clone()));
+        let t1 = Tensor::from_data(TensorData::new(
+            vec![0., 0.],
+            shape.clone(),
+            strides.clone(),
+        ));
+        let t2 = Tensor::from_data(TensorData::new(
+            vec![0., 0.],
+            shape.clone(),
+            strides.clone(),
+        ));
         let t1p = t1.clone().sum(Some(0));
         binary_grad_assert(t1p, t2.clone(), |t1, t2| t1 + t2);
     }

@@ -9,6 +9,10 @@ impl Binary<f64> for Add {
     fn backward(&self, _ctx: &Context<f64>, d: &f64) -> (f64, f64) {
         math::binary::add_back(*d)
     }
+
+    fn tag(&self) -> &str {
+        "add"
+    }
 }
 
 pub struct Mul;
@@ -21,6 +25,10 @@ impl Binary<f64> for Mul {
         let a = ctx.fst.unwrap_or(1.);
         let b = ctx.snd.unwrap_or(1.);
         (math::binary::mul(*d, b), math::binary::mul(*d, a))
+    }
+
+    fn tag(&self) -> &str {
+        "mul"
     }
 }
 
@@ -35,6 +43,10 @@ impl Binary<f64> for Div {
         let b = ctx.snd.filter(|v| *v != 0.).unwrap_or(1.);
         math::binary::div_back(a, b, *d)
     }
+
+    fn tag(&self) -> &str {
+        "div"
+    }
 }
 
 pub struct Lt;
@@ -46,6 +58,10 @@ impl Binary<f64> for Lt {
     fn backward(&self, _ctx: &Context<f64>, _d: &f64) -> (f64, f64) {
         (0., 0.)
     }
+
+    fn tag(&self) -> &str {
+        "lt"
+    }
 }
 
 pub struct Eq;
@@ -56,6 +72,10 @@ impl Binary<f64> for Eq {
 
     fn backward(&self, _ctx: &Context<f64>, _d: &f64) -> (f64, f64) {
         (0., 0.)
+    }
+
+    fn tag(&self) -> &str {
+        "eq"
     }
 }
 

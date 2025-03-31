@@ -14,7 +14,7 @@ impl<A> Debug for Function<A> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::U(u) => write!(f, "Unary: {}", u.tag()),
-            Self::B(_) => write!(f, "Binary: ???"),
+            Self::B(b) => write!(f, "Binary: {}", b.tag()),
         }
     }
 }

@@ -264,6 +264,10 @@ mod tests {
         fn backward(&self, _ctx: &Context<f64>, d: &f64) -> (f64, f64) {
             (*d, *d)
         }
+
+        fn tag(&self) -> &str {
+            "f1"
+        }
     }
 
     struct F2;
@@ -276,6 +280,10 @@ mod tests {
             let a = ctx.fst.unwrap_or(1.);
             let b = ctx.snd.unwrap_or(1.);
             (d * (b + 1.), d * a)
+        }
+
+        fn tag(&self) -> &str {
+            "f2"
         }
     }
 

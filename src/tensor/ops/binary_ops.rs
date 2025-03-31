@@ -18,6 +18,10 @@ impl Binary<TensorData> for Add {
     fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
         (d.clone(), d.clone())
     }
+
+    fn tag(&self) -> &str {
+        "add"
+    }
 }
 
 pub struct Mul;
@@ -39,6 +43,10 @@ impl Binary<TensorData> for Mul {
                 .unwrap_or(TensorData::ones(d.shape.clone())),
         )
     }
+
+    fn tag(&self) -> &str {
+        "mul"
+    }
 }
 
 pub struct Lt;
@@ -53,6 +61,10 @@ impl Binary<TensorData> for Lt {
             TensorData::zeros(d.shape.clone()),
             TensorData::zeros(d.shape.clone()),
         )
+    }
+
+    fn tag(&self) -> &str {
+        "lt"
     }
 }
 
@@ -69,6 +81,10 @@ impl Binary<TensorData> for Eq {
             TensorData::zeros(d.shape.clone()),
         )
     }
+
+    fn tag(&self) -> &str {
+        "eq"
+    }
 }
 
 pub struct Sum;
@@ -80,6 +96,10 @@ impl Binary<TensorData> for Sum {
 
     fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
         (d.clone(), TensorData::scalar(0.))
+    }
+
+    fn tag(&self) -> &str {
+        "sum"
     }
 }
 
@@ -109,6 +129,10 @@ impl Binary<TensorData> for Permute {
             TensorData::scalar(0.),
         )
     }
+
+    fn tag(&self) -> &str {
+        "permute"
+    }
 }
 
 pub struct IsClose;
@@ -119,10 +143,11 @@ impl Binary<TensorData> for IsClose {
     }
 
     fn backward(&self, _ctx: &Context<TensorData>, _d: &TensorData) -> (TensorData, TensorData) {
-        (
-            TensorData::scalar(0.),
-            TensorData::scalar(0.),
-        )
+        (TensorData::scalar(0.), TensorData::scalar(0.))
+    }
+
+    fn tag(&self) -> &str {
+        "is close"
     }
 }
 
@@ -134,10 +159,11 @@ impl Binary<TensorData> for All {
     }
 
     fn backward(&self, _ctx: &Context<TensorData>, _d: &TensorData) -> (TensorData, TensorData) {
-        (
-            TensorData::scalar(0.),
-            TensorData::scalar(0.),
-        )
+        (TensorData::scalar(0.), TensorData::scalar(0.))
+    }
+
+    fn tag(&self) -> &str {
+        "all"
     }
 }
 
@@ -151,7 +177,15 @@ impl Binary<TensorData> for View {
     }
 
     fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
-        let shape = ctx.fst.as_ref().map(|o| o.shape.clone()).unwrap_or(d.shape.clone());
+        let shape = ctx
+            .fst
+            .as_ref()
+            .map(|o| o.shape.clone())
+            .unwrap_or(d.shape.clone());
         (d.clone().reshape(shape), TensorData::scalar(0.))
+    }
+
+    fn tag(&self) -> &str {
+        "view"
     }
 }
