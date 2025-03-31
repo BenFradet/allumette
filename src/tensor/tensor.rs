@@ -90,6 +90,7 @@ impl Tensor {
         let mut derivs = HashMap::from([(self.id.clone(), d)]);
         let mut res: HashMap<String, Self> = HashMap::new();
         for s in sorted {
+            println!("\ncurrent {:?}\n", s.data);
             if let Some(current_deriv) = derivs.get(&s.id).cloned() {
                 for (parent, grad) in s.chain_rule(&current_deriv.data) {
                     let grad_tensor = Tensor::from_data(grad);
@@ -148,12 +149,12 @@ impl Tensor {
     fn topological_sort(&self) -> impl Iterator<Item = &Self> {
         let mut queue = VecDeque::new();
         queue.push_back(self);
-        let mut visited: HashSet<String> = HashSet::from([self.id.clone()]);
+        let mut visited = HashSet::from([&self.id]);
         let mut result = Vec::new();
         while let Some(var) = queue.pop_front() {
             for parent in var.parents() {
-                if !visited.contains(&parent.id) {
-                    visited.insert(parent.id.clone());
+                if !visited.contains(&parent.id) && !self.is_constant() {
+                    visited.insert(&parent.id);
                     queue.push_back(parent);
                 }
             }
@@ -185,6 +186,10 @@ impl Tensor {
 
     fn is_leaf(&self) -> bool {
         self.history.last_fn.is_none()
+    }
+
+    fn is_constant(&self) -> bool {
+        self.history.is_empty()
     }
 
     pub fn lt(self, rhs: Tensor) -> Self {
@@ -393,6 +398,9 @@ mod tests {
         let (idx1, idx2) = (reset1.data.shape.sample(), reset2.data.shape.sample());
         let out = f(reset1, reset2);
         let mut res = out.sum(None).backward();
+        println!("id1: {:#?}", id1);
+        println!("id2: {:#?}", id2);
+        println!("res: {:#?}", res);
         let (after1, after2) = (res.remove(id1), res.remove(id2));
         assert!(
             after1.is_some() && after2.is_some(),
