@@ -13,7 +13,7 @@ pub enum Function<A> {
 impl<A> Debug for Function<A> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::U(_) => write!(f, "Unary: ???"),
+            Self::U(u) => write!(f, "Unary: {}", u.tag()),
             Self::B(_) => write!(f, "Binary: ???"),
         }
     }

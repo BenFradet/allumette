@@ -5,4 +5,6 @@ pub trait Unary<A> {
     fn forward(&self, a: &A) -> A;
     // TODO: remove ctx
     fn backward(&self, ctx: &Context<A>, d: &A) -> A;
+
+    fn tag(&self) -> &str;
 }

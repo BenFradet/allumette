@@ -11,6 +11,10 @@ impl Unary<TensorData> for Neg {
     fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
         d.map(math::unary::neg_back)
     }
+
+    fn tag(&self) -> &str {
+        "neg"
+    }
 }
 
 pub struct Inv;
@@ -25,6 +29,10 @@ impl Unary<TensorData> for Inv {
             .and_then(|a| a.zip(d, math::unary::inv_back))
             .unwrap_or(TensorData::ones(d.shape.clone()))
     }
+
+    fn tag(&self) -> &str {
+        "inv"
+    }
 }
 
 pub struct Ln;
@@ -38,6 +46,10 @@ impl Unary<TensorData> for Ln {
             .as_ref()
             .and_then(|a| a.zip(d, math::unary::ln_back))
             .unwrap_or(TensorData::ones(d.shape.clone()))
+    }
+
+    fn tag(&self) -> &str {
+        "ln"
     }
 }
 
@@ -54,6 +66,10 @@ impl Unary<TensorData> for Sig {
             .and_then(|a| a.zip(d, math::unary::sig_back))
             .unwrap_or(TensorData::ones(d.shape.clone()))
     }
+
+    fn tag(&self) -> &str {
+        "sig"
+    }
 }
 
 pub struct Relu;
@@ -67,6 +83,10 @@ impl Unary<TensorData> for Relu {
             .as_ref()
             .and_then(|a| a.zip(d, math::unary::relu_back))
             .unwrap_or(TensorData::ones(d.shape.clone()))
+    }
+
+    fn tag(&self) -> &str {
+        "relu"
     }
 }
 
@@ -82,6 +102,10 @@ impl Unary<TensorData> for Exp {
             .and_then(|a| a.zip(d, math::unary::exp_back))
             .unwrap_or(TensorData::ones(d.shape.clone()))
     }
+
+    fn tag(&self) -> &str {
+        "exp"
+    }
 }
 
 // make contiguous
@@ -94,5 +118,9 @@ impl Unary<TensorData> for Copy {
 
     fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
         d.clone()
+    }
+
+    fn tag(&self) -> &str {
+        "copy"
     }
 }

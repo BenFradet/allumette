@@ -10,6 +10,10 @@ impl Unary<f64> for Ln {
         let a = ctx.fst.filter(|v| *v != 0.).unwrap_or(1.);
         math::unary::ln_back(a, *d)
     }
+
+    fn tag(&self) -> &str {
+        "ln"
+    }
 }
 
 pub struct Inv;
@@ -22,6 +26,10 @@ impl Unary<f64> for Inv {
         let a = ctx.fst.filter(|v| *v != 0.).unwrap_or(1.);
         math::unary::inv_back(a, *d)
     }
+
+    fn tag(&self) -> &str {
+        "inv"
+    }
 }
 
 pub struct Neg;
@@ -32,6 +40,10 @@ impl Unary<f64> for Neg {
 
     fn backward(&self, _ctx: &Context<f64>, d: &f64) -> f64 {
         math::unary::neg_back(*d)
+    }
+
+    fn tag(&self) -> &str {
+        "neg"
     }
 }
 
@@ -46,6 +58,10 @@ impl Unary<f64> for Sig {
         let a = ctx.fst.unwrap_or(0.);
         math::unary::sig_back(a, *d)
     }
+
+    fn tag(&self) -> &str {
+        "sig"
+    }
 }
 
 pub struct Relu;
@@ -58,6 +74,10 @@ impl Unary<f64> for Relu {
         let a = ctx.fst.unwrap_or(0.);
         math::unary::relu_back(a, *d)
     }
+
+    fn tag(&self) -> &str {
+        "relu"
+    }
 }
 
 pub struct Exp;
@@ -69,6 +89,10 @@ impl Unary<f64> for Exp {
     fn backward(&self, ctx: &Context<f64>, d: &f64) -> f64 {
         let a = ctx.fst.unwrap_or(0.);
         math::unary::exp_back(a, *d)
+    }
+
+    fn tag(&self) -> &str {
+        "exp"
     }
 }
 
