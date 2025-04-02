@@ -95,11 +95,9 @@ impl Tensor {
 
     pub fn backprop(&self, d: Tensor) -> HashMap<String, Self> {
         let sorted = self.topological_sort();
-        let mut derivs = HashMap::from([(self.id.clone(), d)]);
+        let mut derivs = HashMap::from([(&self.id, d)]);
         let mut res: HashMap<String, Self> = HashMap::new();
         for s in sorted {
-            println!("\ncurrent {:?}\n", s.data);
-            println!("\ncurrent hist {:?}\n", s.history);
             if let Some(current_deriv) = derivs.get(&s.id).cloned() {
                 for (parent, grad) in s.chain_rule(&current_deriv.data) {
                     let grad_tensor = Tensor::from_data(grad);
@@ -112,8 +110,8 @@ impl Tensor {
                         res.insert(parent.id.clone(), new);
                     } else {
                         match derivs.remove(&parent.id) {
-                            Some(e) => derivs.insert(parent.id.clone(), e + grad_tensor),
-                            None => derivs.insert(parent.id.clone(), grad_tensor),
+                            Some(e) => derivs.insert(&parent.id, e + grad_tensor),
+                            None => derivs.insert(&parent.id, grad_tensor),
                         };
                     }
                 }
@@ -420,13 +418,15 @@ mod tests {
             "tensors should have grads"
         );
         let (grad1, grad2) = (
-            unwrapped1.grad.unwrap().data[idx1],
-            unwrapped2.grad.unwrap().data[idx2],
+            unwrapped1.grad.clone().unwrap().data[idx1],
+            unwrapped2.grad.clone().unwrap().data[idx2],
         );
+        println!("grad1 data {:?}", unwrapped1.grad.unwrap().data);
         println!("grad1 {grad1}");
         println!("check1 {check1}");
-        println!("check2 {check2}");
+        println!("grad2 data {:?}", unwrapped2.grad.unwrap().data);
         println!("grad2 {grad2}");
+        println!("check2 {check2}");
         assert!(
             is_close(grad1, check1),
             "tensor 1 grad ({:?}) should be close to central diff ({:?})",
@@ -482,16 +482,9 @@ mod tests {
         } else {
             (tensor1, tensor2 - up)
         };
-        println!("add1: {:#?}", add1.data.data);
-        println!("add2: {:#?}", add2.data.data);
-        println!("sub1: {:#?}", sub1.data.data);
-        println!("sub2: {:#?}", sub2.data.data);
         let delta = f(add1, add2).sum(None) - f(sub1, sub2).sum(None);
-        println!("delta: {:#?}", delta.data.data);
 
-        let res = delta.item().unwrap_or(0.) / (2. * eps);
-        println!("res {res}\n");
-        res
+        delta.item().unwrap_or(0.) / (2. * eps)
     }
 
     fn unary_assert<FT, FF>(t: Tensor, ft: FT, ff: FF)
