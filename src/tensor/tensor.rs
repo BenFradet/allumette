@@ -22,6 +22,7 @@ pub struct Tensor {
     pub grad: Option<Box<Tensor>>,
     pub history: TensorHistory,
     pub id: String,
+    is_constant: bool,
 }
 
 impl Tensor {
@@ -32,6 +33,7 @@ impl Tensor {
             grad: None,
             history,
             id,
+            is_constant: false,
         }
     }
 
@@ -42,6 +44,7 @@ impl Tensor {
             grad: None,
             history: TensorHistory::default(),
             id,
+            is_constant: false,
         }
     }
 
@@ -77,6 +80,11 @@ impl Tensor {
         self
     }
 
+    fn make_constant(mut self) -> Self {
+        self.is_constant = true;
+        self
+    }
+
     pub fn backward(&self) -> HashMap<String, Self> {
         assert!(
             self.data.shape == Shape::new(vec![1]),
@@ -91,6 +99,7 @@ impl Tensor {
         let mut res: HashMap<String, Self> = HashMap::new();
         for s in sorted {
             println!("\ncurrent {:?}\n", s.data);
+            println!("\ncurrent hist {:?}\n", s.history);
             if let Some(current_deriv) = derivs.get(&s.id).cloned() {
                 for (parent, grad) in s.chain_rule(&current_deriv.data) {
                     let grad_tensor = Tensor::from_data(grad);
@@ -153,7 +162,7 @@ impl Tensor {
         let mut result = Vec::new();
         while let Some(var) = queue.pop_front() {
             for parent in var.parents() {
-                if !visited.contains(&parent.id) && !self.is_constant() {
+                if !visited.contains(&parent.id) && !parent.is_constant {
                     visited.insert(&parent.id);
                     queue.push_back(parent);
                 }
@@ -188,10 +197,6 @@ impl Tensor {
         self.history.last_fn.is_none()
     }
 
-    fn is_constant(&self) -> bool {
-        self.history.is_empty()
-    }
-
     pub fn lt(self, rhs: Tensor) -> Self {
         Forward::binary(Lt {}, self, rhs)
     }
@@ -206,22 +211,22 @@ impl Tensor {
 
     pub fn all(self, dim: Option<usize>) -> Self {
         match dim {
-            Some(d) => Forward::binary(All {}, self, Tensor::scalar(d as f64)),
+            Some(d) => Forward::binary(All {}, self, Tensor::scalar(d as f64).make_constant()),
             None => {
                 let shape = Shape::scalar(self.size());
                 let t = self.view(shape).unwrap();
-                Forward::binary(All {}, t, Tensor::scalar(0.))
+                Forward::binary(All {}, t, Tensor::scalar(0.).make_constant())
             }
         }
     }
 
     pub fn sum(self, dim: Option<usize>) -> Self {
         match dim {
-            Some(d) => Forward::binary(Sum {}, self, Tensor::scalar(d as f64)),
+            Some(d) => Forward::binary(Sum {}, self, Tensor::scalar(d as f64).make_constant()),
             None => {
                 let shape = Shape::scalar(self.size());
                 let t = self.contiguous().view(shape).unwrap();
-                Forward::binary(Sum {}, t, Tensor::scalar(0.))
+                Forward::binary(Sum {}, t, Tensor::scalar(0.).make_constant())
             }
         }
     }
@@ -400,7 +405,6 @@ mod tests {
         let mut res = out.sum(None).backward();
         println!("id1: {:#?}", id1);
         println!("id2: {:#?}", id2);
-        println!("res: {:#?}", res);
         let (after1, after2) = (res.remove(id1), res.remove(id2));
         assert!(
             after1.is_some() && after2.is_some(),
