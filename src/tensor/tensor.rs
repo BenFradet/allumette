@@ -401,8 +401,6 @@ mod tests {
         let (idx1, idx2) = (reset1.data.shape.sample(), reset2.data.shape.sample());
         let out = f(reset1, reset2);
         let mut res = out.sum(None).backward();
-        println!("id1: {:#?}", id1);
-        println!("id2: {:#?}", id2);
         let (after1, after2) = (res.remove(id1), res.remove(id2));
         assert!(
             after1.is_some() && after2.is_some(),
@@ -421,12 +419,6 @@ mod tests {
             unwrapped1.grad.clone().unwrap().data[idx1],
             unwrapped2.grad.clone().unwrap().data[idx2],
         );
-        println!("grad1 data {:?}", unwrapped1.grad.unwrap().data);
-        println!("grad1 {grad1}");
-        println!("check1 {check1}");
-        println!("grad2 data {:?}", unwrapped2.grad.unwrap().data);
-        println!("grad2 {grad2}");
-        println!("check2 {check2}");
         assert!(
             is_close(grad1, check1),
             "tensor 1 grad ({:?}) should be close to central diff ({:?})",
@@ -513,24 +505,6 @@ mod tests {
                 ff(data1[idx.clone()], data2[idx])
             ));
         }
-    }
-
-    #[test]
-    fn repro_test() {
-        let shape = Shape::new(vec![2, 1, 1, 1]);
-        let strides: Strides = (&shape).into();
-        let t1 = Tensor::from_data(TensorData::new(
-            vec![0., 0.],
-            shape.clone(),
-            strides.clone(),
-        ));
-        let t2 = Tensor::from_data(TensorData::new(
-            vec![0., 0.],
-            shape.clone(),
-            strides.clone(),
-        ));
-        let t1p = t1.clone().sum(Some(0));
-        binary_grad_assert(t1p, t2.clone(), |t1, t2| t1 + t2);
     }
 
     proptest! {

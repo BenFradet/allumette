@@ -18,8 +18,8 @@ impl Forward {
         let new_history = TensorHistory::default()
             .last_fn(Function::B(Rc::new(b)))
             .context(ctx)
-            .push_input(rhs)
-            .push_input(lhs);
+            .push_input(lhs)
+            .push_input(rhs);
         Tensor::new(res, new_history)
     }
 
