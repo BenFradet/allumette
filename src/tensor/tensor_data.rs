@@ -192,10 +192,10 @@ impl TensorData {
         }
 
         let bc_shape = self.shape.broadcast(&other.shape)?;
-        let mut out = TensorData::zeros(bc_shape);
-        let bc = other.map_broadcast(&out, |f| f)?;
+        let buf = TensorData::zeros(bc_shape);
+        let mut out = other.map_broadcast(&buf, |f| f)?;
         if self.shape == out.shape {
-            return Some(bc);
+            return Some(out);
         }
 
         let orig_shape = Shape::new(
@@ -292,6 +292,14 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
+
+    #[test]
+    fn repro_expand_test() {
+        let input = TensorData::scalar(0.);
+        let deriv = TensorData::vec(vec![1., 1.]).unwrap();
+        let res = input.expand(deriv).map(|d| d.data).unwrap();
+        assert_eq!(vec![2.], *res);
+    }
 
     fn assert_tensor_eq(t1: &TensorData, t2: &TensorData) -> () {
         assert_eq!(t1.shape, t2.shape);
