@@ -62,8 +62,6 @@ impl From<&Shape> for Strides {
 
 #[cfg(test)]
 mod tests {
-    use proptest::proptest;
-
     use super::*;
 
     #[test]

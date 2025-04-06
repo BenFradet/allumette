@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use proptest::prelude::Strategy;
-
 use crate::tensor::tensor_data::TensorData;
 
 use super::iter::Iter;
