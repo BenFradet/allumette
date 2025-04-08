@@ -98,6 +98,17 @@ impl TensorData {
         }
     }
 
+    pub fn rand(shape: Shape) -> Self {
+        let mut rng = rand::thread_rng();
+        let data: Vec<f64> = (0..shape.size).map(|_| rng.gen()).collect();
+        let strides = (&shape).into();
+        Self {
+            data: Arc::new(data),
+            shape,
+            strides,
+        }
+    }
+
     pub fn reshape(&self, shape: Shape) -> Self {
         let strides = (&shape).into();
         Self {
@@ -459,5 +470,12 @@ mod tests {
         let tensor = TensorData::new(data, shape, strides);
         assert!(!tensor.is_contiguous());
         assert_eq!(Shape::new(vec![5, 3]), tensor.shape);
+    }
+
+    #[test]
+    fn rand_test() {
+        let rand = TensorData::rand(Shape::new(vec![2]));
+        println!("rand {:?}", rand);
+        assert!(rand.data[0] != rand.data[1]);
     }
 }
