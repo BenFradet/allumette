@@ -20,9 +20,10 @@ impl Network {
         }
     }
 
-    pub fn forward(&self, x: Tensor) -> Tensor {
-        let l1 = self.layer1.forward(x).relu();
-        let l2 = self.layer2.forward(l1).relu();
-        self.layer3.forward(l2).sigmoid()
+    pub fn forward(&self, x: Tensor) -> Option<Tensor> {
+        self.layer1.forward(x)
+            .and_then(|t1| self.layer2.forward(t1.relu()))
+            .and_then(|t2| self.layer3.forward(t2.relu()))
+            .map(|t3| t3.sigmoid())
     }
 }
