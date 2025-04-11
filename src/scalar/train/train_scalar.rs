@@ -1,6 +1,6 @@
 use crate::{
     data::dataset::Dataset,
-    optim::{optimizer::Optimizer, sgd::SGD},
+    optim::{scalar_optimizer::ScalarOptimizer, sgd::SGD},
     scalar::scalar::Scalar,
 };
 

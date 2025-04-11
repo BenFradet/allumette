@@ -1,3 +1,3 @@
 pub mod layer;
 pub mod network;
-pub mod train_scalar;
+pub mod train_tensor;

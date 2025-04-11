@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::scalar::scalar::Scalar;
 
-use super::optimizer::Optimizer;
+use super::scalar_optimizer::ScalarOptimizer;
 
 pub struct SGD {
     lr: f64,
@@ -14,7 +14,7 @@ impl SGD {
     }
 }
 
-impl Optimizer for SGD {
+impl ScalarOptimizer for SGD {
     fn zero(&self, mut scalars: HashMap<String, Scalar>) -> HashMap<String, Scalar> {
         for s in scalars.values_mut() {
             s.derivative = None;

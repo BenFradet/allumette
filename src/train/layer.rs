@@ -23,21 +23,31 @@ impl Layer {
         let mut input_shape = t.data.shape.data().to_vec();
         let input_first_dim = input_shape[0];
         let mut weights_shape = self.weights.data.shape.data().to_vec();
+
+        // input size must match weight size
         if input_shape.last() != weights_shape.first() {
             None
         } else {
+            // reshape weights to prepare for matrix multiplication by adding a batch dimension
             weights_shape.insert(0, 1);
             let reshaped_weights = self.weights.clone().view(Shape::new(weights_shape)).unwrap();
 
+            // reshape input tensor by adding an output dimension
             input_shape.push(1);
             let reshaped_input = t.view(Shape::new(input_shape)).unwrap();
 
+            // perform element-wise multiplication and then sum across the input dimension
+            // to perform a dot product equivalent for each sample in the batch
             let batch_product = reshaped_weights * reshaped_input;
             let summed_product = batch_product.sum(Some(1)).contiguous();
 
+            // reshape the summed product to match the output dimension
+            // number of samples by output size
             let output_shape = vec![input_first_dim, self.out_size];
             let reshaped_output = summed_product.view(Shape::new(output_shape)).unwrap();
 
+            // add bias to each output in the batch
+            // bias is reshaped to match the batch output shape (1, out_size) for broadcasting
             let final_output = reshaped_output + self.biases.clone().view(Shape::new(vec![1, self.out_size])).unwrap();
             Some(final_output)
         }
