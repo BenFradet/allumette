@@ -1,9 +1,10 @@
-use crate::{data::dataset::Dataset, optim::sgd::SGD, tensor::{shaping::shape::Shape, tensor::Tensor, tensor_data::TensorData}};
+use crate::{data::dataset::Dataset, optim::{optimizer::Optimizer, sgd::SGD}, tensor::{shaping::shape::Shape, tensor::Tensor, tensor_data::TensorData}};
 
 use super::network::Network;
 
 pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_size: usize) -> () {
     let network = Network::new(hidden_layer_size);
+    let mut tensors = network.init();
     let optim = SGD::new(learning_rate);
     //let mut losses = vec![];
 
@@ -13,10 +14,14 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
     let x = Tensor::from_data(x_data);
     let y_data = TensorData::vec(data.y.iter().map(|u| *u as f64).collect()).unwrap();
     let y = Tensor::from_data(y_data);
+    let n_shape = Shape::new(vec![data.n]);
 
     for epoch in 1..max_epochs + 1 {
         let mut total_loss = 0.;
         let mut correct: usize = 0;
+        tensors = optim.zero_grad(tensors);
+
+        //let out = network.forward(x).view(n_shape);
     }
 
     todo!()

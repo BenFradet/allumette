@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::tensor::tensor::Tensor;
 
 use super::layer::Layer;
@@ -20,10 +22,21 @@ impl Network {
         }
     }
 
-    pub fn forward(&self, x: Tensor) -> Option<Tensor> {
-        self.layer1.forward(x)
-            .and_then(|t1| self.layer2.forward(t1.relu()))
-            .and_then(|t2| self.layer3.forward(t2.relu()))
-            .map(|t3| t3.sigmoid())
+    pub fn init(&self) -> HashMap<String, Tensor> {
+        HashMap::from([
+            ("layer1_weights".to_owned(), self.layer1.weights.clone()),
+            ("layer1_biases".to_owned(), self.layer1.biases.clone()),
+            ("layer2_weights".to_owned(), self.layer2.weights.clone()),
+            ("layer2_biases".to_owned(), self.layer2.biases.clone()),
+            ("layer3_weights".to_owned(), self.layer3.weights.clone()),
+            ("layer3_biases".to_owned(), self.layer3.biases.clone()),
+        ])
+    }
+
+    pub fn forward(&self, x: Tensor) -> Tensor {
+        let l1 = self.layer1.forward(x);
+        let l2 = self.layer2.forward(l1.relu());
+        let l3 = self.layer3.forward(l2.relu());
+        l3.sigmoid()
     }
 }
