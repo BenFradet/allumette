@@ -1,5 +1,6 @@
 use rand::{thread_rng, Rng};
 
+#[derive(Clone, Debug)]
 pub struct Dataset {
     pub n: usize,
     pub x: Vec<(f64, f64)>,

@@ -24,19 +24,19 @@ impl Network {
 
     pub fn init(&self) -> HashMap<String, Tensor> {
         HashMap::from([
-            ("layer1_weights".to_owned(), self.layer1.weights.clone()),
-            ("layer1_biases".to_owned(), self.layer1.biases.clone()),
-            ("layer2_weights".to_owned(), self.layer2.weights.clone()),
-            ("layer2_biases".to_owned(), self.layer2.biases.clone()),
-            ("layer3_weights".to_owned(), self.layer3.weights.clone()),
-            ("layer3_biases".to_owned(), self.layer3.biases.clone()),
+            ("layer1_weights".to_owned(), self.layer1.weights()),
+            ("layer1_biases".to_owned(), self.layer1.biases()),
+            ("layer2_weights".to_owned(), self.layer2.weights()),
+            ("layer2_biases".to_owned(), self.layer2.biases()),
+            ("layer3_weights".to_owned(), self.layer3.weights()),
+            ("layer3_biases".to_owned(), self.layer3.biases()),
         ])
     }
 
-    pub fn forward(&self, x: Tensor) -> Tensor {
-        let l1 = self.layer1.forward(x);
-        let l2 = self.layer2.forward(l1.relu());
-        let l3 = self.layer3.forward(l2.relu());
+    pub fn forward(&self, x: Tensor, tensors: &HashMap<String, Tensor>) -> Tensor {
+        let l1 = self.layer1.forward(x, tensors);
+        let l2 = self.layer2.forward(l1.relu(), tensors);
+        let l3 = self.layer3.forward(l2.relu(), tensors);
         l3.sigmoid()
     }
 }

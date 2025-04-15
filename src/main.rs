@@ -1,4 +1,4 @@
-use allumette::{data::dataset::Dataset, scalar::train::train_scalar};
+use allumette::{data::dataset::Dataset, scalar::train::train_scalar, train::train_tensor};
 
 fn main() -> () {
     let pts = 10;
@@ -6,5 +6,13 @@ fn main() -> () {
     let hidden_layer_size = 3;
     let learning_rate = 0.5;
     let max_epochs = 50;
-    train_scalar::train(dataset, learning_rate, max_epochs, hidden_layer_size);
+    println!("scalars:");
+    train_scalar::train(
+        dataset.clone(),
+        learning_rate,
+        max_epochs,
+        hidden_layer_size,
+    );
+    println!("\n\ntensors:");
+    train_tensor::train(dataset, learning_rate, max_epochs, hidden_layer_size);
 }
