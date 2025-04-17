@@ -121,8 +121,15 @@ impl Tensor {
     }
 
     fn accumulate_derivative(mut self, d: Tensor) -> Self {
+        if self.id.starts_with("layer") {
+            println!("updating weight grad");
+        }
         if self.is_leaf() {
-            self.grad = Some(Box::new(self.grad.map(|t| *t + d.clone()).unwrap_or(d)));
+            let grad = self.grad.map(|t| *t + d.clone()).unwrap_or(d);
+            self.grad = Some(Box::new(grad.clone()));
+            if self.id.starts_with("layer") {
+                println!("updated weight grad: {:?}", grad.data.data);
+            }
             self
         } else {
             self

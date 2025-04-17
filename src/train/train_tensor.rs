@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     data::dataset::Dataset,
     optim::{optimizer::Optimizer, sgd::SGD},
@@ -6,7 +8,7 @@ use crate::{
 
 use super::network::Network;
 
-pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_size: usize) -> () {
+pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_size: usize) {
     let network = Network::new(hidden_layer_size);
     let mut tensors = network.init();
     let optim = SGD::new(learning_rate);

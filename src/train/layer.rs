@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::tensor::{shaping::shape::Shape, tensor::Tensor, tensor_data::TensorData};
+use crate::tensor::{
+    shaping::shape::Shape, tensor::Tensor, tensor_data::TensorData, tensor_history::TensorHistory,
+};
 
 pub struct Layer {
     pub name: String,
@@ -74,7 +76,7 @@ impl Layer {
 
     fn param(shape: Shape) -> Tensor {
         let t = Tensor::from_data(TensorData::rand(shape));
-        (t - Tensor::scalar(0.5)) * Tensor::scalar(2.)
+        ((t - Tensor::scalar(0.5)) * Tensor::scalar(2.)).history(TensorHistory::default())
     }
 
     fn weights_key(&self) -> String {
