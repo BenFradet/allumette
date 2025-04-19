@@ -26,6 +26,7 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
 
     for epoch in 1..max_epochs + 1 {
         tensors = optim.zero_grad(tensors);
+        network = network.update(&tensors);
 
         let out = network.forward(x.clone()).view(&n_shape).unwrap();
         let prob = (out.clone() * y.clone())
@@ -46,8 +47,8 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
             .item()
             .unwrap_or(0.);
 
+        // todo: impl sgd for network
         tensors = optim.update(tensors);
-        network = network.update(&tensors);
 
         if epoch % 10 == 0 || epoch == max_epochs {
             let y2 = y.clone();

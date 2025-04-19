@@ -1,5 +1,8 @@
 use crate::{
-    autodiff::context::Context, function::unary::Unary, math, tensor::tensor_data::TensorData,
+    autodiff::context::Context,
+    function::unary::Unary,
+    math,
+    tensor::tensor_data::TensorData,
 };
 
 pub struct Neg;
@@ -61,10 +64,15 @@ impl Unary<TensorData> for Sig {
 
     // sig'(x) = sig(x) * (1 - sig(x))
     fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
-        ctx.fst
-            .as_ref()
-            .and_then(|a| a.zip(d, math::unary::sig_back))
-            .unwrap_or(TensorData::ones(d.shape.clone()))
+        //todo: rm unwrap
+        let t = ctx.fst.as_ref().unwrap();
+        let sig = self.forward(t);
+        let minus_sig = sig.map(math::unary::neg);
+        let one_minus_sig = TensorData::scalar(1.)
+            .zip(&minus_sig, math::binary::add)
+            .unwrap();
+        let deriv = sig.zip(&one_minus_sig, math::binary::mul).unwrap();
+        d.zip(&deriv, math::binary::mul).unwrap()
     }
 
     fn tag(&self) -> &str {

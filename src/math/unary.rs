@@ -42,7 +42,8 @@ pub fn sig(a: f64) -> f64 {
     if a >= 0. {
         1. / (1. + (-a).exp())
     } else {
-        a.exp() / (1. + a.exp())
+        let a_exp = a.exp();
+        a_exp / (1. + a_exp)
     }
 }
 
