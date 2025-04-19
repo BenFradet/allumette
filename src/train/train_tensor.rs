@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::{
     data::dataset::Dataset,
     optim::{optimizer::Optimizer, sgd::SGD},
@@ -9,10 +7,9 @@ use crate::{
 use super::network::Network;
 
 pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_size: usize) {
-    let network = Network::new(hidden_layer_size);
+    let mut network = Network::new(hidden_layer_size);
     let mut tensors = network.init();
     let optim = SGD::new(learning_rate);
-    let mut losses = vec![];
 
     let x_shape = Shape::new(vec![data.x.len(), 2]);
     let x_strides = (&x_shape).into();
@@ -24,14 +21,17 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);
 
+    println!("x {:#?}", x.data.data);
+    println!("y {:#?}", y.data.data);
+
     for epoch in 1..max_epochs + 1 {
         tensors = optim.zero_grad(tensors);
 
-        let out = network.forward(x.clone(), &tensors).view(&n_shape).unwrap();
+        let out = network.forward(x.clone()).view(&n_shape).unwrap();
         let prob = (out.clone() * y.clone())
             + (out.clone() - Tensor::scalar(1.)) * (y.clone() - Tensor::scalar(1.));
 
-        let loss = -prob.ln();
+        let loss = -prob.clone().ln();
         let res = (loss.clone() / n_tensor.clone())
             .sum(None)
             .view(&one_shape)
@@ -39,17 +39,21 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
             .backward();
         tensors.extend(res);
         let total_loss = loss
+            .clone()
             .sum(None)
             .view(&one_shape)
             .unwrap()
             .item()
             .unwrap_or(0.);
-        losses.push(total_loss);
 
         tensors = optim.update(tensors);
+        network = network.update(&tensors);
 
         if epoch % 10 == 0 || epoch == max_epochs {
             let y2 = y.clone();
+            println!("out {:#?}", out.data.data);
+            println!("prob {:#?}", prob.data.data);
+            println!("loss {:#?}", loss.data.data);
             let correct = out
                 .clone()
                 .gt(Tensor::scalar(0.5))
