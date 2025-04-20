@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{scalar::scalar::Scalar, tensor::tensor::Tensor};
 
-use super::{optimizer::Optimizer, scalar_optimizer::ScalarOptimizer};
+use super::scalar_optimizer::ScalarOptimizer;
 
 pub struct SGD {
     lr: f64,
@@ -18,25 +18,29 @@ impl SGD {
     }
 }
 
-impl Optimizer for SGD {
-    fn zero_grad(&self, mut tensors: HashMap<String, Tensor>) -> HashMap<String, Tensor> {
-        for t in tensors.values_mut() {
-            t.grad = None;
-        }
-        tensors
-    }
-
-    fn update(&self, mut tensors: HashMap<String, Tensor>) -> HashMap<String, Tensor> {
-        for t in tensors.values_mut() {
-            if let Some(grad) = &t.grad {
-                let update = self.lr_tensor.clone() * *grad.clone();
-                *t = (t.clone() - update).id(t.id.clone());
-            }
-            t.grad = None;
-        }
-        tensors
-    }
-}
+//impl Optimizer for SGD {
+//    fn zero_grad(&self, mut tensors: HashMap<String, Tensor>) -> HashMap<String, Tensor> {
+//        for t in tensors.values_mut() {
+//            t.grad = None;
+//        }
+//        tensors
+//    }
+//
+//    fn update(&self, mut tensors: HashMap<String, Tensor>) -> HashMap<String, Tensor> {
+//        for t in tensors.values_mut() {
+//            if let Some(grad) = &t.grad {
+//                println!("updating {:?} {:#?}", t.id, t.data.data);
+//                let update = self.lr_tensor.clone() * *grad.clone();
+//                *t = (t.clone() - update)
+//                    .history(TensorHistory::default())
+//                    .id(t.id.clone());
+//                println!("to {:#?}", t.data.data);
+//            }
+//            t.grad = None;
+//        }
+//        tensors
+//    }
+//}
 
 impl ScalarOptimizer for SGD {
     fn zero(&self, mut scalars: HashMap<String, Scalar>) -> HashMap<String, Scalar> {
