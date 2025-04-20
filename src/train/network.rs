@@ -13,8 +13,14 @@ pub struct Network<'a> {
 impl Network<'_> {
     pub fn new(hidden_layer_size: usize) -> Self {
         let layer1 = Layer::new("layer1", 2, hidden_layer_size);
+        println!("l1 weights {:#?}", layer1.weights.data.data);
+        println!("l1 biases {:#?}", layer1.biases.data.data);
         let layer2 = Layer::new("layer2", hidden_layer_size, hidden_layer_size);
+        println!("l2 weights {:#?}", layer2.weights.data.data);
+        println!("l2 biases {:#?}", layer2.biases.data.data);
         let layer3 = Layer::new("layer3", hidden_layer_size, 1);
+        println!("l3 weights {:#?}", layer3.weights.data.data);
+        println!("l3 biases {:#?}", layer3.biases.data.data);
         Self {
             layer1,
             layer2,
@@ -56,8 +62,17 @@ impl Network<'_> {
     }
 
     pub fn forward(&self, x: Tensor) -> Tensor {
+        println!("network input {:#?}", x.data.data);
+        println!("network input shape {:#?}", x.data.shape.data());
+        let l1p = self.layer1.forward(x.clone());
+        println!("network l1 before relu {:#?}", l1p.data.data);
+        println!("network l1 shape before relu {:#?}", l1p.data.shape.data());
         let l1 = self.layer1.forward(x).relu();
+        println!("network l1 {:#?}", l1.data.data);
+        println!("network l1 shape {:#?}", l1.data.shape.data());
         let l2 = self.layer2.forward(l1).relu();
+        println!("network l2 {:#?}", l2.data.data);
+        println!("network l2 shape {:#?}", l2.data.shape.data());
         self.layer3.forward(l2).sigmoid()
     }
 }

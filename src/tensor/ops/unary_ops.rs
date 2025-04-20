@@ -1,8 +1,5 @@
 use crate::{
-    autodiff::context::Context,
-    function::unary::Unary,
-    math,
-    tensor::tensor_data::TensorData,
+    autodiff::context::Context, function::unary::Unary, math, tensor::tensor_data::TensorData,
 };
 
 pub struct Neg;

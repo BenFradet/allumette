@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::tensor::{
     shaping::shape::Shape, tensor::Tensor, tensor_data::TensorData, tensor_history::TensorHistory,
 };
@@ -15,11 +13,11 @@ pub struct Layer<'a> {
 impl<'a> Layer<'a> {
     pub fn new(name: &'a str, in_size: usize, out_size: usize) -> Self {
         Self {
-            name: &name,
+            name,
             in_size,
             out_size,
-            weights: Self::weights(&name, in_size, out_size),
-            biases: Self::biases(&name, out_size),
+            weights: Self::frozen_weights(name, in_size, out_size),
+            biases: Self::frozen_biases(name, out_size),
         }
     }
 
@@ -77,10 +75,43 @@ impl<'a> Layer<'a> {
         self
     }
 
+    pub fn frozen_weights(name: &str, in_size: usize, out_size: usize) -> Tensor {
+        let d = if name == "layer1" {
+            vec![-0.98, -0.20, 0.46, 0.94, 0.22, 0.29]
+        } else if name == "layer2" {
+            vec![-0.16, -0.47, -0.58, 0.40, -0.79, -0.48, -0.86, -0.85, -0.90]
+        } else {
+            vec![-0.21, 0.91, -0.79]
+        };
+        let shape = Shape::new(vec![in_size, out_size]);
+        let strides = (&shape).into();
+        let td = TensorData::new(d, shape, strides);
+        let id = Self::weights_key(name);
+        Tensor::from_data(td)
+            .history(TensorHistory::default())
+            .id(id)
+    }
+
+    pub fn frozen_biases(name: &str, out_size: usize) -> Tensor {
+        let d = if name == "layer1" {
+            vec![-0.17, -0.38, 0.84]
+        } else if name == "layer2" {
+            vec![0.5, -0.48, 0.83]
+        } else {
+            vec![-0.04]
+        };
+        let shape = Shape::new(vec![out_size]);
+        let strides = (&shape).into();
+        let td = TensorData::new(d, shape, strides);
+        let id = Self::biases_key(name);
+        Tensor::from_data(td)
+            .history(TensorHistory::default())
+            .id(id)
+    }
+
     pub fn weights(name: &str, in_size: usize, out_size: usize) -> Tensor {
         let id = Self::weights_key(name);
-        let res = Self::param(Shape::new(vec![in_size, out_size])).id(id);
-        res
+        Self::param(Shape::new(vec![in_size, out_size])).id(id)
     }
 
     pub fn biases(name: &str, out_size: usize) -> Tensor {
