@@ -15,21 +15,29 @@ impl Forward {
         let ctx = Context::default()
             .fst(lhs.data.clone())
             .snd(rhs.data.clone());
-        let new_history = TensorHistory::default()
-            .last_fn(Function::B(Rc::new(b)))
-            .context(ctx)
-            .push_input(lhs)
-            .push_input(rhs);
+        let new_history = if lhs.is_constant && rhs.is_constant {
+            TensorHistory::default()
+        } else {
+            TensorHistory::default()
+                .last_fn(Function::B(Rc::new(b)))
+                .context(ctx)
+                .push_input(lhs)
+                .push_input(rhs)
+        };
         Tensor::new(res, new_history)
     }
 
     pub fn unary(u: impl Unary<TensorData> + 'static, a: Tensor) -> Tensor {
         let res = u.forward(&a.data);
         let ctx = Context::default().fst(a.data.clone());
-        let new_history = TensorHistory::default()
-            .last_fn(Function::U(Rc::new(u)))
-            .context(ctx)
-            .push_input(a);
+        let new_history = if a.is_constant {
+            TensorHistory::default()
+        } else {
+            TensorHistory::default()
+                .last_fn(Function::U(Rc::new(u)))
+                .context(ctx)
+                .push_input(a)
+        };
         Tensor::new(res, new_history)
     }
 }
