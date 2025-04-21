@@ -16,7 +16,6 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
     let x = Tensor::from_data(x_data);
     let y_data = TensorData::vec(data.y.iter().map(|u| *u as f64).collect()).unwrap();
     let y = Tensor::from_data(y_data);
-    let n_tensor = Tensor::scalar(data.n as f64);
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);
 
@@ -33,7 +32,7 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
 
         let loss = -prob.clone().ln();
 
-        let res = (loss.clone() / n_tensor.clone())
+        let res = (loss.clone() / Tensor::scalar(data.n as f64))
             .sum(None)
             .view(&one_shape)
             .unwrap()

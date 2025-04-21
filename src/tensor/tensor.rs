@@ -3,6 +3,7 @@ use proptest::{collection, prelude::*};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     ops,
+    sync::atomic::{AtomicU32, Ordering},
 };
 
 use super::{
@@ -22,17 +23,20 @@ pub struct Tensor {
     pub grad: Option<Box<Tensor>>,
     pub history: TensorHistory,
     pub id: String,
-    is_constant: bool,
+    pub is_constant: bool,
 }
+
+static TENSOR_COUNT: AtomicU32 = AtomicU32::new(0);
 
 impl Tensor {
     pub fn new(data: TensorData, history: TensorHistory) -> Self {
-        let id = rand::thread_rng().gen::<u64>().to_string();
+        //let id = rand::thread_rng().gen::<u64>().to_string();
+        let id = TENSOR_COUNT.fetch_add(1, Ordering::Relaxed);
         Self {
             data,
             grad: None,
             history,
-            id,
+            id: id.to_string(),
             is_constant: false,
         }
     }
@@ -49,7 +53,7 @@ impl Tensor {
     }
 
     pub fn scalar(data: f64) -> Self {
-        Self::from_data(TensorData::scalar(data))
+        Self::from_data(TensorData::scalar(data)).make_constant()
     }
 
     pub fn vec(data: Vec<f64>) -> Option<Self> {
@@ -99,6 +103,9 @@ impl Tensor {
         let mut res: HashMap<String, Self> = HashMap::new();
         for s in sorted {
             if let Some(current_deriv) = derivs.get(&s.id).cloned() {
+                println!("deriv id {:?}", s.id);
+                println!("deriv {:#?}", current_deriv.data.data);
+                println!("last fn {:#?}\n", s.history.last_fn);
                 for (parent, grad) in s.chain_rule(&current_deriv.data) {
                     let grad_tensor = Tensor::from_data(grad);
                     if parent.is_leaf() {
@@ -124,9 +131,6 @@ impl Tensor {
         if self.is_leaf() {
             let grad = self.grad.map(|t| *t + d.clone()).unwrap_or(d);
             self.grad = Some(Box::new(grad.clone()));
-            //if self.id.starts_with("layer") {
-            //    println!("updated weight grad: {:?}", grad.data.data);
-            //}
             self
         } else {
             self
@@ -150,7 +154,7 @@ impl Tensor {
             })
             .unwrap_or_default();
         let inputs = &self.history.inputs;
-        // expand derivatives b/c out of bwd is a different size than the in of fwd
+        // expand derivatives b/c out of bwd is a different size than in of fwd
         inputs
             .iter()
             .zip(derivatives)

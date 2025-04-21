@@ -69,8 +69,8 @@ impl Optimizer for Network<'_> {
     fn step(&mut self, lr_tensor: Tensor) {
         if let Some(grad) = &self.layer1.weights.grad {
             println!(
-                "updating {:?} {:#?}",
-                self.layer1.weights.id, self.layer1.weights.data.data
+                "updating {:?} {:#?} with {:#?}",
+                self.layer1.weights.id, self.layer1.weights.data.data, grad.data.data
             );
             let update = lr_tensor.clone() * *grad.clone();
             self.layer1.weights = (self.layer1.weights.clone() - update)
@@ -80,8 +80,8 @@ impl Optimizer for Network<'_> {
         }
         if let Some(grad) = &self.layer2.weights.grad {
             println!(
-                "updating {:?} {:#?}",
-                self.layer2.weights.id, self.layer2.weights.data.data
+                "updating {:?} {:#?} with {:#?}",
+                self.layer2.weights.id, self.layer2.weights.data.data, grad.data.data
             );
             let update = lr_tensor.clone() * *grad.clone();
             self.layer2.weights = (self.layer2.weights.clone() - update)
@@ -91,8 +91,8 @@ impl Optimizer for Network<'_> {
         }
         if let Some(grad) = &self.layer3.weights.grad {
             println!(
-                "updating {:?} {:#?}",
-                self.layer3.weights.id, self.layer3.weights.data.data
+                "updating {:?} {:#?} with {:#?}",
+                self.layer3.weights.id, self.layer3.weights.data.data, grad.data.data
             );
             let update = lr_tensor.clone() * *grad.clone();
             self.layer3.weights = (self.layer3.weights.clone() - update)
@@ -102,8 +102,8 @@ impl Optimizer for Network<'_> {
         }
         if let Some(grad) = &self.layer1.biases.grad {
             println!(
-                "updating {:?} {:#?}",
-                self.layer1.biases.id, self.layer1.biases.data.data
+                "updating {:?} {:#?} with {:#?}",
+                self.layer1.biases.id, self.layer1.biases.data.data, grad.data.data
             );
             let update = lr_tensor.clone() * *grad.clone();
             self.layer1.biases = (self.layer1.biases.clone() - update)
@@ -113,8 +113,8 @@ impl Optimizer for Network<'_> {
         }
         if let Some(grad) = &self.layer2.biases.grad {
             println!(
-                "updating {:?} {:#?}",
-                self.layer2.biases.id, self.layer2.biases.data.data
+                "updating {:?} {:#?} with {:#?}",
+                self.layer2.biases.id, self.layer2.biases.data.data, grad.data.data
             );
             let update = lr_tensor.clone() * *grad.clone();
             self.layer2.biases = (self.layer2.biases.clone() - update)
@@ -124,8 +124,8 @@ impl Optimizer for Network<'_> {
         }
         if let Some(grad) = &self.layer3.biases.grad {
             println!(
-                "updating {:?} {:#?}",
-                self.layer3.biases.id, self.layer3.biases.data.data
+                "updating {:?} {:#?} with {:#?}",
+                self.layer3.biases.id, self.layer3.biases.data.data, grad.data.data
             );
             let update = lr_tensor.clone() * *grad.clone();
             self.layer3.biases = (self.layer3.biases.clone() - update)
