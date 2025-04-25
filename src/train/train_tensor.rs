@@ -26,14 +26,20 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
         println!("\nEPOCH {epoch}");
         network.zero();
 
+        // view (27) broken
         let out = network.forward(x.clone()).view(&n_shape).unwrap();
+        // add -> mul -> mul (34 -> 28 -> 33)
         let prob = (out.clone() * y.clone())
             + (out.clone() - Tensor::scalar(1.)) * (y.clone() - Tensor::scalar(1.));
 
+        // neg -> ln (36 -> 35)
         let loss = -prob.clone().ln();
 
+        // mul (38)
         let res = (loss.clone() / Tensor::scalar(data.n as f64))
+            // sum -> view -> copy (41 -> 39)
             .sum(None)
+            // 42
             .view(&one_shape)
             .unwrap()
             .backward();

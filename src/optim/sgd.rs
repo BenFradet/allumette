@@ -18,30 +18,6 @@ impl SGD {
     }
 }
 
-//impl Optimizer for SGD {
-//    fn zero_grad(&self, mut tensors: HashMap<String, Tensor>) -> HashMap<String, Tensor> {
-//        for t in tensors.values_mut() {
-//            t.grad = None;
-//        }
-//        tensors
-//    }
-//
-//    fn update(&self, mut tensors: HashMap<String, Tensor>) -> HashMap<String, Tensor> {
-//        for t in tensors.values_mut() {
-//            if let Some(grad) = &t.grad {
-//                println!("updating {:?} {:#?}", t.id, t.data.data);
-//                let update = self.lr_tensor.clone() * *grad.clone();
-//                *t = (t.clone() - update)
-//                    .history(TensorHistory::default())
-//                    .id(t.id.clone());
-//                println!("to {:#?}", t.data.data);
-//            }
-//            t.grad = None;
-//        }
-//        tensors
-//    }
-//}
-
 impl ScalarOptimizer for SGD {
     fn zero(&self, mut scalars: HashMap<String, Scalar>) -> HashMap<String, Scalar> {
         for s in scalars.values_mut() {
@@ -71,7 +47,7 @@ mod tests {
         let map = HashMap::from([(s.id.clone(), s)]);
         let sgd = SGD::new(0.5);
         let res = sgd.zero(map);
-        assert!(res.iter().all(|kv| kv.1.derivative == None));
+        assert!(res.iter().all(|kv| kv.1.derivative.is_none()));
     }
 
     #[test]
@@ -83,6 +59,6 @@ mod tests {
         let res = sgd.step(map);
         assert!(res
             .iter()
-            .all(|kv| kv.1.derivative == None && kv.1.v == 0.3125 && kv.1.id == s_id));
+            .all(|kv| kv.1.derivative.is_none() && kv.1.v == 0.3125 && kv.1.id == s_id));
     }
 }

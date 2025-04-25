@@ -43,10 +43,14 @@ impl Network<'_> {
     pub fn forward(&self, x: Tensor) -> Tensor {
         println!("network input {:#?}", x.data.data);
         println!("network input shape {:#?}", x.data.shape.data());
-        let l1 = self.layer1.forward(x).relu();
+        let l1p = self.layer1.forward(x);
+        println!("l1 before relu {:#?}", l1p.data.data);
+        let l1 = l1p.relu();
         println!("network l1 {:#?}", l1.data.data);
         println!("network l1 shape {:#?}", l1.data.shape.data());
-        let l2 = self.layer2.forward(l1).relu();
+        let l2p = self.layer2.forward(l1);
+        println!("l2 before relu {:#?}", l2p.data.data);
+        let l2 = l2p.relu();
         println!("network l2 {:#?}", l2.data.data);
         println!("network l2 shape {:#?}", l2.data.shape.data());
         let l3 = self.layer3.forward(l2).sigmoid();

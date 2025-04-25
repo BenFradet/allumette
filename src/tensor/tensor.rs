@@ -98,16 +98,13 @@ impl Tensor {
     }
 
     pub fn backprop(&self, d: Tensor) -> HashMap<String, Self> {
-        let sorted = self.topological_sort();
+        let sorted = self.topological_sort_dfs();
         let mut derivs = HashMap::from([(&self.id, d)]);
         let mut res: HashMap<String, Self> = HashMap::new();
         for s in sorted {
             if let Some(current_deriv) = derivs.get(&s.id).cloned() {
-                println!("deriv id {:?}", s.id);
-                println!("deriv {:#?}", current_deriv.data.data);
-                println!("last fn {:#?}\n", s.history.last_fn);
                 for (parent, grad) in s.chain_rule(&current_deriv.data) {
-                    let grad_tensor = Tensor::from_data(grad);
+                    let grad_tensor = Tensor::from_data(grad).make_constant();
                     if parent.is_leaf() {
                         let new = match res.get(&parent.id) {
                             // TODO: remove clones
@@ -159,6 +156,25 @@ impl Tensor {
             .iter()
             .zip(derivatives)
             .filter_map(|(i, d)| i.data.expand(d).map(|o| (i, o)))
+    }
+
+    fn topological_sort_dfs(&self) -> impl Iterator<Item = &Self> {
+        let mut q = VecDeque::new();
+        let mut visited = HashSet::new();
+        fn dfs<'a>(t: &'a Tensor, visited: &mut HashSet<&'a str>, q: &mut VecDeque<&'a Tensor>) {
+            if visited.contains(&t.id.as_str()) {
+                return;
+            }
+            visited.insert(&t.id);
+            for parent in t.parents() {
+                if !parent.is_constant {
+                    dfs(parent, visited, q);
+                }
+            }
+            q.push_front(t);
+        }
+        dfs(self, &mut visited, &mut q);
+        q.into_iter()
     }
 
     fn topological_sort(&self) -> impl Iterator<Item = &Self> {
@@ -217,22 +233,22 @@ impl Tensor {
 
     pub fn all(self, dim: Option<usize>) -> Self {
         match dim {
-            Some(d) => Forward::binary(All {}, self, Tensor::scalar(d as f64).make_constant()),
+            Some(d) => Forward::binary(All {}, self, Tensor::scalar(d as f64)),
             None => {
                 let shape = Shape::scalar(self.size());
                 let t = self.view(&shape).unwrap();
-                Forward::binary(All {}, t, Tensor::scalar(0.).make_constant())
+                Forward::binary(All {}, t, Tensor::scalar(0.))
             }
         }
     }
 
     pub fn sum(self, dim: Option<usize>) -> Self {
         match dim {
-            Some(d) => Forward::binary(Sum {}, self, Tensor::scalar(d as f64).make_constant()),
+            Some(d) => Forward::binary(Sum {}, self, Tensor::scalar(d as f64)),
             None => {
                 let shape = Shape::scalar(self.size());
                 let t = self.contiguous().view(&shape).unwrap();
-                Forward::binary(Sum {}, t, Tensor::scalar(0.).make_constant())
+                Forward::binary(Sum {}, t, Tensor::scalar(0.))
             }
         }
     }
