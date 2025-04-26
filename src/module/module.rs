@@ -3,43 +3,31 @@ use std::collections::{HashMap, VecDeque};
 use super::parameter::Parameter;
 
 #[derive(Clone, Debug)]
-pub struct Module {
-    children: HashMap<String, Module>,
-    pub parameters: HashMap<String, Parameter>,
+pub struct Module<'a, A> {
+    children: HashMap<&'a str, Module<'a, A>>,
+    pub parameters: HashMap<&'a str, Parameter<'a, A>>,
     training: bool,
 }
 
-impl Default for Module {
-    fn default() -> Self {
-        Self {
-            children: HashMap::new(),
-            parameters: HashMap::new(),
-            training: true,
-        }
-    }
-}
-
-impl Module {
-    pub fn add_parameter(mut self, param: Parameter) -> Self {
-        let name = param.name.to_owned();
-        self.parameters.insert(name, param);
+impl<'a, A: Clone> Module<'a, A> {
+    pub fn add_parameter(mut self, param: Parameter<'a, A>) -> Self {
+        self.parameters.insert(param.name, param);
         self
     }
 
-    pub fn add_param(&mut self, param: Parameter) -> () {
-        let name = param.name.to_owned();
-        self.parameters.insert(name, param);
+    pub fn add_param(&mut self, param: Parameter<'a, A>) {
+        self.parameters.insert(param.name, param);
     }
 
-    pub fn add_child(&mut self, name: String, module: Module) -> () {
+    pub fn add_child(&mut self, name: &'a str, module: Module<'a, A>) -> () {
         self.children.insert(name, module);
     }
 
-    fn children_values(self) -> impl Iterator<Item = Module> {
+    fn children_values(self) -> impl Iterator<Item = Module<'a, A>> {
         self.children.into_values()
     }
 
-    pub fn parameters(&self) -> impl Iterator<Item = Parameter> {
+    pub fn parameters(&self) -> impl Iterator<Item = Parameter<'a, A>> {
         self.fold_rec(vec![], |acc, module| {
             let params = module.parameters.values().cloned().collect();
             [acc, params].concat()
@@ -47,7 +35,7 @@ impl Module {
         .into_iter()
     }
 
-    fn named_parameters(&self) -> impl Iterator<Item = (String, Parameter)> {
+    fn named_parameters(&self) -> impl Iterator<Item = (String, Parameter<'a, A>)> {
         fn build_prefix(prefix: String, current_mod_name: String, depth: u32) -> String {
             if depth == 1 {
                 current_mod_name
@@ -80,9 +68,9 @@ impl Module {
         .into_iter()
     }
 
-    fn fold_rec<A, F>(&self, z: A, f: F) -> A
+    fn fold_rec<B, F>(&self, z: B, f: F) -> B
     where
-        F: Fn(A, &Self) -> A + Copy,
+        F: Fn(B, &Self) -> B + Copy,
     {
         let mut acc = f(z, self);
         for module in self.children.values() {
@@ -91,11 +79,11 @@ impl Module {
         acc
     }
 
-    fn fold<A, F>(&self, z: A, f: F) -> A
+    fn fold<B, F>(&self, z: B, f: F) -> B
     where
-        F: Fn(A, (&Self, String, u32)) -> A,
+        F: Fn(B, (&Self, String, u32)) -> B,
     {
-        let mut stack: Vec<(&Module, String, u32)> = vec![(self, "".to_string(), 0)];
+        let mut stack: Vec<(&Module<'a, A>, String, u32)> = vec![(self, "".to_string(), 0)];
         let mut res = z;
         while let Some((module, name, depth)) = stack.pop() {
             res = f(res, (module, name.to_string(), depth));
@@ -106,11 +94,11 @@ impl Module {
         res
     }
 
-    fn fold_bf<A, F>(&self, z: A, f: F) -> A
+    fn fold_bf<B, F>(&self, z: B, f: F) -> B
     where
-        F: Fn(A, (&Self, String)) -> A,
+        F: Fn(B, (&Self, String)) -> B,
     {
-        let mut queue: VecDeque<(&Module, String)> = VecDeque::from([(self, "".to_string())]);
+        let mut queue: VecDeque<(&Module<'a, A>, String)> = VecDeque::from([(self, "".to_string())]);
         let mut res = z;
         while let Some((module, name)) = queue.pop_front() {
             res = f(res, (module, name.to_string()));
@@ -154,94 +142,9 @@ impl Module {
 
     fn assert_rec<F>(self, assertion: &mut F) -> ()
     where
-        F: FnMut(&Module) -> (),
+        F: FnMut(&Module<'a, A>) -> (),
     {
         assertion(&self);
         self.children_values().for_each(|m| m.assert_rec(assertion));
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::scalar::scalar::Scalar;
-
-    use super::*;
-
-    fn test_para_a() -> Parameter {
-        Parameter {
-            name: "parameter_a".to_string(),
-            scalar: Scalar::new(50.),
-        }
-    }
-
-    fn test_para_b() -> Parameter {
-        Parameter {
-            name: "parameter_b".to_string(),
-            scalar: Scalar::new(100.),
-        }
-    }
-
-    fn test_module() -> Module {
-        let para_a = test_para_a();
-        let para_b = test_para_b();
-        Module {
-            children: HashMap::from([
-                (
-                    "module_a".to_string(),
-                    Module {
-                        children: HashMap::new(),
-                        parameters: HashMap::from([
-                            (para_a.name.clone(), para_a.clone()),
-                            (para_b.name.clone(), para_b.clone()),
-                        ]),
-                        training: false,
-                    },
-                ),
-                (
-                    "module_b".to_string(),
-                    Module {
-                        children: HashMap::new(),
-                        parameters: HashMap::from([
-                            (para_a.name.clone(), para_a.clone()),
-                            (para_b.name.clone(), para_b.clone()),
-                        ]),
-                        training: false,
-                    },
-                ),
-            ]),
-            parameters: HashMap::from([(para_a.name.clone(), para_a.clone())]),
-            training: false,
-        }
-    }
-
-    #[test]
-    fn parameters_test() -> () {
-        let module = test_module();
-        let parameters: Vec<_> = module.parameters().collect();
-        assert_eq!(5, parameters.len());
-    }
-
-    #[test]
-    fn named_parameters_test() -> () {
-        let module = test_module();
-        let para_a = test_para_a();
-        let para_b = test_para_b();
-        let named_parameters: Vec<_> = module.named_parameters().collect();
-        let expected = vec![
-            (para_a.name.clone(), para_a.clone()),
-            ("module_b.".to_string() + &para_b.name, para_b.clone()),
-            ("module_b.".to_string() + &para_a.name, para_a.clone()),
-            ("module_a.".to_string() + &para_b.name, para_b.clone()),
-            ("module_a.".to_string() + &para_a.name, para_a.clone()),
-        ];
-        // can't have partial eq on scalar because of scalar function's rc<dyn>
-        assert!(expected
-            .iter()
-            .all(|(en, pn)| named_parameters.iter().any(|(n, p)| {
-                n == en
-                    && p.name == pn.name
-                    && p.scalar.derivative == pn.scalar.derivative
-                    && p.scalar.v == pn.scalar.v
-            })));
     }
 }

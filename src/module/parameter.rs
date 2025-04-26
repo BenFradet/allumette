@@ -1,15 +1,11 @@
-use crate::scalar::scalar::Scalar;
-
-// TODO: abstract over scalar
 #[derive(Clone, Debug)]
-pub struct Parameter {
-    pub name: String,
-    pub scalar: Scalar,
+pub struct Parameter<'a, A> {
+    pub name: &'a str,
+    pub a: A,
 }
 
-impl Parameter {
-    pub fn new(scalar: Scalar) -> Self {
-        let id = scalar.id.clone();
-        Self { name: id, scalar }
+impl<'a, A> Parameter<'a, A> {
+    pub fn new(name: &'a str, a: A) -> Self {
+        Self { name, a }
     }
 }
