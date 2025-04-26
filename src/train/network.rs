@@ -47,6 +47,7 @@ impl Network<'_> {
     }
 }
 
+// SGD
 impl Optimizer for Network<'_> {
     fn zero(&mut self) {
         self.layer1.weights.grad = None;
