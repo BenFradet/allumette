@@ -16,8 +16,8 @@ impl<'a> Layer<'a> {
             name,
             in_size,
             out_size,
-            weights: Self::frozen_weights(name, in_size, out_size),
-            biases: Self::frozen_biases(name, out_size),
+            weights: Self::weights(name, in_size, out_size),
+            biases: Self::biases(name, out_size),
         }
     }
 

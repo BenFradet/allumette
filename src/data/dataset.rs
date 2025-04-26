@@ -9,25 +9,12 @@ pub struct Dataset {
 
 impl Dataset {
     pub fn simple(n: usize) -> Self {
-        let x = vec![
-            (0.96, 0.13),
-            (0.05, 0.57),
-            (0.56, 0.39),
-            (0.53, 0.79),
-            (0.70, 0.91),
-            (0.12, 0.89),
-            (0.02, 0.76),
-            (0.43, 0.19),
-            (0.79, 0.33),
-            (0.45, 0.99),
-        ];
-        let y = vec![0, 1, 0, 0, 0, 1, 1, 1, 0, 1];
-        //let x = Self::make_points(n);
-        //let mut y = vec![];
-        //for v in &x {
-        //    let y1 = if v.0 < 0.5 { 1 } else { 0 };
-        //    y.push(y1);
-        //}
+        let x = Self::make_points(n);
+        let mut y = vec![];
+        for v in &x {
+            let y1 = if v.0 < 0.5 { 1 } else { 0 };
+            y.push(y1);
+        }
         Self { n, x, y }
     }
 
@@ -110,15 +97,15 @@ fn common_test(ds: &Dataset, n: usize) -> () {
 proptest! {
     #[test]
     fn simple_test(n in 0usize..10) {
-        //let res = Dataset::simple(n);
-        //common_test(&res, n);
-        //assert!(res.x.iter().zip(res.y.iter()).all(|((x1, _x2), y)| {
-        //    if *x1 < 0.5 {
-        //        *y == 1
-        //    } else {
-        //        *y == 0
-        //    }
-        //}));
+        let res = Dataset::simple(n);
+        common_test(&res, n);
+        assert!(res.x.iter().zip(res.y.iter()).all(|((x1, _x2), y)| {
+            if *x1 < 0.5 {
+                *y == 1
+            } else {
+                *y == 0
+            }
+        }));
     }
 
     #[test]
