@@ -98,7 +98,8 @@ impl<'a, A: Clone> Module<'a, A> {
     where
         F: Fn(B, (&Self, String)) -> B,
     {
-        let mut queue: VecDeque<(&Module<'a, A>, String)> = VecDeque::from([(self, "".to_string())]);
+        let mut queue: VecDeque<(&Module<'a, A>, String)> =
+            VecDeque::from([(self, "".to_string())]);
         let mut res = z;
         while let Some((module, name)) = queue.pop_front() {
             res = f(res, (module, name.to_string()));
