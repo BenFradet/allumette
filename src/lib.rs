@@ -11,6 +11,7 @@ pub mod hof;
 pub mod math;
 pub mod module;
 pub mod optim;
+pub mod shaping;
 pub mod tensor;
 pub mod train;
 pub mod util;
