@@ -85,4 +85,148 @@ impl Backend<Sequential> for TensorData {
             None
         }
     }
+
+    fn expand(&self, other: Self) -> Option<Self> {
+        if self.shape == other.shape {
+            return Some(other);
+        }
+
+        let bc_shape = self.shape.broadcast(&other.shape)?;
+        let buf = TensorData::zeros(bc_shape);
+        let mut out = other.map_broadcast(&buf, |f| f)?;
+        if self.shape == out.shape {
+            return Some(out);
+        }
+
+        let orig_shape = Shape::new(
+            [
+                vec![1; out.shape.len() - self.shape.len()],
+                self.shape.data().to_vec(),
+            ]
+            .concat(),
+        );
+        for (dim, shape) in out.shape.clone().data().iter().enumerate() {
+            if orig_shape.data()[dim] == 1 && *shape != 1 {
+                out = out.reduce(|a, b| a + b, dim, 0.)?;
+            }
+        }
+        assert!(
+            out.size() == self.size(),
+            "out shape: {:?}, self shape: {:?}",
+            out.shape,
+            self.shape
+        );
+        Some(out)
+    }
+
+    fn permute(&self, order: &Self) -> Option<Self> {
+        todo!()
+    }
 }
+
+#[cfg(test)]
+mod tests {
+    use proptest::proptest;
+
+    use super::*;
+
+    #[test]
+    fn expand_test() {
+        let input = TensorData::scalar(0.);
+        let deriv = TensorData::vec(vec![1., 1.]).unwrap();
+        let res = input.expand(deriv).map(|d| d.data).unwrap();
+        assert_eq!(vec![2.], *res);
+    }
+
+    fn assert_tensor_eq(t1: &TensorData, t2: &TensorData) -> () {
+        assert_eq!(t1.shape, t2.shape);
+        assert_eq!(t1.strides, t2.strides);
+        assert_eq!(t1.data, t2.data);
+    }
+
+    proptest! {
+        #[test]
+        fn reduce_test_sum(t1 in TensorData::arbitrary()) {
+            let mut t1p = t1.clone();
+            for i in 0..t1.shape.data().len() {
+                t1p = t1p.reduce(|a, b| a + b, i, 0.).unwrap();
+            }
+            let res = t1.data.clone().iter().fold(0., |acc, a| acc + a);
+            assert_eq!(1, t1p.data.len());
+            assert!((res - t1p.data[0]).abs() < f64::EPSILON * 10_f64.powf(2.));
+        }
+
+        #[test]
+        fn reduce_test_mul(t1 in TensorData::arbitrary()) {
+            let mut t1p = t1.clone();
+            for i in 0..t1.shape.data().len() {
+                t1p = t1p.reduce(|a, b| a * b, i, 1.).unwrap();
+            }
+            let res = t1.data.clone().iter().fold(1., |acc, a| acc * a);
+            assert_eq!(1, t1p.data.len());
+            assert!((res - t1p.data[0]).abs() < f64::EPSILON * 10_f64.powf(2.));
+        }
+
+        #[test]
+        fn zip_commutative_test(t1 in TensorData::arbitrary(), t2 in TensorData::arbitrary()) {
+            // this works if f is commutative
+            let res1 = t1.zip(&t2, |a, b| a + b);
+            let res2 = t2.zip(&t1, |a, b| a + b);
+            match (res1, res2) {
+                (Some(r1), Some(r2)) => assert_tensor_eq(&r1, &r2),
+                (None, None) => (),
+                (r1, r2) => panic!("{:?} not equal to {:?}", r1, r2),
+            }
+        }
+
+        #[test]
+        fn map_identity_test(t in TensorData::arbitrary()) {
+            assert_tensor_eq(&t, &t.map(|f| f));
+        }
+
+        #[test]
+        fn map_broadcast_identity_test(t in TensorData::arbitrary()) {
+            let bc = t.map_broadcast(&t, |f| f);
+            assert!(bc.is_some());
+            assert_tensor_eq(&t, bc.as_ref().unwrap());
+        }
+
+        #[test]
+        fn map_composition_test(t in TensorData::arbitrary()) {
+            let f = |a: f64| a * 2.;
+            let g = |a: f64| a.powf(2.);
+            let fg = |a: f64| g(f(a));
+            assert_tensor_eq(&t.clone().map(f).map(g), &t.map(fg));
+        }
+
+        #[test]
+        fn map_broadcast_composition_test(t in TensorData::arbitrary()) {
+            let f = |a: f64| a * 2.;
+            let g = |a: f64| a.powf(2.);
+            let fg = |a: f64| g(f(a));
+            let t1 = &t.clone().map_broadcast(&t, f).and_then(|t| t.map_broadcast(&t, g));
+            let t2 = &t.map_broadcast(&t, fg);
+            assert!(t1.is_some());
+            assert!(t2.is_some());
+            assert_tensor_eq(t1.as_ref().unwrap(), t2.as_ref().unwrap());
+        }
+
+        #[test]
+        fn map_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
+            let map = TensorData::zeros(shape.clone()).map(|z| z + f);
+            assert_eq!(shape.size, map.data.len());
+            assert!(map.data.iter().all(|e| *e == f));
+        }
+
+        #[test]
+        fn map_broadcast_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
+            let t = TensorData::zeros(shape.clone());
+            let res = t.map_broadcast(&t, |z| z + f);
+            assert!(res.is_some());
+            let map = res.unwrap();
+            assert_eq!(shape.size, map.data.len());
+            assert!(map.data.iter().all(|e| *e == f));
+        }
+    }
+}
+
