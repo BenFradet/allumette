@@ -2,23 +2,32 @@ use std::rc::Rc;
 
 use crate::{
     autodiff::context::Context,
+    backend::{backend::Backend, backend_type::BackendType},
     function::{binary::Binary, function::Function, unary::Unary},
+    shaping::shaped::Shaped,
 };
 
-use super::{tensor::Tensor, tensor_data::TensorData, tensor_history::TensorHistory};
+use super::{tensor::Tensor, tensor_history::History};
 
 pub struct Forward;
 
 impl Forward {
-    pub fn binary(b: impl Binary<TensorData> + 'static, lhs: Tensor, rhs: Tensor) -> Tensor {
+    pub fn binary<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + Shaped + Clone + std::fmt::Debug,
+    >(
+        b: impl Binary<BT, T> + 'static,
+        lhs: Tensor<BT, T>,
+        rhs: Tensor<BT, T>,
+    ) -> Tensor<BT, T> {
         let res = b.forward(&lhs.data, &rhs.data);
         let ctx = Context::default()
             .fst(lhs.data.clone())
             .snd(rhs.data.clone());
         let new_history = if lhs.is_constant && rhs.is_constant {
-            TensorHistory::default()
+            History::default()
         } else {
-            TensorHistory::default()
+            History::default()
                 .last_fn(Function::B(Rc::new(b)))
                 .context(ctx)
                 .push_input(lhs)
@@ -27,13 +36,19 @@ impl Forward {
         Tensor::new(res, new_history)
     }
 
-    pub fn unary(u: impl Unary<TensorData> + 'static, a: Tensor) -> Tensor {
+    pub fn unary<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + Shaped + Clone + std::fmt::Debug,
+    >(
+        u: impl Unary<BT, T> + 'static,
+        a: Tensor<BT, T>,
+    ) -> Tensor<BT, T> {
         let res = u.forward(&a.data);
         let ctx = Context::default().fst(a.data.clone());
         let new_history = if a.is_constant {
-            TensorHistory::default()
+            History::default()
         } else {
-            TensorHistory::default()
+            History::default()
                 .last_fn(Function::U(Rc::new(u)))
                 .context(ctx)
                 .push_input(a)

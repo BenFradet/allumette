@@ -1,7 +1,10 @@
-use crate::autodiff::context::Context;
+use crate::{
+    autodiff::context::Context,
+    backend::{backend::Backend, backend_type::BackendType},
+};
 
-pub trait Binary<A> {
-    fn forward(&self, lhs: &A, rhs: &A) -> A;
-    fn backward(&self, ctx: &Context<A>, d: &A) -> (A, A);
+pub trait Binary<BT: BackendType, B: Backend<BT>> {
+    fn forward(&self, lhs: &B, rhs: &B) -> B;
+    fn backward(&self, ctx: &Context<B>, d: &B) -> (B, B);
     fn tag(&self) -> &str;
 }

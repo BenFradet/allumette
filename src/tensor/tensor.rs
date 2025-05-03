@@ -1,9 +1,15 @@
-use crate::function::function::Function;
+use crate::{
+    backend::{
+        backend::Backend,
+        backend_type::{BackendType, Seq},
+    },
+    function::function::Function,
+    shaping::shaped::Shaped,
+};
 use proptest::{collection, prelude::*};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     ops,
-    sync::atomic::{AtomicU32, Ordering},
 };
 
 use super::{
@@ -14,24 +20,28 @@ use super::{
     },
     shaping::{order::Order, shape::Shape, strides::Strides},
     tensor_data::TensorData,
-    tensor_history::TensorHistory,
+    tensor_history::History,
 };
 
 #[derive(Clone, Debug)]
-pub struct Tensor {
-    pub data: TensorData,
-    pub grad: Option<Box<Tensor>>,
-    pub history: TensorHistory,
+pub struct Tensor<BT: BackendType, T: Backend<BT>> {
+    pub data: T,
+    pub grad: Option<Box<Tensor<BT, T>>>,
+    pub history: History<BT, T>,
     pub id: String,
     pub is_constant: bool,
 }
 
-static TENSOR_COUNT: AtomicU32 = AtomicU32::new(0);
+//static TENSOR_COUNT: AtomicU32 = AtomicU32::new(0);
 
-impl Tensor {
-    pub fn new(data: TensorData, history: TensorHistory) -> Self {
-        //let id = rand::thread_rng().gen::<u64>().to_string();
-        let id = TENSOR_COUNT.fetch_add(1, Ordering::Relaxed);
+impl<BT: BackendType, T: Backend<BT>> Tensor<BT, T>
+where
+    BT: std::fmt::Debug + Clone,
+    T: Shaped + std::fmt::Debug + Clone,
+{
+    pub fn new(data: T, history: History<BT, T>) -> Self {
+        let id = rand::thread_rng().gen::<u64>().to_string();
+        //let id = TENSOR_COUNT.fetch_add(1, Ordering::Relaxed);
         Self {
             data,
             grad: None,
@@ -41,40 +51,40 @@ impl Tensor {
         }
     }
 
-    pub fn from_data(data: TensorData) -> Self {
+    pub fn from_data(data: T) -> Self {
         let id = rand::thread_rng().gen::<u64>().to_string();
         Self {
             data,
             grad: None,
-            history: TensorHistory::default(),
+            history: History::default(),
             id,
             is_constant: false,
         }
     }
 
     pub fn scalar(data: f64) -> Self {
-        Self::from_data(TensorData::scalar(data)).make_constant()
+        Self::from_data(<T as Shaped>::scalar(data)).make_constant()
     }
 
-    pub fn vec(data: Vec<f64>) -> Option<Self> {
-        TensorData::vec(data).map(Self::from_data)
+    pub fn vec(data: Vec<f64>) -> Self {
+        Self::from_data(<T as Shaped>::vec(data))
     }
 
     pub fn matrix(data: Vec<Vec<f64>>) -> Option<Self> {
-        TensorData::matrix(data).map(Self::from_data)
+        <T as Shaped>::matrix(data).map(Self::from_data)
     }
 
-    pub fn history(mut self, h: TensorHistory) -> Self {
+    pub fn history(mut self, h: History<BT, T>) -> Self {
         self.history = h;
         self
     }
 
-    pub fn grad(mut self, grad: Option<Tensor>) -> Self {
+    pub fn grad(mut self, grad: Option<Tensor<BT, T>>) -> Self {
         self.grad = grad.map(Box::new);
         self
     }
 
-    pub fn data(mut self, data: TensorData) -> Self {
+    pub fn data(mut self, data: T) -> Self {
         self.data = data;
         self
     }
@@ -91,13 +101,13 @@ impl Tensor {
 
     pub fn backward(&self) -> HashMap<String, Self> {
         assert!(
-            self.data.shape == Shape::new(vec![1]),
+            self.data.shape() == Shape::new(vec![1]),
             "use backprop for non-scalar tensors"
         );
         self.backprop(Self::scalar(1.))
     }
 
-    pub fn backprop(&self, d: Tensor) -> HashMap<String, Self> {
+    pub fn backprop(&self, d: Tensor<BT, T>) -> HashMap<String, Self> {
         let sorted = self.topological_sort_dfs();
         let mut derivs = HashMap::from([(&self.id, d)]);
         let mut res: HashMap<String, Self> = HashMap::new();
@@ -124,7 +134,7 @@ impl Tensor {
         res
     }
 
-    fn accumulate_derivative(mut self, d: Tensor) -> Self {
+    fn accumulate_derivative(mut self, d: Tensor<BT, T>) -> Self {
         if self.is_leaf() {
             let grad = self.grad.map(|t| *t + d.clone()).unwrap_or(d);
             self.grad = Some(Box::new(grad.clone()));
@@ -134,7 +144,7 @@ impl Tensor {
         }
     }
 
-    fn chain_rule(&self, d: &TensorData) -> impl Iterator<Item = (&Self, TensorData)> {
+    fn chain_rule(&self, d: &T) -> impl Iterator<Item = (&Self, T)> {
         let derivatives = self
             .history
             .last_fn
@@ -158,10 +168,19 @@ impl Tensor {
             .filter_map(|(i, d)| i.data.expand(d).map(|o| (i, o)))
     }
 
+    // TODO: make iterative
     fn topological_sort_dfs(&self) -> impl Iterator<Item = &Self> {
         let mut q = VecDeque::new();
         let mut visited = HashSet::new();
-        fn dfs<'a>(t: &'a Tensor, visited: &mut HashSet<&'a str>, q: &mut VecDeque<&'a Tensor>) {
+        fn dfs<
+            'a,
+            BT: BackendType + Clone + std::fmt::Debug,
+            T: Backend<BT> + Shaped + Clone + std::fmt::Debug,
+        >(
+            t: &'a Tensor<BT, T>,
+            visited: &mut HashSet<&'a str>,
+            q: &mut VecDeque<&'a Tensor<BT, T>>,
+        ) {
             if visited.contains(&t.id.as_str()) {
                 return;
             }
@@ -204,11 +223,7 @@ impl Tensor {
     }
 
     pub fn item(&self) -> Option<f64> {
-        if self.size() == 1 {
-            Some(self.data.data[0])
-        } else {
-            None
-        }
+        self.data.first()
     }
 
     fn parents(&self) -> impl Iterator<Item = &Self> {
@@ -219,15 +234,15 @@ impl Tensor {
         self.history.last_fn.is_none()
     }
 
-    pub fn lt(self, rhs: Tensor) -> Self {
+    pub fn lt(self, rhs: Tensor<BT, T>) -> Self {
         Forward::binary(Lt {}, self, rhs)
     }
 
-    pub fn gt(self, rhs: Tensor) -> Self {
+    pub fn gt(self, rhs: Tensor<BT, T>) -> Self {
         Forward::binary(Lt {}, rhs, self)
     }
 
-    pub fn eq(self, rhs: Tensor) -> Self {
+    pub fn eq(self, rhs: Tensor<BT, T>) -> Self {
         Forward::binary(Eq {}, self, rhs)
     }
 
@@ -236,7 +251,7 @@ impl Tensor {
             Some(d) => Forward::binary(All {}, self, Tensor::scalar(d as f64)),
             None => {
                 let shape = Shape::scalar(self.size());
-                let t = self.view(&shape).unwrap();
+                let t = self.view(&shape);
                 Forward::binary(All {}, t, Tensor::scalar(0.))
             }
         }
@@ -247,7 +262,7 @@ impl Tensor {
             Some(d) => Forward::binary(Sum {}, self, Tensor::scalar(d as f64)),
             None => {
                 let shape = Shape::scalar(self.size());
-                let t = self.contiguous().view(&shape).unwrap();
+                let t = self.contiguous().view(&shape);
                 Forward::binary(Sum {}, t, Tensor::scalar(0.))
             }
         }
@@ -256,31 +271,31 @@ impl Tensor {
     pub fn mean(self, dim: Option<usize>) -> Self {
         match dim {
             Some(d) => {
-                let div = Self::from_data(TensorData::scalar(self.data.shape[d] as f64));
+                let div = Self::from_data(<T as Shaped>::scalar(self.data.shape()[d] as f64));
                 self.sum(dim) / div
             }
             None => {
-                let div = Self::from_data(TensorData::scalar(self.size() as f64));
+                let div = Self::from_data(<T as Shaped>::scalar(self.size() as f64));
                 self.sum(None) / div
             }
         }
     }
 
-    pub fn permute(self, order: Order) -> Option<Self> {
+    pub fn permute(self, order: Order) -> Self {
         let fs = order.data.iter().map(|u| *u as f64).collect();
-        Tensor::vec(fs).map(|td| Forward::binary(Permute {}, self, td))
+        Forward::binary(Permute {}, self, Tensor::vec(fs))
     }
 
-    pub fn view(self, shape: &Shape) -> Option<Self> {
+    pub fn view(self, shape: &Shape) -> Self {
         let fs = shape.data().iter().map(|u| *u as f64).collect();
-        Tensor::vec(fs).map(|td| Forward::binary(View {}, self, td))
+        Forward::binary(View {}, self, Tensor::vec(fs))
     }
 
     pub fn contiguous(self) -> Self {
         Forward::unary(Copy {}, self)
     }
 
-    pub fn is_close(self, rhs: Tensor) -> Self {
+    pub fn is_close(self, rhs: Tensor<BT, T>) -> Self {
         Forward::binary(IsClose {}, self, rhs)
     }
 
@@ -303,7 +318,9 @@ impl Tensor {
     pub fn inv(self) -> Self {
         Forward::unary(Inv {}, self)
     }
+}
 
+impl Tensor<Seq, TensorData> {
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         TensorData::arbitrary().prop_map(Self::from_data)
     }
@@ -325,7 +342,7 @@ impl Tensor {
             })
     }
 
-    pub fn arbitrary_with_order() -> impl Strategy<Value = (Tensor, Order)> {
+    pub fn arbitrary_with_order() -> impl Strategy<Value = (Self, Order)> {
         Self::arbitrary().prop_flat_map(|t| {
             let len = t.data.shape.len();
             let ord = collection::vec(0..len, len)
@@ -336,42 +353,62 @@ impl Tensor {
     }
 }
 
-impl ops::Add<Tensor> for Tensor {
-    type Output = Tensor;
+impl<
+        BT: BackendType + std::fmt::Debug + Clone,
+        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+    > ops::Add<Tensor<BT, T>> for Tensor<BT, T>
+{
+    type Output = Tensor<BT, T>;
 
-    fn add(self, rhs: Tensor) -> Self::Output {
+    fn add(self, rhs: Tensor<BT, T>) -> Self::Output {
         Forward::binary(Add {}, self, rhs)
     }
 }
 
-impl ops::Sub<Tensor> for Tensor {
-    type Output = Tensor;
+impl<
+        BT: BackendType + std::fmt::Debug + Clone,
+        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+    > ops::Sub<Tensor<BT, T>> for Tensor<BT, T>
+{
+    type Output = Tensor<BT, T>;
 
-    fn sub(self, rhs: Tensor) -> Self::Output {
+    fn sub(self, rhs: Tensor<BT, T>) -> Self::Output {
         let new_rhs = Forward::unary(Neg {}, rhs);
         Forward::binary(Add {}, self, new_rhs)
     }
 }
 
-impl ops::Mul<Tensor> for Tensor {
-    type Output = Tensor;
+impl<
+        BT: BackendType + std::fmt::Debug + Clone,
+        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+    > ops::Mul<Tensor<BT, T>> for Tensor<BT, T>
+{
+    type Output = Tensor<BT, T>;
 
-    fn mul(self, rhs: Tensor) -> Self::Output {
+    fn mul(self, rhs: Tensor<BT, T>) -> Self::Output {
         Forward::binary(Mul {}, self, rhs)
     }
 }
 
-impl ops::Div<Tensor> for Tensor {
-    type Output = Tensor;
+impl<
+        BT: BackendType + std::fmt::Debug + Clone,
+        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+    > ops::Div<Tensor<BT, T>> for Tensor<BT, T>
+{
+    type Output = Tensor<BT, T>;
 
-    fn div(self, rhs: Tensor) -> Self::Output {
+    fn div(self, rhs: Tensor<BT, T>) -> Self::Output {
         let new_rhs = Forward::unary(Inv {}, rhs);
         Forward::binary(Mul {}, self, new_rhs)
     }
 }
 
-impl ops::Neg for Tensor {
-    type Output = Tensor;
+impl<
+        BT: BackendType + std::fmt::Debug + Clone,
+        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+    > ops::Neg for Tensor<BT, T>
+{
+    type Output = Tensor<BT, T>;
 
     fn neg(self) -> Self::Output {
         Forward::unary(Neg {}, self)
@@ -390,13 +427,13 @@ mod tests {
 
     use super::*;
 
-    fn unary_grad_assert<F>(tensor: Tensor, f: F)
+    fn unary_grad_assert<F>(tensor: Tensor<Seq, TensorData>, f: F)
     where
-        F: Fn(Tensor) -> Tensor,
+        F: Fn(Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
     {
         let id = &tensor.id.clone();
-        let reset = tensor.grad(None).history(TensorHistory::default());
-        let idx = reset.data.shape.sample();
+        let reset = tensor.grad(None).history(History::default());
+        let idx = reset.data.shape().sample();
         let out = f(reset);
         let mut res = out.sum(None).backward();
         let tensor_after = res.remove(id);
@@ -413,14 +450,17 @@ mod tests {
         );
     }
 
-    fn binary_grad_assert<F>(tensor1: Tensor, tensor2: Tensor, f: F)
-    where
-        F: Fn(Tensor, Tensor) -> Tensor,
+    fn binary_grad_assert<F>(
+        tensor1: Tensor<Seq, TensorData>,
+        tensor2: Tensor<Seq, TensorData>,
+        f: F,
+    ) where
+        F: Fn(Tensor<Seq, TensorData>, Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
     {
         let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
         let (reset1, reset2) = (
-            tensor1.grad(None).history(TensorHistory::default()),
-            tensor2.grad(None).history(TensorHistory::default()),
+            tensor1.grad(None).history(History::default()),
+            tensor2.grad(None).history(History::default()),
         );
         let (idx1, idx2) = (reset1.data.shape.sample(), reset2.data.shape.sample());
         let out = f(reset1, reset2);
@@ -457,9 +497,9 @@ mod tests {
         );
     }
 
-    fn unary_grad_central_diff<F>(tensor: Tensor, f: F, index: &Idx) -> f64
+    fn unary_grad_central_diff<F>(tensor: Tensor<Seq, TensorData>, f: F, index: &Idx) -> f64
     where
-        F: Fn(Tensor) -> Tensor,
+        F: Fn(Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
     {
         let eps = 1e-6;
         let shape = tensor.data.shape.clone();
@@ -472,14 +512,14 @@ mod tests {
     }
 
     fn binary_grad_central_diff<F>(
-        tensor1: Tensor,
-        tensor2: Tensor,
+        tensor1: Tensor<Seq, TensorData>,
+        tensor2: Tensor<Seq, TensorData>,
         f: F,
         index: &Idx,
         first: bool,
     ) -> f64
     where
-        F: Fn(Tensor, Tensor) -> Tensor,
+        F: Fn(Tensor<Seq, TensorData>, Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
     {
         let eps = 1e-6;
         let shape = if first {
@@ -503,9 +543,9 @@ mod tests {
         delta.item().unwrap_or(0.) / (2. * eps)
     }
 
-    fn unary_assert<FT, FF>(t: Tensor, ft: FT, ff: FF)
+    fn unary_assert<FT, FF>(t: Tensor<Seq, TensorData>, ft: FT, ff: FF)
     where
-        FT: Fn(Tensor) -> Tensor,
+        FT: Fn(Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
         FF: Fn(f64) -> f64,
     {
         let data = t.data.clone();
@@ -515,9 +555,13 @@ mod tests {
         }
     }
 
-    fn binary_assert<FT, FF>(t1: Tensor, t2: Tensor, ft: FT, ff: FF)
-    where
-        FT: Fn(Tensor, Tensor) -> Tensor,
+    fn binary_assert<FT, FF>(
+        t1: Tensor<Seq, TensorData>,
+        t2: Tensor<Seq, TensorData>,
+        ft: FT,
+        ff: FF,
+    ) where
+        FT: Fn(Tensor<Seq, TensorData>, Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
         FF: Fn(f64, f64) -> f64,
     {
         let data1 = t1.data.clone();
@@ -532,11 +576,11 @@ mod tests {
     }
 
     proptest! {
-        fn permute_grad_tests((t, o) in Tensor::arbitrary_with_order()) {
-            unary_grad_assert(t, move |t| t.permute(o.clone()).unwrap());
+        fn permute_grad_tests((t, o) in Tensor::<Seq, TensorData>::arbitrary_with_order()) {
+            unary_grad_assert(t, move |t| t.permute(o.clone()));
         }
 
-        fn reduce_grad_tests(t in Tensor::arbitrary()) {
+        fn reduce_grad_tests(t in Tensor::<Seq, TensorData>::arbitrary()) {
             unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
             unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
             unary_grad_assert(t.clone(), |t| t.mean(None));
@@ -573,13 +617,13 @@ mod tests {
 
         #[test]
         fn unary_grad_complex_test1(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
+            let ft = |t: Tensor<Seq, TensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
             unary_grad_assert(t.clone(), ft);
         }
 
         #[test]
         fn unary_grad_complex_test2(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor| (
+            let ft = |t: Tensor<Seq, TensorData>| (
                 (
                     (
                         (
@@ -616,14 +660,14 @@ mod tests {
 
         #[test]
         fn unary_complex_test1(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
+            let ft = |t: Tensor<Seq, TensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
             let ff = |f| ln(f + 100000.) + exp(f - 200.);
             unary_assert(t.clone(), ft, ff);
         }
 
         #[test]
         fn unary_complex_test2(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor| (
+            let ft = |t: Tensor<Seq, TensorData>| (
                 (
                     (
                         (
@@ -651,15 +695,16 @@ mod tests {
 
     #[test]
     fn test_view() {
-        let t = Tensor::matrix(vec![vec![2., 3., 4.], vec![4., 5., 7.]]).unwrap();
+        let t =
+            Tensor::<Seq, TensorData>::matrix(vec![vec![2., 3., 4.], vec![4., 5., 7.]]).unwrap();
         assert_eq!(Shape::new(vec![2, 3]), t.data.shape);
-        let t2 = t.clone().view(&Shape::new(vec![6])).unwrap();
+        let t2 = t.clone().view(&Shape::new(vec![6]));
         assert_eq!(Shape::new(vec![6]), t2.data.shape);
-        let t3 = t2.view(&Shape::new(vec![1, 6])).unwrap();
+        let t3 = t2.view(&Shape::new(vec![1, 6]));
         assert_eq!(Shape::new(vec![1, 6]), t3.data.shape);
-        let t4 = t3.view(&Shape::new(vec![6, 1])).unwrap();
+        let t4 = t3.view(&Shape::new(vec![6, 1]));
         assert_eq!(Shape::new(vec![6, 1]), t4.data.shape);
-        let t5 = t4.view(&Shape::new(vec![2, 3])).unwrap();
+        let t5 = t4.view(&Shape::new(vec![2, 3]));
         assert_eq!(Shape::new(vec![2, 3]), t5.data.shape);
         assert_eq!(Some(1.), t.is_close(t5).all(None).item());
     }
@@ -672,10 +717,10 @@ mod tests {
         let tensor = Tensor::from_data(td);
         let summed = tensor.sum(Some(0));
 
-        let exp = Tensor::vec(vec![11., 16.]).unwrap();
+        let exp = Tensor::vec(vec![11., 16.]);
         let is_close = summed.is_close(exp);
         let shape = Shape::scalar(is_close.size());
-        assert_eq!(Some(1.), is_close.view(&shape).unwrap().all(Some(0)).item());
+        assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
     }
 
     #[test]
@@ -690,15 +735,13 @@ mod tests {
             Tensor::from_data(TensorData::matrix(vec![vec![5.], vec![10.], vec![12.]]).unwrap());
         let is_close = summed.is_close(exp);
         let shape = Shape::new(vec![is_close.size()]);
-        assert_eq!(Some(1.), is_close.view(&shape).unwrap().all(Some(0)).item());
+        assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
     }
 
     #[test]
     fn test_reduce_forward_all_dim() -> () {
         let shape = Shape::new(vec![3, 2]);
-        let tensor = Tensor::vec(vec![2., 3., 4., 6., 5., 7.])
-            .unwrap()
-            .reshape(shape);
+        let tensor = Tensor::<Seq, TensorData>::vec(vec![2., 3., 4., 6., 5., 7.]).reshape(shape);
         let summed = tensor.sum(None);
         assert_eq!(Some(27.), summed.item());
     }

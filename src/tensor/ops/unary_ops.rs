@@ -1,14 +1,19 @@
 use crate::{
-    autodiff::context::Context, function::unary::Unary, math, tensor::tensor_data::TensorData,
+    autodiff::context::Context,
+    backend::{backend::Backend, backend_type::BackendType},
+    function::unary::Unary,
+    math,
+    shaping::shaped::Shaped,
+    tensor::tensor_data::TensorData,
 };
 
 pub struct Neg;
-impl Unary<TensorData> for Neg {
-    fn forward(&self, a: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT>> Unary<BT, T> for Neg {
+    fn forward(&self, a: &T) -> T {
         a.map(math::unary::neg)
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
+    fn backward(&self, _ctx: &Context<T>, d: &T) -> T {
         d.map(math::unary::neg_back)
     }
 
@@ -18,16 +23,16 @@ impl Unary<TensorData> for Neg {
 }
 
 pub struct Inv;
-impl Unary<TensorData> for Inv {
-    fn forward(&self, a: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Unary<BT, T> for Inv {
+    fn forward(&self, a: &T) -> T {
         a.map(math::unary::inv)
     }
 
-    fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
+    fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
             .and_then(|a| a.zip(d, math::unary::inv_back))
-            .unwrap_or(TensorData::ones(d.shape.clone()))
+            .unwrap_or(<T as Shaped>::ones(d.shape().clone()))
     }
 
     fn tag(&self) -> &str {
@@ -36,16 +41,16 @@ impl Unary<TensorData> for Inv {
 }
 
 pub struct Ln;
-impl Unary<TensorData> for Ln {
-    fn forward(&self, a: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Unary<BT, T> for Ln {
+    fn forward(&self, a: &T) -> T {
         a.map(math::unary::ln)
     }
 
-    fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
+    fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
             .and_then(|a| a.zip(d, math::unary::ln_back))
-            .unwrap_or(TensorData::ones(d.shape.clone()))
+            .unwrap_or(<T as Shaped>::ones(d.shape().clone()))
     }
 
     fn tag(&self) -> &str {
@@ -54,18 +59,18 @@ impl Unary<TensorData> for Ln {
 }
 
 pub struct Sig;
-impl Unary<TensorData> for Sig {
-    fn forward(&self, a: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Unary<BT, T> for Sig {
+    fn forward(&self, a: &T) -> T {
         a.map(math::unary::sig)
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
-    fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
+    fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         //todo: rm unwrap
         let t = ctx.fst.as_ref().unwrap();
         let sig = self.forward(t);
         let minus_sig = sig.map(math::unary::neg);
-        let one_minus_sig = TensorData::scalar(1.)
+        let one_minus_sig = <T as Shaped>::scalar(1.)
             .zip(&minus_sig, math::binary::add)
             .unwrap();
         let deriv = sig.zip(&one_minus_sig, math::binary::mul).unwrap();
@@ -78,16 +83,16 @@ impl Unary<TensorData> for Sig {
 }
 
 pub struct Relu;
-impl Unary<TensorData> for Relu {
-    fn forward(&self, a: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Unary<BT, T> for Relu {
+    fn forward(&self, a: &T) -> T {
         a.map(math::unary::relu)
     }
 
-    fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
+    fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
             .and_then(|a| a.zip(d, math::unary::relu_back))
-            .unwrap_or(TensorData::ones(d.shape.clone()))
+            .unwrap_or(<T as Shaped>::ones(d.shape().clone()))
     }
 
     fn tag(&self) -> &str {
@@ -96,16 +101,16 @@ impl Unary<TensorData> for Relu {
 }
 
 pub struct Exp;
-impl Unary<TensorData> for Exp {
-    fn forward(&self, a: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Unary<BT, T> for Exp {
+    fn forward(&self, a: &T) -> T {
         a.map(math::unary::exp)
     }
 
-    fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
+    fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
             .and_then(|a| a.zip(d, math::unary::exp_back))
-            .unwrap_or(TensorData::ones(d.shape.clone()))
+            .unwrap_or(<T as Shaped>::ones(d.shape().clone()))
     }
 
     fn tag(&self) -> &str {
@@ -115,13 +120,13 @@ impl Unary<TensorData> for Exp {
 
 // make contiguous
 pub struct Copy;
-impl Unary<TensorData> for Copy {
-    fn forward(&self, a: &TensorData) -> TensorData {
-        a.map_broadcast(&TensorData::zeros(a.shape.clone()), |f| f)
+impl<BT: BackendType, T: Backend<BT> + Shaped + Clone> Unary<BT, T> for Copy {
+    fn forward(&self, a: &T) -> T {
+        a.map_broadcast(&<T as Shaped>::zeros(a.shape().clone()), |f| f)
             .unwrap_or(a.map(|f| f))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> TensorData {
+    fn backward(&self, _ctx: &Context<T>, d: &T) -> T {
         d.clone()
     }
 

@@ -1,7 +1,9 @@
 use crate::{
     autodiff::context::Context,
+    backend::{backend::Backend, backend_type::BackendType},
     function::binary::Binary,
     math,
+    shaping::shaped::Shaped,
     tensor::{
         shaping::{order::Order, shape::Shape},
         tensor_data::TensorData,
@@ -9,13 +11,13 @@ use crate::{
 };
 
 pub struct Add;
-impl Binary<TensorData> for Add {
-    fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped + Clone> Binary<BT, T> for Add {
+    fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, math::binary::add)
-            .unwrap_or(TensorData::ones(a.shape.clone()))
+            .unwrap_or(<T as Shaped>::ones(a.shape().clone()))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
+    fn backward(&self, _ctx: &Context<T>, d: &T) -> (T, T) {
         (d.clone(), d.clone())
     }
 
@@ -25,22 +27,22 @@ impl Binary<TensorData> for Add {
 }
 
 pub struct Mul;
-impl Binary<TensorData> for Mul {
-    fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for Mul {
+    fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, math::binary::mul)
-            .unwrap_or(TensorData::ones(a.shape.clone()))
+            .unwrap_or(<T as Shaped>::ones(a.shape().clone()))
     }
 
-    fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
+    fn backward(&self, ctx: &Context<T>, d: &T) -> (T, T) {
         (
             ctx.snd
                 .as_ref()
                 .and_then(|b| b.zip(d, math::binary::mul))
-                .unwrap_or(TensorData::ones(d.shape.clone())),
+                .unwrap_or(<T as Shaped>::ones(d.shape().clone())),
             ctx.fst
                 .as_ref()
                 .and_then(|a| a.zip(d, math::binary::mul))
-                .unwrap_or(TensorData::ones(d.shape.clone())),
+                .unwrap_or(<T as Shaped>::ones(d.shape().clone())),
         )
     }
 
@@ -50,16 +52,16 @@ impl Binary<TensorData> for Mul {
 }
 
 pub struct Lt;
-impl Binary<TensorData> for Lt {
-    fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for Lt {
+    fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, math::binary::lt)
-            .unwrap_or(TensorData::ones(a.shape.clone()))
+            .unwrap_or(<T as Shaped>::ones(a.shape().clone()))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
+    fn backward(&self, _ctx: &Context<T>, d: &T) -> (T, T) {
         (
-            TensorData::zeros(d.shape.clone()),
-            TensorData::zeros(d.shape.clone()),
+            <T as Shaped>::zeros(d.shape().clone()),
+            <T as Shaped>::zeros(d.shape().clone()),
         )
     }
 
@@ -69,16 +71,16 @@ impl Binary<TensorData> for Lt {
 }
 
 pub struct Eq;
-impl Binary<TensorData> for Eq {
-    fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for Eq {
+    fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, math::binary::eq)
-            .unwrap_or(TensorData::ones(a.shape.clone()))
+            .unwrap_or(<T as Shaped>::ones(a.shape().clone()))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
+    fn backward(&self, _ctx: &Context<T>, d: &T) -> (T, T) {
         (
-            TensorData::zeros(d.shape.clone()),
-            TensorData::zeros(d.shape.clone()),
+            <T as Shaped>::zeros(d.shape().clone()),
+            <T as Shaped>::zeros(d.shape().clone()),
         )
     }
 
@@ -88,14 +90,14 @@ impl Binary<TensorData> for Eq {
 }
 
 pub struct Sum;
-impl Binary<TensorData> for Sum {
-    fn forward(&self, a: &TensorData, dim: &TensorData) -> TensorData {
-        a.reduce(|acc, v| acc + v, dim.data[0] as usize, 0.)
-            .unwrap_or(TensorData::ones(a.shape.clone()))
+impl<BT: BackendType, T: Backend<BT> + Shaped + Clone> Binary<BT, T> for Sum {
+    fn forward(&self, a: &T, dim: &T) -> T {
+        a.reduce(|acc, v| acc + v, dim.first().unwrap() as usize, 0.)
+            .unwrap_or(<T as Shaped>::ones(a.shape().clone()))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
-        (d.clone(), TensorData::scalar(0.))
+    fn backward(&self, _ctx: &Context<T>, d: &T) -> (T, T) {
+        (d.clone(), <T as Shaped>::scalar(0.))
     }
 
     fn tag(&self) -> &str {
@@ -104,30 +106,33 @@ impl Binary<TensorData> for Sum {
 }
 
 pub struct Permute;
-impl Binary<TensorData> for Permute {
-    fn forward(&self, a: &TensorData, order: &TensorData) -> TensorData {
-        let ord: Order = order.into();
-        let a_shape = a.shape.clone();
-        a.permute(&ord).unwrap_or(TensorData::ones(a_shape))
+impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for Permute {
+    fn forward(&self, a: &T, order: &T) -> T {
+        let a_shape = a.shape().clone();
+        a.permute(&order).unwrap_or(<T as Shaped>::ones(a_shape))
+        //let ord: Order = order.into();
+        //let a_shape = a.shape().clone();
+        //a.permute(&ord).unwrap_or(TensorData::ones(a_shape))
     }
 
-    fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
-        let order = ctx
-            .snd
-            .as_ref()
-            .map(|o| o.into())
-            .unwrap_or(Order::range(d.dims()));
-        let mut inv = vec![];
-        for i in 0..order.len() {
-            let idx = order.index(i).unwrap_or(0);
-            inv.push(idx);
-        }
-        let inverse_order = Order::new(inv).unwrap_or(Order::range(order.len()));
-        (
-            d.permute(&inverse_order)
-                .unwrap_or(TensorData::ones(d.shape.clone())),
-            TensorData::scalar(0.),
-        )
+    fn backward(&self, ctx: &Context<T>, d: &T) -> (T, T) {
+        todo!();
+        //let order = ctx
+        //    .snd
+        //    .as_ref()
+        //    .map(|o| o.into())
+        //    .unwrap_or(Order::range(d.dims()));
+        //let mut inv = vec![];
+        //for i in 0..order.len() {
+        //    let idx = order.index(i).unwrap_or(0);
+        //    inv.push(idx);
+        //}
+        //let inverse_order = Order::new(inv).unwrap_or(Order::range(order.len()));
+        //(
+        //    d.permute(&inverse_order)
+        //        .unwrap_or(TensorData::ones(d.shape.clone())),
+        //    TensorData::scalar(0.),
+        //)
     }
 
     fn tag(&self) -> &str {
@@ -136,14 +141,14 @@ impl Binary<TensorData> for Permute {
 }
 
 pub struct IsClose;
-impl Binary<TensorData> for IsClose {
-    fn forward(&self, a: &TensorData, b: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for IsClose {
+    fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, |a, b| if math::binary::is_close(a, b) { 1. } else { 0. })
-            .unwrap_or(TensorData::ones(a.shape.clone()))
+            .unwrap_or(<T as Shaped>::ones(a.shape().clone()))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, _d: &TensorData) -> (TensorData, TensorData) {
-        (TensorData::scalar(0.), TensorData::scalar(0.))
+    fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
+        (<T as Shaped>::scalar(0.), <T as Shaped>::scalar(0.))
     }
 
     fn tag(&self) -> &str {
@@ -152,14 +157,14 @@ impl Binary<TensorData> for IsClose {
 }
 
 pub struct All;
-impl Binary<TensorData> for All {
-    fn forward(&self, a: &TensorData, dim: &TensorData) -> TensorData {
-        a.reduce(|acc, v| acc * v, dim.data[0] as usize, 1.)
-            .unwrap_or(TensorData::ones(a.shape.clone()))
+impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for All {
+    fn forward(&self, a: &T, dim: &T) -> T {
+        a.reduce(|acc, v| acc * v, dim.first().unwrap() as usize, 1.)
+            .unwrap_or(<T as Shaped>::ones(a.shape().clone()))
     }
 
-    fn backward(&self, _ctx: &Context<TensorData>, _d: &TensorData) -> (TensorData, TensorData) {
-        (TensorData::scalar(0.), TensorData::scalar(0.))
+    fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
+        (<T as Shaped>::scalar(0.), <T as Shaped>::scalar(0.))
     }
 
     fn tag(&self) -> &str {
@@ -167,22 +172,21 @@ impl Binary<TensorData> for All {
     }
 }
 
-// probably an issue here
 pub struct View;
-impl Binary<TensorData> for View {
-    fn forward(&self, lhs: &TensorData, s: &TensorData) -> TensorData {
+impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for View {
+    fn forward(&self, lhs: &T, s: &T) -> T {
         assert!(lhs.is_contiguous(), "must be contiguous to view");
-        let shape = Shape::new(s.data.iter().map(|f| *f as usize).collect());
+        let shape = Shape::new(s.iter().map(|f| *f as usize).collect());
         lhs.clone().reshape(shape)
     }
 
-    fn backward(&self, ctx: &Context<TensorData>, d: &TensorData) -> (TensorData, TensorData) {
+    fn backward(&self, ctx: &Context<T>, d: &T) -> (T, T) {
         let shape = ctx
             .fst
             .as_ref()
-            .map(|o| o.shape.clone())
-            .unwrap_or(d.shape.clone());
-        (d.clone().reshape(shape), TensorData::scalar(0.))
+            .map(|o| o.shape().clone())
+            .unwrap_or(d.shape().clone());
+        (d.clone().reshape(shape), <T as Shaped>::scalar(0.))
     }
 
     fn tag(&self) -> &str {

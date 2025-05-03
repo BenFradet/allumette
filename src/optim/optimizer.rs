@@ -1,6 +1,9 @@
-use crate::tensor::tensor::Tensor;
+use crate::{
+    backend::{backend::Backend, backend_type::BackendType},
+    tensor::tensor::Tensor,
+};
 
-pub trait Optimizer {
+pub trait Optimizer<BT: BackendType, T: Backend<BT>> {
     fn zero(&mut self);
-    fn step(&mut self, lr_tensor: Tensor);
+    fn step(&mut self, lr_tensor: Tensor<BT, T>);
 }

@@ -5,9 +5,9 @@ use crate::tensor::{
     tensor_data::TensorData,
 };
 
-use super::{backend::Backend, backend_type::Sequential};
+use super::{backend::Backend, backend_type::Seq};
 
-impl Backend<Sequential> for TensorData {
+impl Backend<Seq> for TensorData {
     fn map(&self, f: impl Fn(f64) -> f64) -> Self {
         let len = self.size();
         let mut out = vec![0.; len];
@@ -229,4 +229,3 @@ mod tests {
         }
     }
 }
-

@@ -1,9 +1,9 @@
 pub trait BackendType {}
 
 #[derive(Debug, Clone)]
-pub struct Sequential;
+pub struct Seq;
 #[derive(Debug, Clone)]
-pub struct Parallel;
+pub struct Par;
 
-impl BackendType for Sequential {}
-impl BackendType for Parallel {}
+impl BackendType for Seq {}
+impl BackendType for Par {}
