@@ -1,7 +1,8 @@
 use crate::{
+    data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
     optim::optimizer::Optimizer,
-    shaping::{shape::Shape, shaped::Shaped},
-    tensor::{tensor::Tensor, tensor_data::TensorData},
+    shaping::shape::Shape,
+    tensor::Tensor,
 };
 
 use super::{dataset::Dataset, network::Network};
@@ -12,9 +13,9 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
 
     let x_shape = Shape::new(vec![data.x.len(), 2]);
     let x_strides = (&x_shape).into();
-    let x_data = TensorData::new(flatten(&data.x), x_shape, x_strides);
+    let x_data = CpuTensorData::new(flatten(&data.x), x_shape, x_strides);
     let x = Tensor::from_data(x_data);
-    let y_data = TensorData::vec(data.y.iter().map(|u| *u as f64).collect());
+    let y_data = CpuTensorData::vec(data.y.iter().map(|u| *u as f64).collect());
     let y = Tensor::from_data(y_data);
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);

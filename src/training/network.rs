@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use crate::{
     autodiff::history::History,
     backend::{backend::Backend, backend_type::BackendType},
+    data::tensor_data::TensorData,
     optim::optimizer::Optimizer,
-    shaping::shaped::Shaped,
-    tensor::tensor::Tensor,
+    tensor::Tensor,
 };
 
 use super::layer::Layer;
@@ -18,7 +18,7 @@ pub struct Network<'a, BT: BackendType, T: Backend<BT>> {
 
 impl<
         BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + Shaped + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     > Network<'_, BT, T>
 {
     pub fn new(hidden_layer_size: usize) -> Self {
@@ -56,7 +56,7 @@ impl<
 
 impl<
         BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + Shaped + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     > Optimizer<BT, T> for Network<'_, BT, T>
 {
     fn zero(&mut self) {

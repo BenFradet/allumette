@@ -4,20 +4,19 @@ use crate::{
         backend::Backend,
         backend_type::{BackendType, Seq},
     },
+    data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
     function::function::Function,
     ops::{
         binary_ops::{Add, All, Eq, IsClose, Lt, Mul, Permute, Sum, View},
         unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
-    shaping::{order::Order, shape::Shape, shaped::Shaped, strides::Strides},
+    shaping::{order::Order, shape::Shape, strides::Strides},
 };
 use proptest::{collection, prelude::*};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     ops,
 };
-
-use super::tensor_data::TensorData;
 
 #[derive(Clone, Debug)]
 pub struct Tensor<BT: BackendType, T: Backend<BT>> {
@@ -33,7 +32,7 @@ pub struct Tensor<BT: BackendType, T: Backend<BT>> {
 impl<BT: BackendType, T: Backend<BT>> Tensor<BT, T>
 where
     BT: std::fmt::Debug + Clone,
-    T: Shaped + std::fmt::Debug + Clone,
+    T: TensorData + std::fmt::Debug + Clone,
 {
     pub fn new(data: T, history: History<BT, T>) -> Self {
         let id = rand::thread_rng().gen::<u64>().to_string();
@@ -59,15 +58,15 @@ where
     }
 
     pub fn scalar(data: f64) -> Self {
-        Self::from_data(<T as Shaped>::scalar(data)).make_constant()
+        Self::from_data(<T as TensorData>::scalar(data)).make_constant()
     }
 
     pub fn vec(data: Vec<f64>) -> Self {
-        Self::from_data(<T as Shaped>::vec(data))
+        Self::from_data(<T as TensorData>::vec(data))
     }
 
     pub fn matrix(data: Vec<Vec<f64>>) -> Option<Self> {
-        <T as Shaped>::matrix(data).map(Self::from_data)
+        <T as TensorData>::matrix(data).map(Self::from_data)
     }
 
     pub fn history(mut self, h: History<BT, T>) -> Self {
@@ -171,7 +170,7 @@ where
         fn dfs<
             'a,
             BT: BackendType + Clone + std::fmt::Debug,
-            T: Backend<BT> + Shaped + Clone + std::fmt::Debug,
+            T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
         >(
             t: &'a Tensor<BT, T>,
             visited: &mut HashSet<&'a str>,
@@ -267,11 +266,11 @@ where
     pub fn mean(self, dim: Option<usize>) -> Self {
         match dim {
             Some(d) => {
-                let div = Self::from_data(<T as Shaped>::scalar(self.data.shape()[d] as f64));
+                let div = Self::from_data(<T as TensorData>::scalar(self.data.shape()[d] as f64));
                 self.sum(dim) / div
             }
             None => {
-                let div = Self::from_data(<T as Shaped>::scalar(self.size() as f64));
+                let div = Self::from_data(<T as TensorData>::scalar(self.size() as f64));
                 self.sum(None) / div
             }
         }
@@ -316,9 +315,9 @@ where
     }
 }
 
-impl Tensor<Seq, TensorData> {
+impl Tensor<Seq, CpuTensorData> {
     pub fn arbitrary() -> impl Strategy<Value = Self> {
-        TensorData::arbitrary().prop_map(Self::from_data)
+        CpuTensorData::arbitrary().prop_map(Self::from_data)
     }
 
     pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
@@ -332,8 +331,8 @@ impl Tensor<Seq, TensorData> {
             .prop_map(|(data1, data2, shape)| {
                 let strides: Strides = (&shape).into();
                 (
-                    Self::from_data(TensorData::new(data1, shape.clone(), strides.clone())),
-                    Self::from_data(TensorData::new(data2, shape, strides)),
+                    Self::from_data(CpuTensorData::new(data1, shape.clone(), strides.clone())),
+                    Self::from_data(CpuTensorData::new(data2, shape, strides)),
                 )
             })
     }
@@ -351,7 +350,7 @@ impl Tensor<Seq, TensorData> {
 
 impl<
         BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
     > ops::Add<Tensor<BT, T>> for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
@@ -363,7 +362,7 @@ impl<
 
 impl<
         BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
     > ops::Sub<Tensor<BT, T>> for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
@@ -376,7 +375,7 @@ impl<
 
 impl<
         BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
     > ops::Mul<Tensor<BT, T>> for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
@@ -388,7 +387,7 @@ impl<
 
 impl<
         BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
     > ops::Div<Tensor<BT, T>> for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
@@ -401,7 +400,7 @@ impl<
 
 impl<
         BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + Shaped + std::fmt::Debug + Clone,
+        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
     > ops::Neg for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
@@ -423,9 +422,9 @@ mod tests {
 
     use super::*;
 
-    fn unary_grad_assert<F>(tensor: Tensor<Seq, TensorData>, f: F)
+    fn unary_grad_assert<F>(tensor: Tensor<Seq, CpuTensorData>, f: F)
     where
-        F: Fn(Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
+        F: Fn(Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
     {
         let id = &tensor.id.clone();
         let reset = tensor.grad(None).history(History::default());
@@ -447,11 +446,11 @@ mod tests {
     }
 
     fn binary_grad_assert<F>(
-        tensor1: Tensor<Seq, TensorData>,
-        tensor2: Tensor<Seq, TensorData>,
+        tensor1: Tensor<Seq, CpuTensorData>,
+        tensor2: Tensor<Seq, CpuTensorData>,
         f: F,
     ) where
-        F: Fn(Tensor<Seq, TensorData>, Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
+        F: Fn(Tensor<Seq, CpuTensorData>, Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
     {
         let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
         let (reset1, reset2) = (
@@ -493,13 +492,13 @@ mod tests {
         );
     }
 
-    fn unary_grad_central_diff<F>(tensor: Tensor<Seq, TensorData>, f: F, index: &Idx) -> f64
+    fn unary_grad_central_diff<F>(tensor: Tensor<Seq, CpuTensorData>, f: F, index: &Idx) -> f64
     where
-        F: Fn(Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
+        F: Fn(Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
     {
         let eps = 1e-6;
         let shape = tensor.data.shape.clone();
-        let up = Tensor::from_data(TensorData::epsilon(shape, index, eps));
+        let up = Tensor::from_data(CpuTensorData::epsilon(shape, index, eps));
         let add = tensor.clone() + up.clone();
         let sub = tensor - up;
         let delta = f(add).sum(None) - f(sub).sum(None);
@@ -508,14 +507,14 @@ mod tests {
     }
 
     fn binary_grad_central_diff<F>(
-        tensor1: Tensor<Seq, TensorData>,
-        tensor2: Tensor<Seq, TensorData>,
+        tensor1: Tensor<Seq, CpuTensorData>,
+        tensor2: Tensor<Seq, CpuTensorData>,
         f: F,
         index: &Idx,
         first: bool,
     ) -> f64
     where
-        F: Fn(Tensor<Seq, TensorData>, Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
+        F: Fn(Tensor<Seq, CpuTensorData>, Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
     {
         let eps = 1e-6;
         let shape = if first {
@@ -523,7 +522,7 @@ mod tests {
         } else {
             tensor2.data.shape.clone()
         };
-        let up = Tensor::from_data(TensorData::epsilon(shape, index, eps));
+        let up = Tensor::from_data(CpuTensorData::epsilon(shape, index, eps));
         let (add1, add2) = if first {
             (tensor1.clone() + up.clone(), tensor2.clone())
         } else {
@@ -539,9 +538,9 @@ mod tests {
         delta.item().unwrap_or(0.) / (2. * eps)
     }
 
-    fn unary_assert<FT, FF>(t: Tensor<Seq, TensorData>, ft: FT, ff: FF)
+    fn unary_assert<FT, FF>(t: Tensor<Seq, CpuTensorData>, ft: FT, ff: FF)
     where
-        FT: Fn(Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
+        FT: Fn(Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
         FF: Fn(f64) -> f64,
     {
         let data = t.data.clone();
@@ -552,12 +551,15 @@ mod tests {
     }
 
     fn binary_assert<FT, FF>(
-        t1: Tensor<Seq, TensorData>,
-        t2: Tensor<Seq, TensorData>,
+        t1: Tensor<Seq, CpuTensorData>,
+        t2: Tensor<Seq, CpuTensorData>,
         ft: FT,
         ff: FF,
     ) where
-        FT: Fn(Tensor<Seq, TensorData>, Tensor<Seq, TensorData>) -> Tensor<Seq, TensorData>,
+        FT: Fn(
+            Tensor<Seq, CpuTensorData>,
+            Tensor<Seq, CpuTensorData>,
+        ) -> Tensor<Seq, CpuTensorData>,
         FF: Fn(f64, f64) -> f64,
     {
         let data1 = t1.data.clone();
@@ -572,11 +574,11 @@ mod tests {
     }
 
     proptest! {
-        fn permute_grad_tests((t, o) in Tensor::<Seq, TensorData>::arbitrary_with_order()) {
+        fn permute_grad_tests((t, o) in Tensor::<Seq, CpuTensorData>::arbitrary_with_order()) {
             unary_grad_assert(t, move |t| t.permute(o.clone()));
         }
 
-        fn reduce_grad_tests(t in Tensor::<Seq, TensorData>::arbitrary()) {
+        fn reduce_grad_tests(t in Tensor::<Seq, CpuTensorData>::arbitrary()) {
             unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
             unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
             unary_grad_assert(t.clone(), |t| t.mean(None));
@@ -613,13 +615,13 @@ mod tests {
 
         #[test]
         fn unary_grad_complex_test1(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor<Seq, TensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
+            let ft = |t: Tensor<Seq, CpuTensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
             unary_grad_assert(t.clone(), ft);
         }
 
         #[test]
         fn unary_grad_complex_test2(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor<Seq, TensorData>| (
+            let ft = |t: Tensor<Seq, CpuTensorData>| (
                 (
                     (
                         (
@@ -656,14 +658,14 @@ mod tests {
 
         #[test]
         fn unary_complex_test1(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor<Seq, TensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
+            let ft = |t: Tensor<Seq, CpuTensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
             let ff = |f| ln(f + 100000.) + exp(f - 200.);
             unary_assert(t.clone(), ft, ff);
         }
 
         #[test]
         fn unary_complex_test2(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor<Seq, TensorData>| (
+            let ft = |t: Tensor<Seq, CpuTensorData>| (
                 (
                     (
                         (
@@ -692,7 +694,7 @@ mod tests {
     #[test]
     fn test_view() {
         let t =
-            Tensor::<Seq, TensorData>::matrix(vec![vec![2., 3., 4.], vec![4., 5., 7.]]).unwrap();
+            Tensor::<Seq, CpuTensorData>::matrix(vec![vec![2., 3., 4.], vec![4., 5., 7.]]).unwrap();
         assert_eq!(Shape::new(vec![2, 3]), t.data.shape);
         let t2 = t.clone().view(&Shape::new(vec![6]));
         assert_eq!(Shape::new(vec![6]), t2.data.shape);
@@ -709,7 +711,7 @@ mod tests {
     fn test_reduce_forward_one_dim() -> () {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
-        let td = TensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
+        let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
         let tensor = Tensor::from_data(td);
         let summed = tensor.sum(Some(0));
 
@@ -723,7 +725,7 @@ mod tests {
     fn test_reduce_forward_one_dim_2() -> () {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
-        let td = TensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
+        let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
         let tensor = Tensor::from_data(td);
         let summed = tensor.sum(Some(1));
 
@@ -737,7 +739,7 @@ mod tests {
     #[test]
     fn test_reduce_forward_all_dim() -> () {
         let shape = Shape::new(vec![3, 2]);
-        let tensor = Tensor::<Seq, TensorData>::vec(vec![2., 3., 4., 6., 5., 7.]).reshape(shape);
+        let tensor = Tensor::<Seq, CpuTensorData>::vec(vec![2., 3., 4., 6., 5., 7.]).reshape(shape);
         let summed = tensor.sum(None);
         assert_eq!(Some(27.), summed.item());
     }

@@ -1,6 +1,6 @@
 use crate::{
     backend::{backend::Backend, backend_type::BackendType},
-    tensor::tensor::Tensor,
+    tensor::Tensor,
 };
 
 pub trait Optimizer<BT: BackendType, T: Backend<BT>> {

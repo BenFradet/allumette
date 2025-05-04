@@ -1,8 +1,9 @@
 use crate::{
     autodiff::history::History,
     backend::{backend::Backend, backend_type::BackendType},
-    shaping::{shape::Shape, shaped::Shaped},
-    tensor::tensor::Tensor,
+    data::tensor_data::TensorData,
+    shaping::shape::Shape,
+    tensor::Tensor,
 };
 
 pub struct Layer<'a, BT: BackendType, T: Backend<BT>> {
@@ -16,7 +17,7 @@ pub struct Layer<'a, BT: BackendType, T: Backend<BT>> {
 impl<
         'a,
         BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + Shaped + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     > Layer<'a, BT, T>
 {
     pub fn new(name: &'a str, in_size: usize, out_size: usize) -> Self {
@@ -89,7 +90,7 @@ impl<
     }
 
     fn param(shape: Shape) -> Tensor<BT, T> {
-        let t = Tensor::from_data(<T as Shaped>::rand(shape));
+        let t = Tensor::from_data(<T as TensorData>::rand(shape));
         ((t - Tensor::scalar(0.5)) * Tensor::scalar(2.)).history(History::default())
     }
 

@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use crate::{
-    shaping::{order::Order, shape::Shape, shaped::Shaped, strides::Strides},
-    tensor::tensor_data::TensorData,
+    data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
+    shaping::{order::Order, shape::Shape, strides::Strides},
 };
 
 use super::{backend::Backend, backend_type::Seq};
 
-impl Backend<Seq> for TensorData {
+impl Backend<Seq> for CpuTensorData {
     fn map(&self, f: impl Fn(f64) -> f64) -> Self {
         let len = self.size();
         let mut out = vec![0.; len];
@@ -34,7 +34,7 @@ impl Backend<Seq> for TensorData {
             let pos_out = out.strides.position(&out_idx);
             out_vec[pos_out] = f(v);
         }
-        Some(TensorData::new(out_vec, out.shape.clone(), strides))
+        Some(CpuTensorData::new(out_vec, out.shape.clone(), strides))
     }
 
     fn zip(&self, other: &Self, f: impl Fn(f64, f64) -> f64) -> Option<Self> {
@@ -57,7 +57,7 @@ impl Backend<Seq> for TensorData {
             let pos = strides.position(&idx);
             out[pos] = f(va, vb);
         }
-        Some(TensorData::new(out, shape, strides))
+        Some(CpuTensorData::new(out, shape, strides))
     }
 
     fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<Self> {
@@ -80,7 +80,7 @@ impl Backend<Seq> for TensorData {
                     out[out_pos] = f(v_out, v_self);
                 }
             }
-            Some(TensorData::new(out, shape, strides))
+            Some(CpuTensorData::new(out, shape, strides))
         } else {
             None
         }
@@ -150,13 +150,13 @@ mod tests {
 
     #[test]
     fn expand_test() {
-        let input = TensorData::scalar(0.);
-        let deriv = TensorData::vec(vec![1., 1.]);
+        let input = CpuTensorData::scalar(0.);
+        let deriv = CpuTensorData::vec(vec![1., 1.]);
         let res = input.expand(deriv).map(|d| d.data).unwrap();
         assert_eq!(vec![2.], *res);
     }
 
-    fn assert_tensor_eq(t1: &TensorData, t2: &TensorData) -> () {
+    fn assert_tensor_eq(t1: &CpuTensorData, t2: &CpuTensorData) -> () {
         assert_eq!(t1.shape, t2.shape);
         assert_eq!(t1.strides, t2.strides);
         assert_eq!(t1.data, t2.data);
@@ -164,7 +164,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce_test_sum(t1 in TensorData::arbitrary()) {
+        fn reduce_test_sum(t1 in CpuTensorData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
                 t1p = t1p.reduce(|a, b| a + b, i, 0.).unwrap();
@@ -175,7 +175,7 @@ mod tests {
         }
 
         #[test]
-        fn reduce_test_mul(t1 in TensorData::arbitrary()) {
+        fn reduce_test_mul(t1 in CpuTensorData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
                 t1p = t1p.reduce(|a, b| a * b, i, 1.).unwrap();
@@ -186,7 +186,7 @@ mod tests {
         }
 
         #[test]
-        fn zip_commutative_test(t1 in TensorData::arbitrary(), t2 in TensorData::arbitrary()) {
+        fn zip_commutative_test(t1 in CpuTensorData::arbitrary(), t2 in CpuTensorData::arbitrary()) {
             // this works if f is commutative
             let res1 = t1.zip(&t2, |a, b| a + b);
             let res2 = t2.zip(&t1, |a, b| a + b);
@@ -198,19 +198,19 @@ mod tests {
         }
 
         #[test]
-        fn map_identity_test(t in TensorData::arbitrary()) {
+        fn map_identity_test(t in CpuTensorData::arbitrary()) {
             assert_tensor_eq(&t, &t.map(|f| f));
         }
 
         #[test]
-        fn map_broadcast_identity_test(t in TensorData::arbitrary()) {
+        fn map_broadcast_identity_test(t in CpuTensorData::arbitrary()) {
             let bc = t.map_broadcast(&t, |f| f);
             assert!(bc.is_some());
             assert_tensor_eq(&t, bc.as_ref().unwrap());
         }
 
         #[test]
-        fn map_composition_test(t in TensorData::arbitrary()) {
+        fn map_composition_test(t in CpuTensorData::arbitrary()) {
             let f = |a: f64| a * 2.;
             let g = |a: f64| a.powf(2.);
             let fg = |a: f64| g(f(a));
@@ -218,7 +218,7 @@ mod tests {
         }
 
         #[test]
-        fn map_broadcast_composition_test(t in TensorData::arbitrary()) {
+        fn map_broadcast_composition_test(t in CpuTensorData::arbitrary()) {
             let f = |a: f64| a * 2.;
             let g = |a: f64| a.powf(2.);
             let fg = |a: f64| g(f(a));
@@ -231,14 +231,14 @@ mod tests {
 
         #[test]
         fn map_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
-            let map = TensorData::zeros(shape.clone()).map(|z| z + f);
+            let map = CpuTensorData::zeros(shape.clone()).map(|z| z + f);
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
         }
 
         #[test]
         fn map_broadcast_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
-            let t = TensorData::zeros(shape.clone());
+            let t = CpuTensorData::zeros(shape.clone());
             let res = t.map_broadcast(&t, |z| z + f);
             assert!(res.is_some());
             let map = res.unwrap();
@@ -247,7 +247,7 @@ mod tests {
         }
 
         #[test]
-        fn permute_test(tensor_data in TensorData::arbitrary(), idx in Idx::arbitrary()) {
+        fn permute_test(tensor_data in CpuTensorData::arbitrary(), idx in Idx::arbitrary()) {
             let reversed_index = idx.clone().reverse();
             let pos = tensor_data.strides.position(&idx);
             let order = Order::range(tensor_data.shape.data().len()).reverse();

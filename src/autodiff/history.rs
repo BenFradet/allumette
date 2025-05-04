@@ -2,7 +2,7 @@ use crate::{
     autodiff::context::Context,
     backend::{backend::Backend, backend_type::BackendType},
     function::function::Function,
-    tensor::tensor::Tensor,
+    tensor::Tensor,
 };
 
 #[derive(Clone, Debug)]

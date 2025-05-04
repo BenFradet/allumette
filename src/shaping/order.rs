@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::tensor::tensor_data::TensorData;
+use crate::data::cpu_tensor_data::CpuTensorData;
 
 use super::iter::Iter;
 
@@ -55,16 +55,16 @@ impl Order {
     }
 }
 
-impl From<TensorData> for Order {
-    fn from(td: TensorData) -> Self {
+impl From<CpuTensorData> for Order {
+    fn from(td: CpuTensorData) -> Self {
         let ord_data = td.data.clone();
         let len = ord_data.len();
         Order::new(ord_data.iter().map(|f| *f as usize).collect()).unwrap_or(Order::range(len))
     }
 }
 
-impl From<&TensorData> for Order {
-    fn from(td: &TensorData) -> Self {
+impl From<&CpuTensorData> for Order {
+    fn from(td: &CpuTensorData) -> Self {
         let ord_data = td.data.clone();
         let len = ord_data.len();
         Order::new(ord_data.iter().map(|f| *f as usize).collect()).unwrap_or(Order::range(len))
