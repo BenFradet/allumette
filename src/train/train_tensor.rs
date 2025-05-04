@@ -1,11 +1,10 @@
 use crate::{
-    data::dataset::Dataset,
     optim::optimizer::Optimizer,
     shaping::{shape::Shape, shaped::Shaped},
     tensor::{tensor::Tensor, tensor_data::TensorData},
 };
 
-use super::network::Network;
+use super::{dataset::Dataset, network::Network};
 
 pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_size: usize) {
     let mut network = Network::new(hidden_layer_size);
