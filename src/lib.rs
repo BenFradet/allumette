@@ -14,5 +14,5 @@ pub mod ops;
 pub mod optim;
 pub mod shaping;
 pub mod tensor;
-pub mod train;
+pub mod training;
 pub mod util;

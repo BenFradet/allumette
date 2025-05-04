@@ -1,4 +1,4 @@
-use allumette::train::{dataset::Dataset, train_tensor};
+use allumette::training::{dataset::Dataset, train};
 
 fn main() -> () {
     let pts = 10;
@@ -6,5 +6,5 @@ fn main() -> () {
     let hidden_layer_size = 3;
     let learning_rate = 0.5;
     let max_epochs = 200;
-    train_tensor::train(dataset, learning_rate, max_epochs, hidden_layer_size);
+    train::train(dataset, learning_rate, max_epochs, hidden_layer_size);
 }
