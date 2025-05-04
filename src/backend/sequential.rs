@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    shaping::{shape::Shape, shaped::Shaped, strides::Strides},
+    shaping::{order::Order, shape::Shape, shaped::Shaped, strides::Strides},
     tensor::tensor_data::TensorData,
 };
 
@@ -120,13 +120,31 @@ impl Backend<Seq> for TensorData {
     }
 
     fn permute(&self, order: &Self) -> Option<Self> {
-        todo!()
+        let n = self.shape.data().len();
+        let ord = Order::from(order);
+        if ord.fits(n) {
+            let mut new_shape = vec![0; n];
+            let mut new_strides = vec![0; n];
+            for (idx, value) in ord.iter().enumerate() {
+                new_shape[idx] = self.shape[value];
+                new_strides[idx] = self.strides[value];
+            }
+            Some(Self {
+                data: Arc::clone(&self.data),
+                shape: Shape::new(new_shape),
+                strides: Strides::new(new_strides),
+            })
+        } else {
+            None
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use proptest::proptest;
+
+    use crate::shaping::idx::Idx;
 
     use super::*;
 
@@ -226,6 +244,22 @@ mod tests {
             let map = res.unwrap();
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
+        }
+
+        #[test]
+        fn permute_test(tensor_data in TensorData::arbitrary(), idx in Idx::arbitrary()) {
+            let reversed_index = idx.clone().reverse();
+            let pos = tensor_data.strides.position(&idx);
+            let order = Order::range(tensor_data.shape.data().len()).reverse();
+            let order_td = TensorData::vec(order.data.iter().map(|u| *u as f64).collect());
+            let perm_opt = tensor_data.permute(&order_td);
+            assert!(perm_opt.is_some());
+            let perm = perm_opt.unwrap();
+            assert_eq!(pos, perm.strides.position(&reversed_index));
+            let orig_opt = perm.permute(&order_td);
+            assert!(orig_opt.is_some());
+            let orig = orig_opt.unwrap();
+            assert_eq!(pos, orig.strides.position(&idx));
         }
     }
 }

@@ -78,40 +78,6 @@ impl<
         self
     }
 
-    //pub fn frozen_weights(name: &str, in_size: usize, out_size: usize) -> Tensor<BT, T> {
-    //    let d = if name == "layer1" {
-    //        vec![-0.98, -0.20, 0.46, 0.94, 0.22, 0.29]
-    //    } else if name == "layer2" {
-    //        vec![-0.16, -0.47, -0.58, 0.40, -0.79, -0.48, -0.86, -0.85, -0.90]
-    //    } else {
-    //        vec![-0.21, 0.91, -0.79]
-    //    };
-    //    let shape = Shape::new(vec![in_size, out_size]);
-    //    let strides = (&shape).into();
-    //    let td = TensorData::new(d, shape, strides);
-    //    let id = Self::weights_key(name);
-    //    Tensor::from_data(td)
-    //        .history(History::default())
-    //        .id(id)
-    //}
-
-    //pub fn frozen_biases(name: &str, out_size: usize) -> Tensor<BT, T> {
-    //    let d = if name == "layer1" {
-    //        vec![-0.17, -0.38, 0.84]
-    //    } else if name == "layer2" {
-    //        vec![0.5, -0.48, 0.83]
-    //    } else {
-    //        vec![-0.04]
-    //    };
-    //    let shape = Shape::new(vec![out_size]);
-    //    let strides = (&shape).into();
-    //    let td = TensorData::new(d, shape, strides);
-    //    let id = Self::biases_key(name);
-    //    Tensor::from_data(td)
-    //        .history(History::default())
-    //        .id(id)
-    //}
-
     pub fn weights(name: &str, in_size: usize, out_size: usize) -> Tensor<BT, T> {
         let id = Self::weights_key(name);
         Self::param(Shape::new(vec![in_size, out_size])).id(id)

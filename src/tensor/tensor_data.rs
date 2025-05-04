@@ -2,7 +2,7 @@ use std::{ops::Index, sync::Arc};
 
 use proptest::{collection, prelude::*};
 
-use crate::shaping::{idx::Idx, order::Order, shape::Shape, shaped::Shaped, strides::Strides};
+use crate::shaping::{idx::Idx, shape::Shape, shaped::Shaped, strides::Strides};
 
 #[derive(Clone, Debug)]
 pub struct TensorData {
@@ -37,25 +37,6 @@ impl TensorData {
 
     pub fn indices(&self) -> impl Iterator<Item = Idx> + use<'_> {
         (0..self.size()).map(|i| self.strides.idx(i))
-    }
-
-    pub fn permute(&self, order: &Order) -> Option<Self> {
-        let n = self.shape.data().len();
-        if order.fits(n) {
-            let mut new_shape = vec![0; n];
-            let mut new_strides = vec![0; n];
-            for (idx, value) in order.iter().enumerate() {
-                new_shape[idx] = self.shape[value];
-                new_strides[idx] = self.strides[value];
-            }
-            Some(Self {
-                data: Arc::clone(&self.data),
-                shape: Shape::new(new_shape),
-                strides: Strides::new(new_strides),
-            })
-        } else {
-            None
-        }
     }
 
     pub fn arbitrary() -> impl Strategy<Value = TensorData> {
@@ -98,21 +79,6 @@ mod tests {
             let zeros = TensorData::zeros(shape.clone());
             assert_eq!(shape.size, zeros.data.len());
             assert!(zeros.data.iter().all(|f| *f == 0.));
-        }
-
-        #[test]
-        fn permute_test(tensor_data in TensorData::arbitrary(), idx in Idx::arbitrary()) {
-            let reversed_index = idx.clone().reverse();
-            let pos = tensor_data.strides.position(&idx);
-            let order = Order::range(tensor_data.shape.data().len()).reverse();
-            let perm_opt = tensor_data.permute(&order);
-            assert!(perm_opt.is_some());
-            let perm = perm_opt.unwrap();
-            assert_eq!(pos, perm.strides.position(&reversed_index));
-            let orig_opt = perm.permute(&order);
-            assert!(orig_opt.is_some());
-            let orig = orig_opt.unwrap();
-            assert_eq!(pos, orig.strides.position(&idx));
         }
 
         #[test]
