@@ -4,7 +4,6 @@ use crate::{
     function::unary::Unary,
     math,
     shaping::shaped::Shaped,
-    tensor::tensor_data::TensorData,
 };
 
 pub struct Neg;

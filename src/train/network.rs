@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use crate::{
+    autodiff::history::History,
     backend::{backend::Backend, backend_type::BackendType},
     optim::optimizer::Optimizer,
     shaping::shaped::Shaped,
-    tensor::{tensor::Tensor, tensor_history::History},
+    tensor::tensor::Tensor,
 };
 
 use super::layer::Layer;

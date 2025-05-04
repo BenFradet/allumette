@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
 use crate::{
-    autodiff::context::Context,
+    autodiff::{context::Context, history::History},
     backend::{backend::Backend, backend_type::BackendType},
     function::{binary::Binary, function::Function, unary::Unary},
     shaping::shaped::Shaped,
 };
 
-use super::{tensor::Tensor, tensor_history::History};
+use super::tensor::Tensor;
 
 pub struct Forward;
 
