@@ -1,9 +1,7 @@
 use crate::{
     backend::{backend::Backend, backend_type::BackendType},
-    shaping::shaped::Shaped,
-    tensor::{
-        shaping::shape::Shape, tensor::Tensor, tensor_data::TensorData, tensor_history::History,
-    },
+    shaping::{shape::Shape, shaped::Shaped},
+    tensor::{tensor::Tensor, tensor_history::History},
 };
 
 pub struct Layer<'a, BT: BackendType, T: Backend<BT>> {

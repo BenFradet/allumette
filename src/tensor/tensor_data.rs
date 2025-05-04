@@ -2,7 +2,7 @@ use std::{ops::Index, sync::Arc};
 
 use proptest::{collection, prelude::*};
 
-use super::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
+use crate::shaping::{idx::Idx, order::Order, shape::Shape, shaped::Shaped, strides::Strides};
 
 #[derive(Clone, Debug)]
 pub struct TensorData {
@@ -12,64 +12,7 @@ pub struct TensorData {
 }
 
 impl TensorData {
-    // TODO: accept any collection
     pub fn new(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
-        Self {
-            data: Arc::new(data),
-            shape,
-            strides,
-        }
-    }
-
-    pub fn scalar(data: f64) -> Self {
-        let shape = Shape::new(vec![1]);
-        let strides = (&shape).into();
-        Self {
-            data: Arc::new(vec![data]),
-            shape,
-            strides,
-        }
-    }
-
-    // TODO: accept any collection
-    pub fn vec(data: Vec<f64>) -> Option<Self> {
-        if data.is_empty() {
-            None
-        } else {
-            let shape = Shape::new(vec![data.len()]);
-            let strides = (&shape).into();
-            Some(Self {
-                data: Arc::new(data),
-                shape,
-                strides,
-            })
-        }
-    }
-
-    // TODO: accept any collection
-    pub fn matrix(data: Vec<Vec<f64>>) -> Option<Self> {
-        if data.is_empty() {
-            None
-        } else {
-            let rows = data[0].len();
-            if !data.iter().all(|v| v.len() == rows) {
-                None
-            } else {
-                let cols = data.len();
-                let shape = Shape::new(vec![cols, rows]);
-                let strides = (&shape).into();
-                Some(Self {
-                    data: Arc::new(data.concat()),
-                    shape,
-                    strides,
-                })
-            }
-        }
-    }
-
-    pub fn zeros(shape: Shape) -> Self {
-        let data = vec![0.; shape.size];
-        let strides = (&shape).into();
         Self {
             data: Arc::new(data),
             shape,
@@ -86,152 +29,6 @@ impl TensorData {
             shape,
             strides,
         }
-    }
-
-    pub fn ones(shape: Shape) -> Self {
-        let data = vec![1.; shape.size];
-        let strides = (&shape).into();
-        Self {
-            data: Arc::new(data),
-            shape,
-            strides,
-        }
-    }
-
-    pub fn rand(shape: Shape) -> Self {
-        let mut rng = rand::thread_rng();
-        let data: Vec<f64> = (0..shape.size).map(|_| rng.gen()).collect();
-        let strides = (&shape).into();
-        Self {
-            data: Arc::new(data),
-            shape,
-            strides,
-        }
-    }
-
-    pub fn reshape(&self, shape: Shape) -> Self {
-        let strides = (&shape).into();
-        Self {
-            data: Arc::clone(&self.data),
-            shape,
-            strides,
-        }
-    }
-
-    //pub fn map(&self, f: impl Fn(f64) -> f64) -> Self {
-    //    let len = self.size();
-    //    let mut out = vec![0.; len];
-    //    // TODO: add an iterator
-    //    for (i, d) in self.data.iter().enumerate() {
-    //        out[i] = f(*d);
-    //    }
-    //    Self {
-    //        data: Arc::new(out),
-    //        shape: self.shape.clone(),
-    //        strides: self.strides.clone(),
-    //    }
-    //}
-
-    //pub fn map_broadcast(&self, out: &TensorData, f: impl Fn(f64) -> f64) -> Option<Self> {
-    //    let strides: Strides = (&out.shape).into();
-    //    let len = out.shape.size;
-    //    let mut out_vec = vec![0.; len];
-    //    for i in 0..len {
-    //        let out_idx = strides.idx(i);
-    //        let idx_bc = out_idx.broadcast(&self.shape)?;
-    //        let pos_in = self.strides.position(&idx_bc);
-    //        let v = self.data[pos_in];
-    //        let pos_out = out.strides.position(&out_idx);
-    //        out_vec[pos_out] = f(v);
-    //    }
-    //    Some(TensorData::new(out_vec, out.shape.clone(), strides))
-    //}
-
-    //pub fn zip(&self, other: &TensorData, f: impl Fn(f64, f64) -> f64) -> Option<TensorData> {
-    //    let shape = if self.shape == other.shape {
-    //        self.shape.clone()
-    //    } else {
-    //        self.shape.broadcast(&other.shape)?
-    //    };
-    //    let strides: Strides = (&shape).into();
-    //    let len = shape.size;
-    //    let mut out = vec![0.; len];
-    //    for i in 0..len {
-    //        let idx = strides.idx(i);
-    //        let idxa = idx.broadcast(&self.shape)?;
-    //        let idxb = idx.broadcast(&other.shape)?;
-    //        let posa = self.strides.position(&idxa);
-    //        let posb = other.strides.position(&idxb);
-    //        let va = self.data[posa];
-    //        let vb = other.data[posb];
-    //        let pos = strides.position(&idx);
-    //        out[pos] = f(va, vb);
-    //    }
-    //    Some(TensorData::new(out, shape, strides))
-    //}
-
-    //pub fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<Self> {
-    //    if dim < self.shape.data().len() {
-    //        let mut shape_data = self.shape.data().to_vec();
-    //        shape_data[dim] = 1;
-    //        let shape = Shape::new(shape_data);
-    //        let strides: Strides = (&shape).into();
-    //        let len = shape.size;
-    //        let mut out = vec![init; len];
-    //        for i in 0..len {
-    //            let out_idx = strides.idx(i);
-    //            let out_pos = strides.position(&out_idx);
-    //            for j in 0..self.shape[dim] {
-    //                let mut self_idx = out_idx.clone();
-    //                self_idx[dim] = j;
-    //                let self_pos = self.strides.position(&self_idx);
-    //                let v_out = out[out_pos];
-    //                let v_self = self.data[self_pos];
-    //                out[out_pos] = f(v_out, v_self);
-    //            }
-    //        }
-    //        Some(TensorData::new(out, shape, strides))
-    //    } else {
-    //        None
-    //    }
-    //}
-
-    // output of backward not the same size as the input of forward
-    //pub fn expand(&self, other: Self) -> Option<Self> {
-    //    if self.shape == other.shape {
-    //        return Some(other);
-    //    }
-
-    //    let bc_shape = self.shape.broadcast(&other.shape)?;
-    //    let buf = TensorData::zeros(bc_shape);
-    //    let mut out = other.map_broadcast(&buf, |f| f)?;
-    //    if self.shape == out.shape {
-    //        return Some(out);
-    //    }
-
-    //    let orig_shape = Shape::new(
-    //        [
-    //            vec![1; out.shape.len() - self.shape.len()],
-    //            self.shape.data().to_vec(),
-    //        ]
-    //        .concat(),
-    //    );
-    //    for (dim, shape) in out.shape.clone().data().iter().enumerate() {
-    //        if orig_shape.data()[dim] == 1 && *shape != 1 {
-    //            out = out.reduce(|a, b| a + b, dim, 0.)?;
-    //        }
-    //    }
-    //    assert!(
-    //        out.size() == self.size(),
-    //        "out shape: {:?}, self shape: {:?}",
-    //        out.shape,
-    //        self.shape
-    //    );
-    //    Some(out)
-    //}
-
-    pub fn size(&self) -> usize {
-        self.shape.size
     }
 
     pub fn dims(&self) -> usize {
@@ -258,21 +55,6 @@ impl TensorData {
             })
         } else {
             None
-        }
-    }
-
-    pub fn is_contiguous(&self) -> bool {
-        if self.strides.is_empty() {
-            false
-        } else {
-            let mut last = self.strides[0];
-            for stride in self.strides.iter() {
-                if stride > last {
-                    return false;
-                }
-                last = stride;
-            }
-            true
         }
     }
 

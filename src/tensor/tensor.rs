@@ -4,7 +4,11 @@ use crate::{
         backend_type::{BackendType, Seq},
     },
     function::function::Function,
-    shaping::shaped::Shaped,
+    ops::{
+        binary_ops::{Add, All, Eq, IsClose, Lt, Mul, Permute, Sum, View},
+        unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
+    },
+    shaping::{order::Order, shape::Shape, shaped::Shaped, strides::Strides},
 };
 use proptest::{collection, prelude::*};
 use std::{
@@ -12,16 +16,7 @@ use std::{
     ops,
 };
 
-use super::{
-    forward::Forward,
-    ops::{
-        binary_ops::{Add, All, Eq, IsClose, Lt, Mul, Permute, Sum, View},
-        unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
-    },
-    shaping::{order::Order, shape::Shape, strides::Strides},
-    tensor_data::TensorData,
-    tensor_history::History,
-};
+use super::{forward::Forward, tensor_data::TensorData, tensor_history::History};
 
 #[derive(Clone, Debug)]
 pub struct Tensor<BT: BackendType, T: Backend<BT>> {
@@ -101,7 +96,7 @@ where
 
     pub fn backward(&self) -> HashMap<String, Self> {
         assert!(
-            self.data.shape() == Shape::new(vec![1]),
+            *self.data.shape() == Shape::new(vec![1]),
             "use backprop for non-scalar tensors"
         );
         self.backprop(Self::scalar(1.))
@@ -422,7 +417,7 @@ mod tests {
             binary::{div, eq, is_close, lt},
             unary::{exp, inv, ln, relu, sig},
         },
-        tensor::shaping::idx::Idx,
+        shaping::idx::Idx,
     };
 
     use super::*;

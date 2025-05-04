@@ -3,11 +3,7 @@ use crate::{
     backend::{backend::Backend, backend_type::BackendType},
     function::binary::Binary,
     math,
-    shaping::shaped::Shaped,
-    tensor::{
-        shaping::{order::Order, shape::Shape},
-        tensor_data::TensorData,
-    },
+    shaping::{shape::Shape, shaped::Shaped},
 };
 
 pub struct Add;
@@ -109,13 +105,10 @@ pub struct Permute;
 impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for Permute {
     fn forward(&self, a: &T, order: &T) -> T {
         let a_shape = a.shape().clone();
-        a.permute(&order).unwrap_or(<T as Shaped>::ones(a_shape))
-        //let ord: Order = order.into();
-        //let a_shape = a.shape().clone();
-        //a.permute(&ord).unwrap_or(TensorData::ones(a_shape))
+        a.permute(order).unwrap_or(<T as Shaped>::ones(a_shape))
     }
 
-    fn backward(&self, ctx: &Context<T>, d: &T) -> (T, T) {
+    fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
         todo!();
         //let order = ctx
         //    .snd
@@ -177,7 +170,7 @@ impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for View {
     fn forward(&self, lhs: &T, s: &T) -> T {
         assert!(lhs.is_contiguous(), "must be contiguous to view");
         let shape = Shape::new(s.iter().map(|f| *f as usize).collect());
-        lhs.clone().reshape(shape)
+        lhs.reshape(shape)
     }
 
     fn backward(&self, ctx: &Context<T>, d: &T) -> (T, T) {
@@ -186,7 +179,7 @@ impl<BT: BackendType, T: Backend<BT> + Shaped> Binary<BT, T> for View {
             .as_ref()
             .map(|o| o.shape().clone())
             .unwrap_or(d.shape().clone());
-        (d.clone().reshape(shape), <T as Shaped>::scalar(0.))
+        (d.reshape(shape), <T as Shaped>::scalar(0.))
     }
 
     fn tag(&self) -> &str {

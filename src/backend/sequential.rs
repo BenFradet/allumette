@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use crate::tensor::{
-    shaping::{shape::Shape, strides::Strides},
-    tensor_data::TensorData,
+use crate::{
+    shaping::{shape::Shape, shaped::Shaped, strides::Strides},
+    tensor::tensor_data::TensorData,
 };
 
 use super::{backend::Backend, backend_type::Seq};
@@ -133,7 +133,7 @@ mod tests {
     #[test]
     fn expand_test() {
         let input = TensorData::scalar(0.);
-        let deriv = TensorData::vec(vec![1., 1.]).unwrap();
+        let deriv = TensorData::vec(vec![1., 1.]);
         let res = input.expand(deriv).map(|d| d.data).unwrap();
         assert_eq!(vec![2.], *res);
     }
