@@ -5,9 +5,8 @@ use crate::{
     backend::{backend::Backend, backend_type::BackendType},
     function::{binary::Binary, function::Function, unary::Unary},
     shaping::shaped::Shaped,
+    tensor::tensor::Tensor,
 };
-
-use super::tensor::Tensor;
 
 pub struct Forward;
 

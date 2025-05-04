@@ -4,7 +4,6 @@ use crate::backend::{backend::Backend, backend_type::BackendType};
 
 use super::{binary::Binary, unary::Unary};
 
-// TODO: find a way to partial eq
 #[derive(Clone)]
 pub enum Function<BT: BackendType, B: Backend<BT>> {
     U(Rc<dyn Unary<BT, B>>),

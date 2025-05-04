@@ -1,5 +1,5 @@
 use crate::{
-    autodiff::history::History,
+    autodiff::{forward::Forward, history::History},
     backend::{
         backend::Backend,
         backend_type::{BackendType, Seq},
@@ -17,7 +17,7 @@ use std::{
     ops,
 };
 
-use super::{forward::Forward, tensor_data::TensorData};
+use super::tensor_data::TensorData;
 
 #[derive(Clone, Debug)]
 pub struct Tensor<BT: BackendType, T: Backend<BT>> {
