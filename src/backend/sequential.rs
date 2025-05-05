@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
-    shaping::{order::Order, shape::Shape, strides::Strides},
+    shaping::{shape::Shape, strides::Strides},
 };
 
 use super::{backend::Backend, backend_type::Seq};
@@ -34,7 +34,7 @@ impl Backend<Seq> for CpuTensorData {
             let pos_out = out.strides.position(&out_idx);
             out_vec[pos_out] = f(v);
         }
-        Some(CpuTensorData::new(out_vec, out.shape.clone(), strides))
+        Some(Self::new(out_vec, out.shape.clone(), strides))
     }
 
     fn zip(&self, other: &Self, f: impl Fn(f64, f64) -> f64) -> Option<Self> {
@@ -57,7 +57,7 @@ impl Backend<Seq> for CpuTensorData {
             let pos = strides.position(&idx);
             out[pos] = f(va, vb);
         }
-        Some(CpuTensorData::new(out, shape, strides))
+        Some(Self::new(out, shape, strides))
     }
 
     fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<Self> {
@@ -80,7 +80,7 @@ impl Backend<Seq> for CpuTensorData {
                     out[out_pos] = f(v_out, v_self);
                 }
             }
-            Some(CpuTensorData::new(out, shape, strides))
+            Some(Self::new(out, shape, strides))
         } else {
             None
         }
@@ -117,26 +117,6 @@ impl Backend<Seq> for CpuTensorData {
             self.shape
         );
         Some(out)
-    }
-
-    fn permute(&self, order: &Self) -> Option<Self> {
-        let n = self.shape.data().len();
-        let ord = Order::from(order);
-        if ord.fits(n) {
-            let mut new_shape = vec![0; n];
-            let mut new_strides = vec![0; n];
-            for (idx, value) in ord.iter().enumerate() {
-                new_shape[idx] = self.shape[value];
-                new_strides[idx] = self.strides[value];
-            }
-            Some(Self {
-                data: Arc::clone(&self.data),
-                shape: Shape::new(new_shape),
-                strides: Strides::new(new_strides),
-            })
-        } else {
-            None
-        }
     }
 }
 
@@ -244,22 +224,6 @@ mod tests {
             let map = res.unwrap();
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
-        }
-
-        #[test]
-        fn permute_test(tensor_data in CpuTensorData::arbitrary(), idx in Idx::arbitrary()) {
-            let reversed_index = idx.clone().reverse();
-            let pos = tensor_data.strides.position(&idx);
-            let order = Order::range(tensor_data.shape.data().len()).reverse();
-            let order_td = TensorData::vec(order.data.iter().map(|u| *u as f64).collect());
-            let perm_opt = tensor_data.permute(&order_td);
-            assert!(perm_opt.is_some());
-            let perm = perm_opt.unwrap();
-            assert_eq!(pos, perm.strides.position(&reversed_index));
-            let orig_opt = perm.permute(&order_td);
-            assert!(orig_opt.is_some());
-            let orig = orig_opt.unwrap();
-            assert_eq!(pos, orig.strides.position(&idx));
         }
     }
 }

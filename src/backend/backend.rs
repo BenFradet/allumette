@@ -14,7 +14,4 @@ pub trait Backend<T: BackendType> {
     fn expand(&self, other: Self) -> Option<Self>
     where
         Self: Sized;
-    fn permute(&self, order: &Self) -> Option<Self>
-    where
-        Self: Sized;
 }

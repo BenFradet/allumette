@@ -9,6 +9,9 @@ pub trait TensorData {
     fn first(&self) -> Option<f64>;
     fn is_contiguous(&self) -> bool;
     fn reshape(&self, shape: Shape) -> Self;
+    fn permute(&self, order: &Self) -> Option<Self>
+    where
+        Self: Sized;
 
     fn ones(shape: Shape) -> Self;
     fn zeros(shape: Shape) -> Self;
