@@ -3,8 +3,6 @@ use std::ops::Index;
 use proptest::prelude::Strategy;
 use rand::Rng;
 
-use crate::util::max::max;
-
 use super::idx::Idx;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -28,10 +26,11 @@ impl Shape {
         &self.data
     }
 
+    #[inline(always)]
     pub fn broadcast(&self, other: &Shape) -> Option<Shape> {
         let n = self.data.len();
         let m = other.data.len();
-        let max = max(m, n);
+        let max = m.max(n);
         let padded_n = self.pad_left(max, 1);
         let padded_m = other.pad_left(max, 1);
         let mut res = vec![0; max];
@@ -63,6 +62,7 @@ impl Shape {
         }
     }
 
+    #[inline(always)]
     pub fn pad_left(&self, m: usize, cnst: usize) -> Shape {
         let n = self.data.len();
         let mut res = vec![cnst; m];

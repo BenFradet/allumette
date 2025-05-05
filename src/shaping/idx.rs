@@ -20,6 +20,7 @@ impl Idx {
     }
 
     // reduce self into smaller index
+    #[inline(always)]
     pub fn broadcast(&self, reference_shape: &Shape) -> Option<Idx> {
         let n = self.data.len();
         let m = reference_shape.data().len();

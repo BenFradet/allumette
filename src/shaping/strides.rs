@@ -13,6 +13,7 @@ impl Strides {
     }
 
     #[allow(clippy::needless_range_loop)]
+    #[inline(always)]
     pub fn idx(&self, pos: usize) -> Idx {
         let n = self.data.len();
         let mut res = vec![1; n];
@@ -26,6 +27,7 @@ impl Strides {
         Idx::new(res)
     }
 
+    #[inline(always)]
     pub fn position(&self, idx: &Idx) -> usize {
         idx.iter()
             .zip(self.iter())
