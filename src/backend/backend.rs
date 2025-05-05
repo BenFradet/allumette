@@ -11,7 +11,4 @@ pub trait Backend<T: BackendType> {
     fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<Self>
     where
         Self: Sized;
-    fn expand(&self, other: Self) -> Option<Self>
-    where
-        Self: Sized;
 }

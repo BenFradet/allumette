@@ -12,6 +12,9 @@ pub trait TensorData {
     fn permute(&self, order: &Self) -> Option<Self>
     where
         Self: Sized;
+    fn expand(&self, other: Self) -> Option<Self>
+    where
+        Self: Sized;
 
     fn ones(shape: Shape) -> Self;
     fn zeros(shape: Shape) -> Self;
