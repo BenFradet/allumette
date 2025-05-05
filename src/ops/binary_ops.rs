@@ -2,10 +2,11 @@ use crate::{
     autodiff::context::Context,
     backend::{backend::Backend, backend_type::BackendType},
     data::tensor_data::TensorData,
-    function::binary::Binary,
     math,
     shaping::shape::Shape,
 };
+
+use super::binary::Binary;
 
 pub struct Add;
 impl<BT: BackendType, T: Backend<BT> + TensorData + Clone> Binary<BT, T> for Add {

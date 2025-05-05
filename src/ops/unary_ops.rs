@@ -2,9 +2,10 @@ use crate::{
     autodiff::context::Context,
     backend::{backend::Backend, backend_type::BackendType},
     data::tensor_data::TensorData,
-    function::unary::Unary,
     math,
 };
+
+use super::unary::Unary;
 
 pub struct Neg;
 impl<BT: BackendType, T: Backend<BT>> Unary<BT, T> for Neg {

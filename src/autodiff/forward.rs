@@ -4,7 +4,7 @@ use crate::{
     autodiff::{context::Context, history::History},
     backend::{backend::Backend, backend_type::BackendType},
     data::tensor_data::TensorData,
-    function::{binary::Binary, function::Function, unary::Unary},
+    ops::{binary::Binary, function::Function, unary::Unary},
     tensor::Tensor,
 };
 

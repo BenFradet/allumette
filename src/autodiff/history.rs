@@ -1,7 +1,7 @@
 use crate::{
     autodiff::context::Context,
     backend::{backend::Backend, backend_type::BackendType},
-    function::function::Function,
+    ops::function::Function,
     tensor::Tensor,
 };
 

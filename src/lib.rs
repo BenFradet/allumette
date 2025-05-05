@@ -6,8 +6,6 @@ pub mod autodiff;
 #[allow(clippy::module_inception)]
 pub mod backend;
 pub mod data;
-#[allow(clippy::module_inception)]
-pub mod function;
 pub mod math;
 pub mod module;
 pub mod ops;

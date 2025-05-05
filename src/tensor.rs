@@ -5,9 +5,9 @@ use crate::{
         backend_type::{BackendType, Seq},
     },
     data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
-    function::function::Function,
     ops::{
         binary_ops::{Add, All, Eq, IsClose, Lt, Mul, Permute, Sum, View},
+        function::Function,
         unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
     shaping::{order::Order, shape::Shape, strides::Strides},
