@@ -439,9 +439,7 @@ mod tests {
         let grad = unwrapped.grad.unwrap().data[idx];
         assert!(
             is_close(grad, check),
-            "tensor grad ({:?}) should be close to central diff ({:?})",
-            grad,
-            check,
+            "tensor grad ({grad:?}) should be close to central diff ({check:?})",
         );
     }
 
@@ -480,15 +478,11 @@ mod tests {
         );
         assert!(
             is_close(grad1, check1),
-            "tensor 1 grad ({:?}) should be close to central diff ({:?})",
-            grad1,
-            check1,
+            "tensor 1 grad ({grad1:?}) should be close to central diff ({check1:?})",
         );
         assert!(
             is_close(grad2, check2),
-            "tensor 2 grad ({:?}) should be close to central diff ({:?})",
-            grad2,
-            check2,
+            "tensor 2 grad ({grad2:?}) should be close to central diff ({check2:?})",
         );
     }
 

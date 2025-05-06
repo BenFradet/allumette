@@ -138,7 +138,7 @@ mod tests {
             match (res1, res2) {
                 (Some(r1), Some(r2)) => assert_tensor_eq(&r1, &r2),
                 (None, None) => (),
-                (r1, r2) => panic!("{:?} not equal to {:?}", r1, r2),
+                (r1, r2) => panic!("{r1:?} not equal to {r2:?}"),
             }
         }
 

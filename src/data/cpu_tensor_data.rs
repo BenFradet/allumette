@@ -322,7 +322,6 @@ mod tests {
     #[test]
     fn rand_test() {
         let rand = CpuTensorData::rand(Shape::new(vec![2]));
-        println!("rand {:?}", rand);
         assert!(rand.data[0] != rand.data[1]);
     }
 }
