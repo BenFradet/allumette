@@ -99,11 +99,11 @@ impl<
     }
 
     fn weights_key(name: &str) -> String {
-        format!("{}_weights", name)
+        format!("{name}_weights")
     }
 
     fn biases_key(name: &str) -> String {
-        format!("{}_biases", name)
+        format!("{name}_biases")
     }
 
     pub fn bkey(&self) -> String {

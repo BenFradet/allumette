@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
 
 jobs:
   build:
@@ -16,11 +17,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Install build tools
+      run: |
+        rustup component add --toolchain nightly-x86_64-unknown-linux-gnu clippy
+        rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
     - name: Build
       run: cargo +nightly build --verbose
     - name: Clippy 
-      run: cargo +nightly clippy
+      run: cargo +nightly clippy --all-targets --all-features
     - name: Format
-      run: cargo +nightly format --check
+      run: cargo +nightly fmt --check
     - name: Run tests
       run: cargo +nightly test --verbose
