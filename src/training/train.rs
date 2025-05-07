@@ -7,7 +7,7 @@ use crate::{
 
 use super::{dataset::Dataset, network::Network};
 
-pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_size: usize) {
+pub fn train(data: Dataset, learning_rate: f64, iterations: usize, hidden_layer_size: usize) {
     let mut network = Network::new(hidden_layer_size);
     let lr_tensor = Tensor::scalar(learning_rate);
 
@@ -20,7 +20,7 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);
 
-    for epoch in 1..max_epochs + 1 {
+    for iteration in 1..iterations + 1 {
         network.zero();
 
         let out = network.forward(x.clone()).view(&n_shape);
@@ -39,7 +39,7 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
 
         network.step(lr_tensor.clone());
 
-        if epoch % 10 == 0 || epoch == max_epochs {
+        if iteration % 10 == 0 || iteration == iterations {
             let y2 = y.clone();
             let correct = out
                 .clone()
@@ -48,7 +48,7 @@ pub fn train(data: Dataset, learning_rate: f64, max_epochs: usize, hidden_layer_
                 .sum(None)
                 .item()
                 .unwrap();
-            println!("Epoch {epoch}, loss: {total_loss}, correct: {correct}\n");
+            println!("Iteration {iteration}, loss: {total_loss}, correct: {correct}\n");
         }
     }
 }
