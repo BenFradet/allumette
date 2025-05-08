@@ -3,9 +3,6 @@ name = "allumette"
 version = "0.1.0"
 edition = "2021"
 
-[lints.clippy]
-unused_unit = "allow"
-
 [dependencies]
 proptest = "1.5.0"
 rand = "0.8.5"

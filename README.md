@@ -18,8 +18,18 @@ let iterations = 200;
 train::train(dataset, learning_rate, iterations, hidden_layer_size);
 ```
 
+### Build and dependencies
+
+Part of the codebase makes use of the `generic_const_exprs` experimental feature so it requires
+nightly.
+
+The set of dependencies is otherwise pretty limited:
+- `proptest` for property-based testing
+- `rand` for synthetic data generation
+
 ### Next up
 
 - [ ] parallel backend
 - [ ] gpu backend
 - [ ] optimizations
+- [ ] make encoding tensor dimension as a const generic work
