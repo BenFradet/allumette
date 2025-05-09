@@ -97,7 +97,9 @@ mod tests {
     fn expand_test() {
         let input = CpuTensorData::scalar(0.);
         let deriv = CpuTensorData::vec(vec![1., 1.]);
-        let res = input.expand(deriv).map(|d| d.data).unwrap();
+        let res = Backend::<Seq>::expand(&input, deriv)
+            .map(|d| d.data)
+            .unwrap();
         assert_eq!(vec![2.], *res);
     }
 

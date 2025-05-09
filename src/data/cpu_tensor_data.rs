@@ -2,10 +2,7 @@ use std::{ops::Index, slice::Iter, sync::Arc};
 
 use proptest::{collection, prelude::*};
 
-use crate::{
-    backend::{backend::Backend, backend_type::Seq},
-    shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides},
-};
+use crate::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
 use super::tensor_data::TensorData;
 
@@ -127,40 +124,6 @@ impl TensorData for CpuTensorData {
         }
     }
 
-    // TODO: move to backend
-    fn expand(&self, other: Self) -> Option<Self> {
-        if self.shape == other.shape {
-            return Some(other);
-        }
-
-        let bc_shape = self.shape.broadcast(&other.shape)?;
-        let buf = TensorData::zeros(bc_shape);
-        let mut out = Backend::<Seq>::map_broadcast(&other, &buf, |f| f)?;
-        if self.shape == out.shape {
-            return Some(out);
-        }
-
-        let orig_shape = Shape::new(
-            [
-                vec![1; out.shape.len() - self.shape.len()],
-                self.shape.data().to_vec(),
-            ]
-            .concat(),
-        );
-        for (dim, shape) in out.shape.clone().data().iter().enumerate() {
-            if orig_shape.data()[dim] == 1 && *shape != 1 {
-                out = Backend::<Seq>::reduce(&out, |a, b| a + b, dim, 0.)?;
-            }
-        }
-        assert!(
-            out.size() == self.size(),
-            "out shape: {:?}, self shape: {:?}",
-            out.shape,
-            self.shape
-        );
-        Some(out)
-    }
-
     fn ones(shape: Shape) -> Self {
         let data = vec![1.; shape.size];
         let strides = (&shape).into();
@@ -242,7 +205,7 @@ mod tests {
 
     use super::*;
 
-    fn assert_tensor_eq(t1: &CpuTensorData, t2: &CpuTensorData) -> () {
+    fn assert_tensor_eq(t1: &CpuTensorData, t2: &CpuTensorData) {
         assert_eq!(t1.shape, t2.shape);
         assert_eq!(t1.strides, t2.strides);
         assert_eq!(t1.data, t2.data);
@@ -288,7 +251,7 @@ mod tests {
     }
 
     #[test]
-    fn idx_in_set_test() -> () {
+    fn idx_in_set_test() {
         let idx1 = Idx::new(vec![1, 2]);
         let idx2 = Idx::new(vec![1, 2]);
         let mut set = HashSet::new();
@@ -299,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn layout_test1() -> () {
+    fn layout_test1() {
         let data = vec![0.; 15];
         let shape = Shape::new(vec![3, 5]);
         let strides = Strides::new(vec![5, 1]);
@@ -311,7 +274,7 @@ mod tests {
     }
 
     #[test]
-    fn layout_test2() -> () {
+    fn layout_test2() {
         let data = vec![0.; 15];
         let shape = Shape::new(vec![5, 3]);
         let strides = Strides::new(vec![1, 5]);
