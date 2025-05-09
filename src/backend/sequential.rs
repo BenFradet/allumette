@@ -8,7 +8,7 @@ use crate::{
 use super::{backend::Backend, backend_type::Seq};
 
 impl Backend<Seq> for CpuTensorData {
-    fn map<F: Fn(f64) -> f64 + Send + Sync>(&self, f: F) -> Self {
+    fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F) -> Self {
         let len = self.size();
         let mut out = vec![0.; len];
         // TODO: add an iterator

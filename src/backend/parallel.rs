@@ -10,7 +10,7 @@ use crate::{
 use super::{backend::Backend, backend_type::Par};
 
 impl Backend<Par> for CpuTensorData {
-    fn map<F: Fn(f64) -> f64 + Send + Sync>(&self, f: F) -> Self {
+    fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F) -> Self {
         let out: Vec<_> = self.data.par_iter().map(|d| f(*d)).collect();
         Self {
             data: Arc::new(out),
