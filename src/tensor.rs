@@ -702,11 +702,11 @@ mod tests {
     }
 
     #[test]
-    fn test_reduce_forward_one_dim() -> () {
+    fn test_reduce_forward_one_dim() {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
         let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
-        let tensor = Tensor::from_data(td);
+        let tensor: Tensor<Seq, _> = Tensor::from_data(td);
         let summed = tensor.sum(Some(0));
 
         let exp = Tensor::vec(vec![11., 16.]);
@@ -716,11 +716,11 @@ mod tests {
     }
 
     #[test]
-    fn test_reduce_forward_one_dim_2() -> () {
+    fn test_reduce_forward_one_dim_2() {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
         let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
-        let tensor = Tensor::from_data(td);
+        let tensor: Tensor<Seq, _> = Tensor::from_data(td);
         let summed = tensor.sum(Some(1));
 
         let exp =
@@ -731,7 +731,7 @@ mod tests {
     }
 
     #[test]
-    fn test_reduce_forward_all_dim() -> () {
+    fn test_reduce_forward_all_dim() {
         let shape = Shape::new(vec![3, 2]);
         let tensor = Tensor::<Seq, CpuTensorData>::vec(vec![2., 3., 4., 6., 5., 7.]).reshape(shape);
         let summed = tensor.sum(None);

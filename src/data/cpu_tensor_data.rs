@@ -3,7 +3,7 @@ use std::{ops::Index, slice::Iter, sync::Arc};
 use proptest::{collection, prelude::*};
 
 use crate::{
-    backend::backend::Backend,
+    backend::{backend::Backend, backend_type::Seq},
     shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides},
 };
 
@@ -127,6 +127,7 @@ impl TensorData for CpuTensorData {
         }
     }
 
+    // TODO: move to backend
     fn expand(&self, other: Self) -> Option<Self> {
         if self.shape == other.shape {
             return Some(other);
@@ -134,7 +135,7 @@ impl TensorData for CpuTensorData {
 
         let bc_shape = self.shape.broadcast(&other.shape)?;
         let buf = TensorData::zeros(bc_shape);
-        let mut out = other.map_broadcast(&buf, |f| f)?;
+        let mut out = Backend::<Seq>::map_broadcast(&other, &buf, |f| f)?;
         if self.shape == out.shape {
             return Some(out);
         }
@@ -148,7 +149,7 @@ impl TensorData for CpuTensorData {
         );
         for (dim, shape) in out.shape.clone().data().iter().enumerate() {
             if orig_shape.data()[dim] == 1 && *shape != 1 {
-                out = out.reduce(|a, b| a + b, dim, 0.)?;
+                out = Backend::<Seq>::reduce(&out, |a, b| a + b, dim, 0.)?;
             }
         }
         assert!(

@@ -1,4 +1,5 @@
 use crate::{
+    backend::backend_type::Seq,
     data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
     optim::optimizer::Optimizer,
     shaping::shape::Shape,
@@ -8,7 +9,7 @@ use crate::{
 use super::{dataset::Dataset, network::Network};
 
 pub fn train(data: Dataset, learning_rate: f64, iterations: usize, hidden_layer_size: usize) {
-    let mut network = Network::new(hidden_layer_size);
+    let mut network: Network<'_, Seq, _> = Network::new(hidden_layer_size);
     let lr_tensor = Tensor::scalar(learning_rate);
 
     let x_shape = Shape::new(vec![data.x.len(), 2]);
