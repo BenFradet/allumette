@@ -22,7 +22,7 @@ impl Backend<Seq> for CpuTensorData {
         }
     }
 
-    fn map_broadcast(&self, out: &Self, f: impl Fn(f64) -> f64) -> Option<Self> {
+    fn map_broadcast<F: Fn(f64) -> f64 + Sync>(&self, out: &Self, f: F) -> Option<Self> {
         let strides: Strides = (&out.shape).into();
         let len = out.shape.size;
         let mut out_vec = vec![0.; len];

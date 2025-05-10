@@ -19,18 +19,19 @@ impl Backend<Par> for CpuTensorData {
         }
     }
 
-    fn map_broadcast(&self, out: &Self, f: impl Fn(f64) -> f64) -> Option<Self> {
-        let strides: Strides = (&out.shape).into();
+    fn map_broadcast<F: Fn(f64) -> f64 + Sync>(&self, out: &Self, f: F) -> Option<Self> {
         let len = out.shape.size;
-        let mut out_vec = vec![0.; len];
-        for i in 0..len {
-            let out_idx = strides.idx(i);
-            let idx_bc = out_idx.broadcast(&self.shape)?;
-            let pos_in = self.strides.position(&idx_bc);
-            let v = self.data[pos_in];
-            let pos_out = out.strides.position(&out_idx);
-            out_vec[pos_out] = f(v);
-        }
+        let strides: Strides = (&out.shape).into();
+        let out_vec: Vec<_> = if self.shape == out.shape {
+            (0..len).into_par_iter().map(|i| f(self.data[i])).collect()
+        } else {
+            (0..len).into_par_iter().map(|i| {
+                let out_idx = strides.idx(i);
+                let idx_bc = out_idx.broadcast(&self.shape).unwrap();
+                let pos_in = self.strides.position(&idx_bc);
+                f(self.data[pos_in])
+            }).collect()
+        };
         Some(Self::new(out_vec, out.shape.clone(), strides))
     }
 
