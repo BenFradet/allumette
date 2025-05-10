@@ -37,7 +37,7 @@ impl Backend<Seq> for CpuTensorData {
         Some(Self::new(out_vec, out.shape.clone(), strides))
     }
 
-    fn zip(&self, other: &Self, f: impl Fn(f64, f64) -> f64) -> Option<Self> {
+    fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F) -> Option<Self> {
         let shape = if self.shape == other.shape {
             self.shape.clone()
         } else {

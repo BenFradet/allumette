@@ -19,43 +19,52 @@ impl Backend<Par> for CpuTensorData {
         }
     }
 
+    // TODO: remove unwrap
     fn map_broadcast<F: Fn(f64) -> f64 + Sync>(&self, out: &Self, f: F) -> Option<Self> {
         let len = out.shape.size;
         let strides: Strides = (&out.shape).into();
         let out_vec: Vec<_> = if self.shape == out.shape {
             (0..len).into_par_iter().map(|i| f(self.data[i])).collect()
         } else {
-            (0..len).into_par_iter().map(|i| {
-                let out_idx = strides.idx(i);
-                let idx_bc = out_idx.broadcast(&self.shape).unwrap();
-                let pos_in = self.strides.position(&idx_bc);
-                f(self.data[pos_in])
-            }).collect()
+            (0..len)
+                .into_par_iter()
+                .map(|i| {
+                    let out_idx = strides.idx(i);
+                    let idx_bc = out_idx.broadcast(&self.shape).unwrap();
+                    let pos_in = self.strides.position(&idx_bc);
+                    f(self.data[pos_in])
+                })
+                .collect()
         };
         Some(Self::new(out_vec, out.shape.clone(), strides))
     }
 
-    fn zip(&self, other: &Self, f: impl Fn(f64, f64) -> f64) -> Option<Self> {
-        let shape = if self.shape == other.shape {
-            self.shape.clone()
+    // TODO: remove unwrap
+    fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F) -> Option<Self> {
+        if self.shape == other.shape {
+            let len = self.shape.size;
+            let out = (0..len)
+                .into_par_iter()
+                .map(|i| f(self.data[i], other.data[i]))
+                .collect();
+            Some(Self::new(out, self.shape.clone(), self.strides.clone()))
         } else {
-            self.shape.broadcast(&other.shape)?
-        };
-        let strides: Strides = (&shape).into();
-        let len = shape.size;
-        let mut out = vec![0.; len];
-        for i in 0..len {
-            let idx = strides.idx(i);
-            let idxa = idx.broadcast(&self.shape)?;
-            let idxb = idx.broadcast(&other.shape)?;
-            let posa = self.strides.position(&idxa);
-            let posb = other.strides.position(&idxb);
-            let va = self.data[posa];
-            let vb = other.data[posb];
-            let pos = strides.position(&idx);
-            out[pos] = f(va, vb);
+            let shape = self.shape.broadcast(&other.shape)?;
+            let strides: Strides = (&shape).into();
+            let len = shape.size;
+            let out = (0..len)
+                .into_par_iter()
+                .map(|i| {
+                    let idx = strides.idx(i);
+                    let idxa = idx.broadcast(&self.shape).unwrap();
+                    let idxb = idx.broadcast(&other.shape).unwrap();
+                    let posa = self.strides.position(&idxa);
+                    let posb = other.strides.position(&idxb);
+                    f(self.data[posa], other.data[posb])
+                })
+                .collect();
+            Some(Self::new(out, shape, strides))
         }
-        Some(Self::new(out, shape, strides))
     }
 
     fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<Self> {

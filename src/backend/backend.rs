@@ -7,7 +7,7 @@ pub trait Backend<T: BackendType> {
     fn map_broadcast<F: Fn(f64) -> f64 + Sync>(&self, out: &Self, f: F) -> Option<Self>
     where
         Self: Sized;
-    fn zip(&self, other: &Self, f: impl Fn(f64, f64) -> f64) -> Option<Self>
+    fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F) -> Option<Self>
     where
         Self: Sized;
     fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<Self>
