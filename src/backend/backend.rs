@@ -10,7 +10,7 @@ pub trait Backend<T: BackendType> {
     fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F) -> Option<Self>
     where
         Self: Sized;
-    fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<Self>
+    fn reduce<F: Fn(f64, f64) -> f64 + Sync>(&self, f: F, dim: usize, init: f64) -> Option<Self>
     where
         Self: Sized;
 

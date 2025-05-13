@@ -67,26 +67,28 @@ impl Backend<Par> for CpuTensorData {
         }
     }
 
-    fn reduce(&self, f: impl Fn(f64, f64) -> f64, dim: usize, init: f64) -> Option<Self> {
+    fn reduce<F: Fn(f64, f64) -> f64 + Sync>(&self, f: F, dim: usize, init: f64) -> Option<Self> {
         if dim < self.shape.data().len() {
             let mut shape_data = self.shape.data().to_vec();
             shape_data[dim] = 1;
             let shape = Shape::new(shape_data);
             let strides: Strides = (&shape).into();
             let len = shape.size;
-            let mut out = vec![init; len];
-            for i in 0..len {
-                let out_idx = strides.idx(i);
-                let out_pos = strides.position(&out_idx);
-                for j in 0..self.shape[dim] {
-                    let mut self_idx = out_idx.clone();
-                    self_idx[dim] = j;
-                    let self_pos = self.strides.position(&self_idx);
-                    let v_out = out[out_pos];
-                    let v_self = self.data[self_pos];
-                    out[out_pos] = f(v_out, v_self);
-                }
-            }
+
+            let out = (0..len)
+                .into_par_iter()
+                .map(|i| {
+                    let out_idx = strides.idx(i);
+                    let mut tmp = init;
+                    for j in 0..self.shape[dim] {
+                        let mut self_idx = out_idx.clone();
+                        self_idx[dim] = j;
+                        let self_pos = self.strides.position(&self_idx);
+                        tmp = f(tmp, self.data[self_pos]);
+                    }
+                    tmp
+                })
+                .collect();
             Some(Self::new(out, shape, strides))
         } else {
             None
