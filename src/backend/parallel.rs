@@ -95,3 +95,73 @@ impl Backend<Par> for CpuTensorData {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use proptest::proptest;
+
+    use crate::data::tensor_data::TensorData;
+
+    use super::*;
+
+    fn assert_tensor_eq(t1: &CpuTensorData, t2: &CpuTensorData) {
+        assert_eq!(t1.shape, t2.shape);
+        assert_eq!(t1.strides, t2.strides);
+        assert_eq!(t1.data, t2.data);
+    }
+
+    proptest! {
+        #[test]
+        fn map_identity_test(t in CpuTensorData::arbitrary()) {
+            assert_tensor_eq(&t, &Backend::<Par>::map(&t, |f| f));
+        }
+
+        #[test]
+        fn map_broadcast_identity_test(t in CpuTensorData::arbitrary()) {
+            let bc = Backend::<Par>::map_broadcast(&t, &t, |f| f);
+            assert!(bc.is_some());
+            assert_tensor_eq(&t, bc.as_ref().unwrap());
+        }
+
+        #[test]
+        fn map_composition_test(t in CpuTensorData::arbitrary()) {
+            let f = |a: f64| a * 2.;
+            let g = |a: f64| a.powf(2.);
+            let fg = |a: f64| g(f(a));
+            assert_tensor_eq(
+                &Backend::<Par>::map(&Backend::<Par>::map(&t.clone(), f), g),
+                &Backend::<Par>::map(&t, fg)
+            );
+        }
+
+        #[test]
+        fn map_broadcast_composition_test(t in CpuTensorData::arbitrary()) {
+            let f = |a: f64| a * 2.;
+            let g = |a: f64| a.powf(2.);
+            let fg = |a: f64| g(f(a));
+            let t1 = Backend::<Par>::map_broadcast(&t.clone(), &t, f)
+                .and_then(|t| Backend::<Par>::map_broadcast(&t, &t, g));
+            let t2 = Backend::<Par>::map_broadcast(&t, &t, fg);
+            assert!(t1.is_some());
+            assert!(t2.is_some());
+            assert_tensor_eq(t1.as_ref().unwrap(), t2.as_ref().unwrap());
+        }
+
+        #[test]
+        fn map_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
+            let map = Backend::<Par>::map(&CpuTensorData::zeros(shape.clone()), |z| z + f);
+            assert_eq!(shape.size, map.data.len());
+            assert!(map.data.iter().all(|e| *e == f));
+        }
+
+        #[test]
+        fn map_broadcast_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
+            let t = CpuTensorData::zeros(shape.clone());
+            let res = Backend::<Par>::map_broadcast(&t, &t, |z| z + f);
+            assert!(res.is_some());
+            let map = res.unwrap();
+            assert_eq!(shape.size, map.data.len());
+            assert!(map.data.iter().all(|e| *e == f));
+        }
+    }
+}
