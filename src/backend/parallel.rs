@@ -111,6 +111,27 @@ mod tests {
     }
 
     proptest! {
+        #[test]
+        fn reduce_test_sum(t1 in CpuTensorData::arbitrary()) {
+            let mut t1p = t1.clone();
+            for i in 0..t1.shape.data().len() {
+                t1p = Backend::<Par>::reduce(&t1p, |a, b| a + b, i, 0.).unwrap();
+            }
+            let res = t1.data.clone().iter().fold(0., |acc, a| acc + a);
+            assert_eq!(1, t1p.data.len());
+            assert!((res - t1p.data[0]).abs() < f64::EPSILON * 10_f64.powf(2.));
+        }
+
+        #[test]
+        fn reduce_test_mul(t1 in CpuTensorData::arbitrary()) {
+            let mut t1p = t1.clone();
+            for i in 0..t1.shape.data().len() {
+                t1p = Backend::<Par>::reduce(&t1p, |a, b| a * b, i, 1.).unwrap();
+            }
+            let res = t1.data.clone().iter().fold(1., |acc, a| acc * a);
+            assert_eq!(1, t1p.data.len());
+            assert!((res - t1p.data[0]).abs() < f64::EPSILON * 10_f64.powf(2.));
+        }
 
         #[test]
         fn zip_commutative_test(t1 in CpuTensorData::arbitrary(), t2 in CpuTensorData::arbitrary()) {
