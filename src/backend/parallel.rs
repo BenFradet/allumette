@@ -111,6 +111,19 @@ mod tests {
     }
 
     proptest! {
+
+        #[test]
+        fn zip_commutative_test(t1 in CpuTensorData::arbitrary(), t2 in CpuTensorData::arbitrary()) {
+            // this works if f is commutative
+            let res1 = Backend::<Par>::zip(&t1, &t2, |a, b| a + b);
+            let res2 = Backend::<Par>::zip(&t2, &t1, |a, b| a + b);
+            match (res1, res2) {
+                (Some(r1), Some(r2)) => assert_tensor_eq(&r1, &r2),
+                (None, None) => (),
+                (r1, r2) => panic!("{r1:?} not equal to {r2:?}"),
+            }
+        }
+
         #[test]
         fn map_identity_test(t in CpuTensorData::arbitrary()) {
             assert_tensor_eq(&t, &Backend::<Par>::map(&t, |f| f));
