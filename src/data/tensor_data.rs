@@ -1,6 +1,6 @@
 use std::slice::Iter;
 
-use crate::shaping::shape::Shape;
+use crate::shaping::{shape::Shape, strides::Strides};
 
 pub trait TensorData {
     fn shape(&self) -> &Shape;
@@ -17,6 +17,7 @@ pub trait TensorData {
     fn zeros(shape: Shape) -> Self;
     fn rand(shape: Shape) -> Self;
 
+    fn from(data: Vec<f64>, shape: Shape, strides: Strides) -> Self;
     fn scalar(s: f64) -> Self;
     fn vec(v: Vec<f64>) -> Self;
     fn matrix(m: Vec<Vec<f64>>) -> Option<Self>

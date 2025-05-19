@@ -197,6 +197,10 @@ impl TensorData for CpuTensorData {
             }
         }
     }
+
+    fn from(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
+        Self::new(data, shape, strides)
+    }
 }
 
 #[cfg(test)]

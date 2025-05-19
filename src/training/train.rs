@@ -1,6 +1,6 @@
 use crate::{
-    backend::backend_type::Seq,
-    data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
+    backend::{backend::Backend, backend_type::BackendType},
+    data::tensor_data::TensorData,
     optim::optimizer::Optimizer,
     shaping::shape::Shape,
     tensor::Tensor,
@@ -8,15 +8,23 @@ use crate::{
 
 use super::{dataset::Dataset, network::Network};
 
-pub fn train(data: Dataset, learning_rate: f64, iterations: usize, hidden_layer_size: usize) {
-    let mut network: Network<'_, Seq, _> = Network::new(hidden_layer_size);
+pub fn train<
+    BT: BackendType + Clone + std::fmt::Debug,
+    T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+>(
+    data: Dataset,
+    learning_rate: f64,
+    iterations: usize,
+    hidden_layer_size: usize,
+) {
+    let mut network: Network<'_, BT, T> = Network::new(hidden_layer_size);
     let lr_tensor = Tensor::scalar(learning_rate);
 
     let x_shape = Shape::new(vec![data.x.len(), 2]);
     let x_strides = (&x_shape).into();
-    let x_data = CpuTensorData::new(flatten(&data.x), x_shape, x_strides);
+    let x_data = <T as TensorData>::from(flatten(&data.x), x_shape, x_strides);
     let x = Tensor::from_data(x_data);
-    let y_data = CpuTensorData::vec(data.y.iter().map(|u| *u as f64).collect());
+    let y_data = <T as TensorData>::vec(data.y.iter().map(|u| *u as f64).collect());
     let y = Tensor::from_data(y_data);
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);
