@@ -104,6 +104,16 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn expand_test() {
+        let input = CpuTensorData::scalar(0.);
+        let deriv = CpuTensorData::vec(vec![1., 1.]);
+        let res = Backend::<Par>::expand(&input, deriv)
+            .map(|d| d.data)
+            .unwrap();
+        assert_eq!(vec![2.], *res);
+    }
+
     fn assert_tensor_eq(t1: &CpuTensorData, t2: &CpuTensorData) {
         assert_eq!(t1.shape, t2.shape);
         assert_eq!(t1.strides, t2.strides);
