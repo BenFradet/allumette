@@ -113,6 +113,10 @@ impl TensorData for CpuTensorData {
         }
     }
 
+    fn index(&self, idx: Idx) -> f64 {
+        self[idx]
+    }
+
     fn ones(shape: Shape) -> Self {
         let data = vec![1.; shape.size];
         let strides = (&shape).into();
@@ -153,6 +157,10 @@ impl TensorData for CpuTensorData {
             shape,
             strides,
         }
+    }
+
+    fn from(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
+        Self::new(data, shape, strides)
     }
 
     fn scalar(s: f64) -> Self {
@@ -196,10 +204,6 @@ impl TensorData for CpuTensorData {
                 })
             }
         }
-    }
-
-    fn from(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
-        Self::new(data, shape, strides)
     }
 }
 
