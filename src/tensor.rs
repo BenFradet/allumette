@@ -422,10 +422,14 @@ mod tests {
 
     use super::*;
 
-    fn unary_grad_assert<F>(tensor: Tensor<Seq, CpuTensorData>, f: F)
-    where
-        F: Fn(Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
-    {
+    fn unary_grad_assert<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+        F: Fn(Tensor<BT, T>) -> Tensor<BT, T>,
+    >(
+        tensor: Tensor<BT, T>,
+        f: F,
+    ) {
         let id = &tensor.id.clone();
         let reset = tensor.grad(None).history(History::default());
         let idx = reset.data.shape().sample();
@@ -436,7 +440,7 @@ mod tests {
         let unwrapped = tensor_after.unwrap();
         let check = unary_grad_central_diff(unwrapped.clone(), f, &idx);
         assert!(unwrapped.grad.is_some(), "tensor should have a grad");
-        let grad = unwrapped.grad.unwrap().data[idx];
+        let grad = unwrapped.grad.unwrap().data.index(idx);
         assert!(
             is_close(grad, check),
             "tensor grad ({grad:?}) should be close to central diff ({check:?})",
@@ -486,13 +490,18 @@ mod tests {
         );
     }
 
-    fn unary_grad_central_diff<F>(tensor: Tensor<Seq, CpuTensorData>, f: F, index: &Idx) -> f64
-    where
-        F: Fn(Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
-    {
+    fn unary_grad_central_diff<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+        F: Fn(Tensor<BT, T>) -> Tensor<BT, T>,
+    >(
+        tensor: Tensor<BT, T>,
+        f: F,
+        index: &Idx,
+    ) -> f64 {
         let eps = 1e-6;
-        let shape = tensor.data.shape.clone();
-        let up = Tensor::from_data(CpuTensorData::epsilon(shape, index, eps));
+        let shape = tensor.data.shape().clone();
+        let up = Tensor::from_data(<T as TensorData>::epsilon(shape, index, eps));
         let add = tensor.clone() + up.clone();
         let sub = tensor - up;
         let delta = f(add).sum(None) - f(sub).sum(None);
