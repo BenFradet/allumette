@@ -22,17 +22,6 @@ impl CpuTensorData {
         }
     }
 
-    pub fn epsilon(shape: Shape, idx: &Idx, eps: f64) -> Self {
-        let strides: Strides = (&shape).into();
-        let mut data = vec![0.; shape.size];
-        data[strides.position(idx)] = eps;
-        Self {
-            data: Arc::new(data),
-            shape,
-            strides,
-        }
-    }
-
     pub fn dims(&self) -> usize {
         self.shape.len()
     }
@@ -148,6 +137,17 @@ impl TensorData for CpuTensorData {
         let mut rng = rand::thread_rng();
         let data: Vec<f64> = (0..shape.size).map(|_| rng.gen()).collect();
         let strides = (&shape).into();
+        Self {
+            data: Arc::new(data),
+            shape,
+            strides,
+        }
+    }
+
+    fn epsilon(shape: Shape, idx: &Idx, eps: f64) -> Self {
+        let strides: Strides = (&shape).into();
+        let mut data = vec![0.; shape.size];
+        data[strides.position(idx)] = eps;
         Self {
             data: Arc::new(data),
             shape,
