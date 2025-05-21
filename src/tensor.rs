@@ -1,9 +1,6 @@
 use crate::{
     autodiff::{forward::Forward, history::History},
-    backend::{
-        backend::Backend,
-        backend_type::{BackendType, Seq},
-    },
+    backend::{backend::Backend, backend_type::BackendType},
     data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
     ops::{
         binary_ops::{Add, All, Eq, IsClose, Lt, Mul, Permute, Sum, View},
@@ -315,7 +312,10 @@ where
     }
 }
 
-impl Tensor<Seq, CpuTensorData> {
+impl<BT: BackendType + Clone + std::fmt::Debug> Tensor<BT, CpuTensorData>
+where
+    CpuTensorData: Backend<BT>,
+{
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         CpuTensorData::arbitrary().prop_map(Self::from_data)
     }
@@ -413,6 +413,7 @@ impl<
 #[cfg(test)]
 mod tests {
     use crate::{
+        backend::backend_type::Seq,
         math::{
             binary::{div, eq, is_close, lt},
             unary::{exp, inv, ln, relu, sig},
@@ -637,7 +638,7 @@ mod tests {
         }
 
         #[test]
-        fn unary_grad_tests(t in Tensor::arbitrary()) {
+        fn unary_grad_tests(t in Tensor::<Seq, CpuTensorData>::arbitrary()) {
             unary_grad_assert(t.clone(), |t| -t);
             unary_grad_assert(t.clone(), |t| t.clone() * t);
             unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
