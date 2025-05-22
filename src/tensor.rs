@@ -413,7 +413,7 @@ impl<
 #[cfg(test)]
 mod tests {
     use crate::{
-        backend::backend_type::Seq,
+        backend::backend_type::{Par, Seq},
         math::{
             binary::{div, eq, is_close, lt},
             unary::{exp, inv, ln, relu, sig},
@@ -581,8 +581,12 @@ mod tests {
     }
 
     proptest! {
-        fn permute_grad_tests((t, o) in Tensor::<Seq, CpuTensorData>::arbitrary_with_order()) {
-            unary_grad_assert(t, move |t| t.permute(o.clone()));
+        fn permute_grad_tests(
+            (t_seq, o_seq) in Tensor::<Seq, CpuTensorData>::arbitrary_with_order(),
+            (t_par, o_par) in Tensor::<Par, CpuTensorData>::arbitrary_with_order(),
+        ) {
+            unary_grad_assert(t_seq, move |t| t.permute(o_seq.clone()));
+            unary_grad_assert(t_par, move |t| t.permute(o_par.clone()));
         }
 
         fn reduce_grad_tests(t in Tensor::<Seq, CpuTensorData>::arbitrary()) {
