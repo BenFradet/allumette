@@ -602,14 +602,24 @@ mod tests {
         }
 
         #[test]
-        fn binary_grad_tests((t1, t2) in Tensor::<Seq, CpuTensorData>::arbitrary_tuple()) {
-            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
-            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
-            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
-            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 / (t2 + Tensor::scalar(5.5)));
-            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
-            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
-            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
+        fn binary_grad_tests(
+            (t1_seq, t2_seq) in Tensor::<Seq, CpuTensorData>::arbitrary_tuple(),
+            (t1_par, t2_par) in Tensor::<Par, CpuTensorData>::arbitrary_tuple(),
+        ) {
+            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1 + t2);
+            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1 - t2);
+            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1 * t2);
+            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1 / (t2 + Tensor::scalar(5.5)));
+            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.gt(t2));
+            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.lt(t2));
+            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.eq(t2));
+            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1 + t2);
+            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1 - t2);
+            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1 * t2);
+            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1 / (t2 + Tensor::scalar(5.5)));
+            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1.gt(t2));
+            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1.lt(t2));
+            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1.eq(t2));
         }
 
         #[test]
