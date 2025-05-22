@@ -589,10 +589,16 @@ mod tests {
             unary_grad_assert(t_par, move |t| t.permute(o_par.clone()));
         }
 
-        fn reduce_grad_tests(t in Tensor::<Seq, CpuTensorData>::arbitrary()) {
-            unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
-            unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
-            unary_grad_assert(t.clone(), |t| t.mean(None));
+        fn reduce_grad_tests(
+            t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
+            t_par in Tensor::<Par, CpuTensorData>::arbitrary(),
+        ) {
+            unary_grad_assert(t_seq.clone(), |t| t.sum(Some(0)));
+            unary_grad_assert(t_seq.clone(), |t| t.mean(Some(0)));
+            unary_grad_assert(t_seq.clone(), |t| t.mean(None));
+            unary_grad_assert(t_par.clone(), |t| t.sum(Some(0)));
+            unary_grad_assert(t_par.clone(), |t| t.mean(Some(0)));
+            unary_grad_assert(t_par.clone(), |t| t.mean(None));
         }
 
         #[test]
