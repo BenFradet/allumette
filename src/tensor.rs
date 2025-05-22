@@ -658,14 +658,22 @@ mod tests {
         }
 
         #[test]
-        fn unary_grad_complex_test1(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor<Seq, CpuTensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
-            unary_grad_assert(t.clone(), ft);
+        fn unary_grad_complex_test1(
+            t_seq in Tensor::arbitrary(),
+            t_par in Tensor::arbitrary(),
+        ) {
+            let ft_seq = |t: Tensor<Seq, CpuTensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
+            unary_grad_assert(t_seq.clone(), ft_seq);
+            let ft_par = |t: Tensor<Par, CpuTensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
+            unary_grad_assert(t_par.clone(), ft_par);
         }
 
         #[test]
-        fn unary_grad_complex_test2(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor<Seq, CpuTensorData>| (
+        fn unary_grad_complex_test2(
+            t_seq in Tensor::arbitrary(),
+            t_par in Tensor::arbitrary(),
+        ) {
+            let ft_seq = |t: Tensor<Seq, CpuTensorData>| (
                 (
                     (
                         (
@@ -674,19 +682,40 @@ mod tests {
                     ).relu() * Tensor::scalar(10.)
                 ).sigmoid()
             ).ln() / Tensor::scalar(50.);
-            unary_grad_assert(t.clone(), ft);
+            unary_grad_assert(t_seq.clone(), ft_seq);
+            let ft_par = |t: Tensor<Par, CpuTensorData>| (
+                (
+                    (
+                        (
+                            t * Tensor::scalar(10.) + Tensor::scalar(7.)
+                        ).relu() * Tensor::scalar(6.) + Tensor::scalar(5.)
+                    ).relu() * Tensor::scalar(10.)
+                ).sigmoid()
+            ).ln() / Tensor::scalar(50.);
+            unary_grad_assert(t_par.clone(), ft_par);
         }
 
         #[test]
-        fn unary_grad_tests(t in Tensor::<Seq, CpuTensorData>::arbitrary()) {
-            unary_grad_assert(t.clone(), |t| -t);
-            unary_grad_assert(t.clone(), |t| t.clone() * t);
-            unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
-            unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(3.5)).inv());
-            unary_grad_assert(t.clone(), |t| t.sigmoid());
-            unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(100000.)).ln());
-            unary_grad_assert(t.clone(), |t| t.relu());
-            unary_grad_assert(t.clone(), |t| t.exp());
+        fn unary_grad_tests(
+            t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
+            t_par in Tensor::<Seq, CpuTensorData>::arbitrary(),
+        ) {
+            unary_grad_assert(t_seq.clone(), |t| -t);
+            unary_grad_assert(t_seq.clone(), |t| t.clone() * t);
+            unary_grad_assert(t_seq.clone(), |t| t.clone() * t.clone() * t);
+            unary_grad_assert(t_seq.clone(), |t| (t + Tensor::scalar(3.5)).inv());
+            unary_grad_assert(t_seq.clone(), |t| t.sigmoid());
+            unary_grad_assert(t_seq.clone(), |t| (t + Tensor::scalar(100000.)).ln());
+            unary_grad_assert(t_seq.clone(), |t| t.relu());
+            unary_grad_assert(t_seq.clone(), |t| t.exp());
+            unary_grad_assert(t_par.clone(), |t| -t);
+            unary_grad_assert(t_par.clone(), |t| t.clone() * t);
+            unary_grad_assert(t_par.clone(), |t| t.clone() * t.clone() * t);
+            unary_grad_assert(t_par.clone(), |t| (t + Tensor::scalar(3.5)).inv());
+            unary_grad_assert(t_par.clone(), |t| t.sigmoid());
+            unary_grad_assert(t_par.clone(), |t| (t + Tensor::scalar(100000.)).ln());
+            unary_grad_assert(t_par.clone(), |t| t.relu());
+            unary_grad_assert(t_par.clone(), |t| t.exp());
         }
 
         #[test]
