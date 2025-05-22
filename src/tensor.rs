@@ -448,19 +448,21 @@ mod tests {
         );
     }
 
-    fn binary_grad_assert<F>(
-        tensor1: Tensor<Seq, CpuTensorData>,
-        tensor2: Tensor<Seq, CpuTensorData>,
+    fn binary_grad_assert<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+        F: Fn(Tensor<BT, T>, Tensor<BT, T>) -> Tensor<BT, T>,
+    >(
+        tensor1: Tensor<BT, T>,
+        tensor2: Tensor<BT, T>,
         f: F,
-    ) where
-        F: Fn(Tensor<Seq, CpuTensorData>, Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
-    {
+    ) {
         let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
         let (reset1, reset2) = (
             tensor1.grad(None).history(History::default()),
             tensor2.grad(None).history(History::default()),
         );
-        let (idx1, idx2) = (reset1.data.shape.sample(), reset2.data.shape.sample());
+        let (idx1, idx2) = (reset1.data.shape().sample(), reset2.data.shape().sample());
         let out = f(reset1, reset2);
         let mut res = out.sum(None).backward();
         let (after1, after2) = (res.remove(id1), res.remove(id2));
@@ -478,8 +480,8 @@ mod tests {
             "tensors should have grads"
         );
         let (grad1, grad2) = (
-            unwrapped1.grad.clone().unwrap().data[idx1],
-            unwrapped2.grad.clone().unwrap().data[idx2],
+            unwrapped1.grad.clone().unwrap().data.index(idx1),
+            unwrapped2.grad.clone().unwrap().data.index(idx2),
         );
         assert!(
             is_close(grad1, check1),
@@ -510,23 +512,24 @@ mod tests {
         delta.item().unwrap_or(0.) / (2. * eps)
     }
 
-    fn binary_grad_central_diff<F>(
-        tensor1: Tensor<Seq, CpuTensorData>,
-        tensor2: Tensor<Seq, CpuTensorData>,
+    fn binary_grad_central_diff<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+        F: Fn(Tensor<BT, T>, Tensor<BT, T>) -> Tensor<BT, T>,
+    >(
+        tensor1: Tensor<BT, T>,
+        tensor2: Tensor<BT, T>,
         f: F,
         index: &Idx,
         first: bool,
-    ) -> f64
-    where
-        F: Fn(Tensor<Seq, CpuTensorData>, Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
-    {
+    ) -> f64 {
         let eps = 1e-6;
         let shape = if first {
-            tensor1.data.shape.clone()
+            tensor1.data.shape().clone()
         } else {
-            tensor2.data.shape.clone()
+            tensor2.data.shape().clone()
         };
-        let up = Tensor::from_data(CpuTensorData::epsilon(shape, index, eps));
+        let up = Tensor::from_data(<T as TensorData>::epsilon(shape, index, eps));
         let (add1, add2) = if first {
             (tensor1.clone() + up.clone(), tensor2.clone())
         } else {
@@ -589,7 +592,7 @@ mod tests {
         }
 
         #[test]
-        fn binary_grad_tests((t1, t2) in Tensor::arbitrary_tuple()) {
+        fn binary_grad_tests((t1, t2) in Tensor::<Seq, CpuTensorData>::arbitrary_tuple()) {
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
@@ -600,7 +603,7 @@ mod tests {
         }
 
         #[test]
-        fn binary_grad_broadcast_tests((t1, t2) in Tensor::arbitrary_tuple()) {
+        fn binary_grad_broadcast_tests((t1, t2) in Tensor::<Seq, CpuTensorData>::arbitrary_tuple()) {
             binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 + t2);
             binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 + t2);
             binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 - t2);
