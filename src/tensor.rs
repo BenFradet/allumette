@@ -601,6 +601,24 @@ mod tests {
         unary_grad_assert(t.clone(), |t| t.mean(None));
     }
 
+    fn binary_grad_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t1: Tensor<BT, T>,
+        t2: Tensor<BT, T>,
+    ) {
+        binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
+        binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
+        binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
+        binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| {
+            t1 / (t2 + Tensor::scalar(5.5))
+        });
+        binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
+        binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
+        binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
+    }
+
     proptest! {
         // TODO: reimplement backward
         // #[test]
@@ -626,20 +644,8 @@ mod tests {
             (t1_seq, t2_seq) in Tensor::<Seq, CpuTensorData>::arbitrary_tuple(),
             (t1_par, t2_par) in Tensor::<Par, CpuTensorData>::arbitrary_tuple(),
         ) {
-            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1 + t2);
-            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1 - t2);
-            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1 * t2);
-            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1 / (t2 + Tensor::scalar(5.5)));
-            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.gt(t2));
-            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.lt(t2));
-            binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.eq(t2));
-            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1 + t2);
-            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1 - t2);
-            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1 * t2);
-            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1 / (t2 + Tensor::scalar(5.5)));
-            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1.gt(t2));
-            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1.lt(t2));
-            binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1.eq(t2));
+            binary_grad_test(t1_seq, t2_seq);
+            binary_grad_test(t1_par, t2_par);
         }
 
         #[test]
