@@ -580,25 +580,45 @@ mod tests {
         }
     }
 
+    fn permute_grad_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+        o: Order,
+    ) {
+        unary_grad_assert(t, move |t| t.permute(o.clone()));
+    }
+
+    fn reduce_grad_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
+        unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
+        unary_grad_assert(t.clone(), |t| t.mean(None));
+    }
+
     proptest! {
+        // TODO: reimplement backward
+        // #[test]
         fn permute_grad_tests(
             (t_seq, o_seq) in Tensor::<Seq, CpuTensorData>::arbitrary_with_order(),
             (t_par, o_par) in Tensor::<Par, CpuTensorData>::arbitrary_with_order(),
         ) {
-            unary_grad_assert(t_seq, move |t| t.permute(o_seq.clone()));
-            unary_grad_assert(t_par, move |t| t.permute(o_par.clone()));
+            permute_grad_test(t_seq, o_seq);
+            permute_grad_test(t_par, o_par);
         }
 
+        #[test]
         fn reduce_grad_tests(
             t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<Par, CpuTensorData>::arbitrary(),
         ) {
-            unary_grad_assert(t_seq.clone(), |t| t.sum(Some(0)));
-            unary_grad_assert(t_seq.clone(), |t| t.mean(Some(0)));
-            unary_grad_assert(t_seq.clone(), |t| t.mean(None));
-            unary_grad_assert(t_par.clone(), |t| t.sum(Some(0)));
-            unary_grad_assert(t_par.clone(), |t| t.mean(Some(0)));
-            unary_grad_assert(t_par.clone(), |t| t.mean(None));
+            reduce_grad_test(t_seq);
+            reduce_grad_test(t_par);
         }
 
         #[test]
