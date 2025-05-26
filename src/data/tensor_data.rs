@@ -13,6 +13,7 @@ pub trait TensorData {
     where
         Self: Sized;
     fn index(&self, idx: Idx) -> f64;
+    fn indices(&self) -> impl Iterator<Item = Idx>;
 
     fn ones(shape: Shape) -> Self;
     fn zeros(shape: Shape) -> Self;

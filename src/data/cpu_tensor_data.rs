@@ -26,10 +26,6 @@ impl CpuTensorData {
         self.shape.len()
     }
 
-    pub fn indices(&self) -> impl Iterator<Item = Idx> + use<'_> {
-        (0..self.size()).map(|i| self.strides.idx(i))
-    }
-
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         Shape::arbitrary()
             .prop_flat_map(|shape| {
@@ -204,6 +200,10 @@ impl TensorData for CpuTensorData {
                 })
             }
         }
+    }
+
+    fn indices(&self) -> impl Iterator<Item = Idx> {
+        (0..self.size()).map(|i| self.strides.idx(i))
     }
 }
 

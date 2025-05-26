@@ -545,15 +545,20 @@ mod tests {
         delta.item().unwrap_or(0.) / (2. * eps)
     }
 
-    fn unary_assert<FT, FF>(t: Tensor<Seq, CpuTensorData>, ft: FT, ff: FF)
-    where
-        FT: Fn(Tensor<Seq, CpuTensorData>) -> Tensor<Seq, CpuTensorData>,
+    fn unary_assert<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+        FT: Fn(Tensor<BT, T>) -> Tensor<BT, T>,
         FF: Fn(f64) -> f64,
-    {
+    >(
+        t: Tensor<BT, T>,
+        ft: FT,
+        ff: FF,
+    ) {
         let data = t.data.clone();
         let res = ft(t);
         for idx in res.data.indices() {
-            assert!(is_close(res.data[idx.clone()], ff(data[idx])));
+            assert!(is_close(res.data.index(idx.clone()), ff(data.index(idx))));
         }
     }
 
@@ -692,6 +697,54 @@ mod tests {
         unary_grad_assert(t.clone(), |t| t.exp());
     }
 
+    fn unary_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        unary_assert(t.clone(), |t| -t, |f| -f);
+        unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
+        unary_assert(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
+        unary_assert(t.clone(), |t| t.inv(), inv);
+        unary_assert(t.clone(), |t| t.sigmoid(), sig);
+        unary_assert(t.clone(), |t| t.ln(), ln);
+        unary_assert(t.clone(), |t| t.relu(), relu);
+        unary_assert(t.clone(), |t| t.exp(), exp);
+    }
+
+    fn unary_complex_test1_<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        let ft = |t: Tensor<BT, T>| {
+            (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp()
+        };
+        let ff = |f| ln(f + 100000.) + exp(f - 200.);
+        unary_assert(t.clone(), ft, ff);
+    }
+
+    fn unary_complex_test2_<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        let ft = |t: Tensor<BT, T>| {
+            ((((t * Tensor::scalar(10.) + Tensor::scalar(7.)).relu() * Tensor::scalar(6.)
+                + Tensor::scalar(5.))
+            .relu()
+                * Tensor::scalar(10.))
+            .sigmoid())
+            .ln()
+                / Tensor::scalar(50.)
+        };
+        let ff = |f| ln(sig(relu(relu(f * 10. + 7.) * 6. + 5.) * 10.)) / 50.;
+        unary_assert(t.clone(), ft, ff);
+    }
+
     proptest! {
         // TODO: reimplement backward
         // #[test]
@@ -769,37 +822,30 @@ mod tests {
         }
 
         #[test]
-        fn unary_complex_test1(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor<Seq, CpuTensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
-            let ff = |f| ln(f + 100000.) + exp(f - 200.);
-            unary_assert(t.clone(), ft, ff);
+        fn unary_complex_test1(
+            t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
+            t_par in Tensor::<Par, CpuTensorData>::arbitrary(),
+        ) {
+            unary_complex_test1_(t_seq);
+            unary_complex_test1_(t_par);
         }
 
         #[test]
-        fn unary_complex_test2(t in Tensor::arbitrary()) {
-            let ft = |t: Tensor<Seq, CpuTensorData>| (
-                (
-                    (
-                        (
-                            t * Tensor::scalar(10.) + Tensor::scalar(7.)
-                        ).relu() * Tensor::scalar(6.) + Tensor::scalar(5.)
-                    ).relu() * Tensor::scalar(10.)
-                ).sigmoid()
-            ).ln() / Tensor::scalar(50.);
-            let ff = |f| ln(sig(relu(relu(f * 10. + 7.) * 6. + 5.) * 10.)) / 50.;
-            unary_assert(t.clone(), ft, ff);
+        fn unary_complex_test2(
+            t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
+            t_par in Tensor::<Par, CpuTensorData>::arbitrary(),
+        ) {
+            unary_complex_test2_(t_seq);
+            unary_complex_test2_(t_par);
         }
 
         #[test]
-        fn unary_tests(t in Tensor::arbitrary()) {
-            unary_assert(t.clone(), |t| -t, |f| -f);
-            unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
-            unary_assert(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
-            unary_assert(t.clone(), |t| t.inv(), inv);
-            unary_assert(t.clone(), |t| t.sigmoid(), sig);
-            unary_assert(t.clone(), |t| t.ln(), ln);
-            unary_assert(t.clone(), |t| t.relu(), relu);
-            unary_assert(t.clone(), |t| t.exp(), exp);
+        fn unary_tests(
+            t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
+            t_par in Tensor::<Par, CpuTensorData>::arbitrary(),
+        ) {
+            unary_test(t_seq);
+            unary_test(t_par);
         }
     }
 
