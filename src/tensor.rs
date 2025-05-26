@@ -676,6 +676,22 @@ mod tests {
         unary_grad_assert(t.clone(), ft);
     }
 
+    fn unary_grad_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        unary_grad_assert(t.clone(), |t| -t);
+        unary_grad_assert(t.clone(), |t| t.clone() * t);
+        unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
+        unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(3.5)).inv());
+        unary_grad_assert(t.clone(), |t| t.sigmoid());
+        unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(100000.)).ln());
+        unary_grad_assert(t.clone(), |t| t.relu());
+        unary_grad_assert(t.clone(), |t| t.exp());
+    }
+
     proptest! {
         // TODO: reimplement backward
         // #[test]
@@ -737,22 +753,8 @@ mod tests {
             t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<Seq, CpuTensorData>::arbitrary(),
         ) {
-            unary_grad_assert(t_seq.clone(), |t| -t);
-            unary_grad_assert(t_seq.clone(), |t| t.clone() * t);
-            unary_grad_assert(t_seq.clone(), |t| t.clone() * t.clone() * t);
-            unary_grad_assert(t_seq.clone(), |t| (t + Tensor::scalar(3.5)).inv());
-            unary_grad_assert(t_seq.clone(), |t| t.sigmoid());
-            unary_grad_assert(t_seq.clone(), |t| (t + Tensor::scalar(100000.)).ln());
-            unary_grad_assert(t_seq.clone(), |t| t.relu());
-            unary_grad_assert(t_seq.clone(), |t| t.exp());
-            unary_grad_assert(t_par.clone(), |t| -t);
-            unary_grad_assert(t_par.clone(), |t| t.clone() * t);
-            unary_grad_assert(t_par.clone(), |t| t.clone() * t.clone() * t);
-            unary_grad_assert(t_par.clone(), |t| (t + Tensor::scalar(3.5)).inv());
-            unary_grad_assert(t_par.clone(), |t| t.sigmoid());
-            unary_grad_assert(t_par.clone(), |t| (t + Tensor::scalar(100000.)).ln());
-            unary_grad_assert(t_par.clone(), |t| t.relu());
-            unary_grad_assert(t_par.clone(), |t| t.exp());
+            unary_grad_test(t_seq);
+            unary_grad_test(t_par);
         }
 
         #[test]
