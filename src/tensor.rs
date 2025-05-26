@@ -646,6 +646,36 @@ mod tests {
         binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.eq(t2));
     }
 
+    fn unary_grad_complex_test1_<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        let ft_seq = |t: Tensor<BT, T>| {
+            (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp()
+        };
+        unary_grad_assert(t.clone(), ft_seq);
+    }
+
+    fn unary_grad_complex_test2_<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        let ft = |t: Tensor<BT, T>| {
+            ((((t * Tensor::scalar(10.) + Tensor::scalar(7.)).relu() * Tensor::scalar(6.)
+                + Tensor::scalar(5.))
+            .relu()
+                * Tensor::scalar(10.))
+            .sigmoid())
+            .ln()
+                / Tensor::scalar(50.)
+        };
+        unary_grad_assert(t.clone(), ft);
+    }
+
     proptest! {
         // TODO: reimplement backward
         // #[test]
@@ -686,40 +716,20 @@ mod tests {
 
         #[test]
         fn unary_grad_complex_test1(
-            t_seq in Tensor::arbitrary(),
-            t_par in Tensor::arbitrary(),
+            t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
+            t_par in Tensor::<Par, CpuTensorData>::arbitrary(),
         ) {
-            let ft_seq = |t: Tensor<Seq, CpuTensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
-            unary_grad_assert(t_seq.clone(), ft_seq);
-            let ft_par = |t: Tensor<Par, CpuTensorData>| (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp();
-            unary_grad_assert(t_par.clone(), ft_par);
+            unary_grad_complex_test1_(t_seq);
+            unary_grad_complex_test1_(t_par);
         }
 
         #[test]
         fn unary_grad_complex_test2(
-            t_seq in Tensor::arbitrary(),
-            t_par in Tensor::arbitrary(),
+            t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
+            t_par in Tensor::<Par, CpuTensorData>::arbitrary(),
         ) {
-            let ft_seq = |t: Tensor<Seq, CpuTensorData>| (
-                (
-                    (
-                        (
-                            t * Tensor::scalar(10.) + Tensor::scalar(7.)
-                        ).relu() * Tensor::scalar(6.) + Tensor::scalar(5.)
-                    ).relu() * Tensor::scalar(10.)
-                ).sigmoid()
-            ).ln() / Tensor::scalar(50.);
-            unary_grad_assert(t_seq.clone(), ft_seq);
-            let ft_par = |t: Tensor<Par, CpuTensorData>| (
-                (
-                    (
-                        (
-                            t * Tensor::scalar(10.) + Tensor::scalar(7.)
-                        ).relu() * Tensor::scalar(6.) + Tensor::scalar(5.)
-                    ).relu() * Tensor::scalar(10.)
-                ).sigmoid()
-            ).ln() / Tensor::scalar(50.);
-            unary_grad_assert(t_par.clone(), ft_par);
+            unary_grad_complex_test2_(t_seq);
+            unary_grad_complex_test2_(t_par);
         }
 
         #[test]
