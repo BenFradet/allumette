@@ -1,5 +1,5 @@
 use allumette::{
-    backend::backend_type::{Par, Seq},
+    backend::backend_type::Par,
     data::cpu_tensor_data::CpuTensorData,
     training::{dataset::Dataset, train},
 };

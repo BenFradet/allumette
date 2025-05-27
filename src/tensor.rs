@@ -562,25 +562,24 @@ mod tests {
         }
     }
 
-    fn binary_assert<FT, FF>(
-        t1: Tensor<Seq, CpuTensorData>,
-        t2: Tensor<Seq, CpuTensorData>,
+    fn binary_assert<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+        FT: Fn(Tensor<BT, T>, Tensor<BT, T>) -> Tensor<BT, T>,
+        FF: Fn(f64, f64) -> f64,
+    >(
+        t1: Tensor<BT, T>,
+        t2: Tensor<BT, T>,
         ft: FT,
         ff: FF,
-    ) where
-        FT: Fn(
-            Tensor<Seq, CpuTensorData>,
-            Tensor<Seq, CpuTensorData>,
-        ) -> Tensor<Seq, CpuTensorData>,
-        FF: Fn(f64, f64) -> f64,
-    {
+    ) {
         let data1 = t1.data.clone();
         let data2 = t2.data.clone();
         let res = ft(t1, t2);
         for idx in res.data.indices() {
             assert!(is_close(
-                res.data[idx.clone()],
-                ff(data1[idx.clone()], data2[idx])
+                res.data.index(idx.clone()),
+                ff(data1.index(idx.clone()), data2.index(idx))
             ));
         }
     }
@@ -745,6 +744,27 @@ mod tests {
         unary_assert(t.clone(), ft, ff);
     }
 
+    fn binary_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t1: Tensor<BT, T>,
+        t2: Tensor<BT, T>,
+    ) {
+        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
+        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
+        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
+        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 / t2, div);
+        binary_assert(
+            t1.clone(),
+            t2.clone(),
+            |t1, t2| t1.gt(t2),
+            |f1, f2| lt(f2, f1),
+        );
+        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2), lt);
+        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2), eq);
+    }
+
     proptest! {
         // TODO: reimplement backward
         // #[test]
@@ -811,14 +831,12 @@ mod tests {
         }
 
         #[test]
-        fn binary_tests((t1, t2) in Tensor::arbitrary_tuple()) {
-            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
-            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
-            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
-            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 / t2, div);
-            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2), |f1, f2| lt(f2, f1));
-            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2), lt);
-            binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2), eq);
+        fn binary_tests(
+            (t1_seq, t2_seq) in Tensor::<Seq, CpuTensorData>::arbitrary_tuple(),
+            (t1_par, t2_par) in Tensor::<Seq, CpuTensorData>::arbitrary_tuple(),
+        ) {
+            binary_test(t1_seq, t2_seq);
+            binary_test(t1_par, t2_par);
         }
 
         #[test]
