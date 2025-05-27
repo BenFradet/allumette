@@ -867,20 +867,32 @@ mod tests {
         }
     }
 
+    fn view_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        assert_eq!(&Shape::new(vec![2, 3]), t.data.shape());
+        let t2 = t.clone().view(&Shape::new(vec![6]));
+        assert_eq!(&Shape::new(vec![6]), t2.data.shape());
+        let t3 = t2.view(&Shape::new(vec![1, 6]));
+        assert_eq!(&Shape::new(vec![1, 6]), t3.data.shape());
+        let t4 = t3.view(&Shape::new(vec![6, 1]));
+        assert_eq!(&Shape::new(vec![6, 1]), t4.data.shape());
+        let t5 = t4.view(&Shape::new(vec![2, 3]));
+        assert_eq!(&Shape::new(vec![2, 3]), t5.data.shape());
+        assert_eq!(Some(1.), t.is_close(t5).all(None).item());
+    }
+
     #[test]
     fn test_view() {
-        let t =
+        let t_seq =
             Tensor::<Seq, CpuTensorData>::matrix(vec![vec![2., 3., 4.], vec![4., 5., 7.]]).unwrap();
-        assert_eq!(Shape::new(vec![2, 3]), t.data.shape);
-        let t2 = t.clone().view(&Shape::new(vec![6]));
-        assert_eq!(Shape::new(vec![6]), t2.data.shape);
-        let t3 = t2.view(&Shape::new(vec![1, 6]));
-        assert_eq!(Shape::new(vec![1, 6]), t3.data.shape);
-        let t4 = t3.view(&Shape::new(vec![6, 1]));
-        assert_eq!(Shape::new(vec![6, 1]), t4.data.shape);
-        let t5 = t4.view(&Shape::new(vec![2, 3]));
-        assert_eq!(Shape::new(vec![2, 3]), t5.data.shape);
-        assert_eq!(Some(1.), t.is_close(t5).all(None).item());
+        view_test(t_seq);
+        let t_par =
+            Tensor::<Par, CpuTensorData>::matrix(vec![vec![2., 3., 4.], vec![4., 5., 7.]]).unwrap();
+        view_test(t_par);
     }
 
     #[test]
