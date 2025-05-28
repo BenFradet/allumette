@@ -1,18 +1,18 @@
 use crate::{
     autodiff::context::Context,
-    backend::{backend::Backend, backend_type::BackendType},
+    backend::{backend::TensorBackend, backend_type::TensorBackendType},
     ops::function::Function,
     tensor::Tensor,
 };
 
 #[derive(Clone, Debug)]
-pub struct History<BT: BackendType, B: Backend<BT>> {
+pub struct History<BT: TensorBackendType, B: TensorBackend<BT>> {
     pub last_fn: Option<Function<BT, B>>,
     pub ctx: Context<B>,
     pub inputs: Vec<Tensor<BT, B>>,
 }
 
-impl<BT: BackendType, B: Backend<BT>> Default for History<BT, B> {
+impl<BT: TensorBackendType, B: TensorBackend<BT>> Default for History<BT, B> {
     fn default() -> Self {
         Self {
             last_fn: Default::default(),
@@ -22,7 +22,7 @@ impl<BT: BackendType, B: Backend<BT>> Default for History<BT, B> {
     }
 }
 
-impl<BT: BackendType, B: Backend<BT> + Clone> History<BT, B> {
+impl<BT: TensorBackendType, B: TensorBackend<BT>> History<BT, B> {
     pub fn last_fn(mut self, f: Function<BT, B>) -> Self {
         self.last_fn = Some(f);
         self

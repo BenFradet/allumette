@@ -22,9 +22,9 @@ pub trait Backend<T: BackendType> {
             return Some(other);
         }
 
-        let bc_shape = self.shape().broadcast(&other.shape())?;
+        let bc_shape = self.shape().broadcast(other.shape())?;
         let buf = TensorData::zeros(bc_shape);
-        let mut out = other.map_broadcast(&buf, |f| f)?; // Backend::<Seq>::map_broadcast(&other, &buf, |f| f)?;
+        let mut out = other.map_broadcast(&buf, |f| f)?;
         if self.shape() == out.shape() {
             return Some(out);
         }
@@ -50,3 +50,5 @@ pub trait Backend<T: BackendType> {
         Some(out)
     }
 }
+
+pub trait TensorBackend<T: BackendType> = Backend<T> + TensorData + Clone + std::fmt::Debug;

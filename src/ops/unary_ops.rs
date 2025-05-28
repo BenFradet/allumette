@@ -1,6 +1,6 @@
 use crate::{
     autodiff::context::Context,
-    backend::{backend::Backend, backend_type::BackendType},
+    backend::{backend::TensorBackend, backend_type::TensorBackendType},
     data::tensor_data::TensorData,
     math,
 };
@@ -8,7 +8,7 @@ use crate::{
 use super::unary::Unary;
 
 pub struct Neg;
-impl<BT: BackendType, T: Backend<BT>> Unary<BT, T> for Neg {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Unary<BT, T> for Neg {
     fn forward(&self, a: &T) -> T {
         a.map(math::unary::neg)
     }
@@ -23,7 +23,7 @@ impl<BT: BackendType, T: Backend<BT>> Unary<BT, T> for Neg {
 }
 
 pub struct Inv;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Inv {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Unary<BT, T> for Inv {
     fn forward(&self, a: &T) -> T {
         a.map(math::unary::inv)
     }
@@ -41,7 +41,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Inv {
 }
 
 pub struct Ln;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Ln {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Unary<BT, T> for Ln {
     fn forward(&self, a: &T) -> T {
         a.map(math::unary::ln)
     }
@@ -59,7 +59,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Ln {
 }
 
 pub struct Sig;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Sig {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Unary<BT, T> for Sig {
     fn forward(&self, a: &T) -> T {
         a.map(math::unary::sig)
     }
@@ -83,7 +83,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Sig {
 }
 
 pub struct Relu;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Relu {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Unary<BT, T> for Relu {
     fn forward(&self, a: &T) -> T {
         a.map(math::unary::relu)
     }
@@ -101,7 +101,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Relu {
 }
 
 pub struct Exp;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Exp {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Unary<BT, T> for Exp {
     fn forward(&self, a: &T) -> T {
         a.map(math::unary::exp)
     }
@@ -120,7 +120,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Unary<BT, T> for Exp {
 
 // make contiguous
 pub struct Copy;
-impl<BT: BackendType, T: Backend<BT> + TensorData + Clone> Unary<BT, T> for Copy {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Unary<BT, T> for Copy {
     fn forward(&self, a: &T) -> T {
         a.map_broadcast(&<T as TensorData>::zeros(a.shape().clone()), |f| f)
             .unwrap_or(a.map(|f| f))

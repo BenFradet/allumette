@@ -1,12 +1,12 @@
 use crate::{
     autodiff::history::History,
-    backend::{backend::Backend, backend_type::BackendType},
+    backend::{backend::TensorBackend, backend_type::TensorBackendType},
     data::tensor_data::TensorData,
     shaping::shape::Shape,
     tensor::Tensor,
 };
 
-pub struct Layer<'a, BT: BackendType, T: Backend<BT>> {
+pub struct Layer<'a, BT: TensorBackendType, T: TensorBackend<BT>> {
     pub name: &'a str,
     pub in_size: usize,
     pub out_size: usize,
@@ -14,7 +14,7 @@ pub struct Layer<'a, BT: BackendType, T: Backend<BT>> {
     pub biases: Tensor<BT, T>,
 }
 
-impl<'a, BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug> Layer<'a, BT, T> {
+impl<'a, BT: TensorBackendType, T: TensorBackend<BT>> Layer<'a, BT, T> {
     pub fn new(name: &'a str, in_size: usize, out_size: usize) -> Self {
         Self {
             name,

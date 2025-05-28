@@ -1,6 +1,6 @@
 use crate::{
     autodiff::context::Context,
-    backend::{backend::Backend, backend_type::BackendType},
+    backend::{backend::TensorBackend, backend_type::TensorBackendType},
     data::tensor_data::TensorData,
     math,
     shaping::shape::Shape,
@@ -9,7 +9,7 @@ use crate::{
 use super::binary::Binary;
 
 pub struct Add;
-impl<BT: BackendType, T: Backend<BT> + TensorData + Clone> Binary<BT, T> for Add {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Binary<BT, T> for Add {
     fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, math::binary::add)
             .unwrap_or(<T as TensorData>::ones(a.shape().clone()))
@@ -25,7 +25,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData + Clone> Binary<BT, T> for Add
 }
 
 pub struct Mul;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for Mul {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Binary<BT, T> for Mul {
     fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, math::binary::mul)
             .unwrap_or(<T as TensorData>::ones(a.shape().clone()))
@@ -50,7 +50,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for Mul {
 }
 
 pub struct Lt;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for Lt {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Binary<BT, T> for Lt {
     fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, math::binary::lt)
             .unwrap_or(<T as TensorData>::ones(a.shape().clone()))
@@ -69,7 +69,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for Lt {
 }
 
 pub struct Eq;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for Eq {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Binary<BT, T> for Eq {
     fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, math::binary::eq)
             .unwrap_or(<T as TensorData>::ones(a.shape().clone()))
@@ -88,7 +88,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for Eq {
 }
 
 pub struct Sum;
-impl<BT: BackendType, T: Backend<BT> + TensorData + Clone> Binary<BT, T> for Sum {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Binary<BT, T> for Sum {
     fn forward(&self, a: &T, dim: &T) -> T {
         a.reduce(|acc, v| acc + v, dim.first().unwrap() as usize, 0.)
             .unwrap_or(<T as TensorData>::ones(a.shape().clone()))
@@ -104,7 +104,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData + Clone> Binary<BT, T> for Sum
 }
 
 pub struct Permute;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for Permute {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Binary<BT, T> for Permute {
     fn forward(&self, a: &T, order: &T) -> T {
         let a_shape = a.shape().clone();
         a.permute(order).unwrap_or(<T as TensorData>::ones(a_shape))
@@ -136,7 +136,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for Permute {
 }
 
 pub struct IsClose;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for IsClose {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Binary<BT, T> for IsClose {
     fn forward(&self, a: &T, b: &T) -> T {
         a.zip(b, |a, b| if math::binary::is_close(a, b) { 1. } else { 0. })
             .unwrap_or(<T as TensorData>::ones(a.shape().clone()))
@@ -152,7 +152,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for IsClose {
 }
 
 pub struct All;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for All {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Binary<BT, T> for All {
     fn forward(&self, a: &T, dim: &T) -> T {
         a.reduce(|acc, v| acc * v, dim.first().unwrap() as usize, 1.)
             .unwrap_or(<T as TensorData>::ones(a.shape().clone()))
@@ -168,7 +168,7 @@ impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for All {
 }
 
 pub struct View;
-impl<BT: BackendType, T: Backend<BT> + TensorData> Binary<BT, T> for View {
+impl<BT: TensorBackendType, T: TensorBackend<BT>> Binary<BT, T> for View {
     fn forward(&self, lhs: &T, s: &T) -> T {
         assert!(lhs.is_contiguous(), "must be contiguous to view");
         let shape = Shape::new(s.iter().map(|f| *f as usize).collect());
