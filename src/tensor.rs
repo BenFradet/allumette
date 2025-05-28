@@ -895,14 +895,13 @@ mod tests {
         view_test(t_par);
     }
 
-    #[test]
-    fn test_reduce_forward_one_dim() {
-        let shape = Shape::new(vec![3, 2]);
-        let strides = (&shape).into();
-        let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
-        let tensor: Tensor<Seq, _> = Tensor::from_data(td);
-        let summed = tensor.sum(Some(0));
-
+    fn reduce_forward_one_dim_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        let summed = t.sum(Some(0));
         let exp = Tensor::vec(vec![11., 16.]);
         let is_close = summed.is_close(exp);
         let shape = Shape::scalar(is_close.size());
@@ -910,13 +909,24 @@ mod tests {
     }
 
     #[test]
-    fn test_reduce_forward_one_dim_2() {
+    fn test_reduce_forward_one_dim() {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
         let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
-        let tensor: Tensor<Seq, _> = Tensor::from_data(td);
-        let summed = tensor.sum(Some(1));
 
+        let t_seq: Tensor<Seq, _> = Tensor::from_data(td.clone());
+        reduce_forward_one_dim_test(t_seq);
+        let t_par: Tensor<Par, _> = Tensor::from_data(td.clone());
+        reduce_forward_one_dim_test(t_par);
+    }
+
+    fn reduce_forward_one_dim_2_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        let summed = t.sum(Some(1));
         let exp =
             Tensor::from_data(TensorData::matrix(vec![vec![5.], vec![10.], vec![12.]]).unwrap());
         let is_close = summed.is_close(exp);
@@ -925,10 +935,34 @@ mod tests {
     }
 
     #[test]
+    fn test_reduce_forward_one_dim_2() {
+        let shape = Shape::new(vec![3, 2]);
+        let strides = (&shape).into();
+        let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
+
+        let t_seq: Tensor<Seq, _> = Tensor::from_data(td.clone());
+        reduce_forward_one_dim_2_test(t_seq);
+        let t_par: Tensor<Par, _> = Tensor::from_data(td);
+        reduce_forward_one_dim_2_test(t_par);
+    }
+
+    fn reduce_forward_all_dim_test<
+        BT: BackendType + Clone + std::fmt::Debug,
+        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
+    >(
+        t: Tensor<BT, T>,
+    ) {
+        let summed = t.sum(None);
+        assert_eq!(Some(27.), summed.item());
+    }
+
+    #[test]
     fn test_reduce_forward_all_dim() {
         let shape = Shape::new(vec![3, 2]);
-        let tensor = Tensor::<Seq, CpuTensorData>::vec(vec![2., 3., 4., 6., 5., 7.]).reshape(shape);
-        let summed = tensor.sum(None);
-        assert_eq!(Some(27.), summed.item());
+        let t_seq =
+            Tensor::<Seq, CpuTensorData>::vec(vec![2., 3., 4., 6., 5., 7.]).reshape(shape.clone());
+        reduce_forward_all_dim_test(t_seq);
+        let t_par = Tensor::<Par, CpuTensorData>::vec(vec![2., 3., 4., 6., 5., 7.]).reshape(shape);
+        reduce_forward_all_dim_test(t_par);
     }
 }
