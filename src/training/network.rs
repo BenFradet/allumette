@@ -16,11 +16,7 @@ pub struct Network<'a, BT: BackendType, T: Backend<BT>> {
     layer3: Layer<'a, BT, T>,
 }
 
-impl<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    > Network<'_, BT, T>
-{
+impl<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug> Network<'_, BT, T> {
     pub fn new(hidden_layer_size: usize) -> Self {
         let layer1 = Layer::new("layer1", 2, hidden_layer_size);
         let layer2 = Layer::new("layer2", hidden_layer_size, hidden_layer_size);
@@ -54,10 +50,8 @@ impl<
     }
 }
 
-impl<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    > Optimizer<BT, T> for Network<'_, BT, T>
+impl<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug> Optimizer<BT, T>
+    for Network<'_, BT, T>
 {
     fn zero(&mut self) {
         self.layer1.weights.grad = None;

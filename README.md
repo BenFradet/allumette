@@ -27,8 +27,8 @@ train::train::<Seq, CpuTensorData>(dataset, learning_rate, iterations, hidden_la
 
 ### Build and dependencies
 
-Part of the codebase makes use of the `generic_const_exprs` experimental feature so it requires
-nightly.
+Part of the codebase makes use of the `generic_const_exprs` and `trait_alias` experimental features
+so it requires nightly.
 
 The set of dependencies is otherwise pretty limited:
 - `proptest` for property-based testing

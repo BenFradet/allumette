@@ -11,10 +11,7 @@ use crate::{
 pub struct Forward;
 
 impl Forward {
-    pub fn binary<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    >(
+    pub fn binary<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
         b: impl Binary<BT, T> + 'static,
         lhs: Tensor<BT, T>,
         rhs: Tensor<BT, T>,
@@ -35,10 +32,7 @@ impl Forward {
         Tensor::new(res, new_history)
     }
 
-    pub fn unary<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    >(
+    pub fn unary<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
         u: impl Unary<BT, T> + 'static,
         a: Tensor<BT, T>,
     ) -> Tensor<BT, T> {

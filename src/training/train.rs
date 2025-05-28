@@ -8,10 +8,7 @@ use crate::{
 
 use super::{dataset::Dataset, network::Network};
 
-pub fn train<
-    BT: BackendType + Clone + std::fmt::Debug,
-    T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
->(
+pub fn train<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
     data: Dataset,
     learning_rate: f64,
     iterations: usize,

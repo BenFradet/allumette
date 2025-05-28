@@ -1,6 +1,7 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![feature(generic_arg_infer)]
+#![feature(trait_alias)]
 #![allow(dead_code)]
 pub mod autodiff;
 #[allow(clippy::module_inception)]

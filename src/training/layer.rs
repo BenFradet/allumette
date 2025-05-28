@@ -14,12 +14,7 @@ pub struct Layer<'a, BT: BackendType, T: Backend<BT>> {
     pub biases: Tensor<BT, T>,
 }
 
-impl<
-        'a,
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    > Layer<'a, BT, T>
-{
+impl<'a, BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug> Layer<'a, BT, T> {
     pub fn new(name: &'a str, in_size: usize, out_size: usize) -> Self {
         Self {
             name,

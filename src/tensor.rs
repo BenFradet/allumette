@@ -164,11 +164,7 @@ where
     fn topological_sort_dfs(&self) -> impl Iterator<Item = &Self> {
         let mut q = VecDeque::new();
         let mut visited = HashSet::new();
-        fn dfs<
-            'a,
-            BT: BackendType + Clone + std::fmt::Debug,
-            T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-        >(
+        fn dfs<'a, BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
             t: &'a Tensor<BT, T>,
             visited: &mut HashSet<&'a str>,
             q: &mut VecDeque<&'a Tensor<BT, T>>,
@@ -312,7 +308,7 @@ where
     }
 }
 
-impl<BT: BackendType + Clone + std::fmt::Debug> Tensor<BT, CpuTensorData>
+impl<BT: BackendType> Tensor<BT, CpuTensorData>
 where
     CpuTensorData: Backend<BT>,
 {
@@ -348,10 +344,8 @@ where
     }
 }
 
-impl<
-        BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
-    > ops::Add<Tensor<BT, T>> for Tensor<BT, T>
+impl<BT: BackendType, T: Backend<BT> + TensorData + std::fmt::Debug + Clone> ops::Add<Tensor<BT, T>>
+    for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
 
@@ -360,10 +354,8 @@ impl<
     }
 }
 
-impl<
-        BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
-    > ops::Sub<Tensor<BT, T>> for Tensor<BT, T>
+impl<BT: BackendType, T: Backend<BT> + TensorData + std::fmt::Debug + Clone> ops::Sub<Tensor<BT, T>>
+    for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
 
@@ -373,10 +365,8 @@ impl<
     }
 }
 
-impl<
-        BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
-    > ops::Mul<Tensor<BT, T>> for Tensor<BT, T>
+impl<BT: BackendType, T: Backend<BT> + TensorData + std::fmt::Debug + Clone> ops::Mul<Tensor<BT, T>>
+    for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
 
@@ -385,10 +375,8 @@ impl<
     }
 }
 
-impl<
-        BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
-    > ops::Div<Tensor<BT, T>> for Tensor<BT, T>
+impl<BT: BackendType, T: Backend<BT> + TensorData + std::fmt::Debug + Clone> ops::Div<Tensor<BT, T>>
+    for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
 
@@ -398,10 +386,8 @@ impl<
     }
 }
 
-impl<
-        BT: BackendType + std::fmt::Debug + Clone,
-        T: Backend<BT> + TensorData + std::fmt::Debug + Clone,
-    > ops::Neg for Tensor<BT, T>
+impl<BT: BackendType, T: Backend<BT> + TensorData + std::fmt::Debug + Clone> ops::Neg
+    for Tensor<BT, T>
 {
     type Output = Tensor<BT, T>;
 
@@ -424,7 +410,7 @@ mod tests {
     use super::*;
 
     fn unary_grad_assert<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
         F: Fn(Tensor<BT, T>) -> Tensor<BT, T>,
     >(
@@ -449,7 +435,7 @@ mod tests {
     }
 
     fn binary_grad_assert<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
         F: Fn(Tensor<BT, T>, Tensor<BT, T>) -> Tensor<BT, T>,
     >(
@@ -494,7 +480,7 @@ mod tests {
     }
 
     fn unary_grad_central_diff<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
         F: Fn(Tensor<BT, T>) -> Tensor<BT, T>,
     >(
@@ -513,7 +499,7 @@ mod tests {
     }
 
     fn binary_grad_central_diff<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
         F: Fn(Tensor<BT, T>, Tensor<BT, T>) -> Tensor<BT, T>,
     >(
@@ -546,7 +532,7 @@ mod tests {
     }
 
     fn unary_assert<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
         FT: Fn(Tensor<BT, T>) -> Tensor<BT, T>,
         FF: Fn(f64) -> f64,
@@ -563,7 +549,7 @@ mod tests {
     }
 
     fn binary_assert<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
         FT: Fn(Tensor<BT, T>, Tensor<BT, T>) -> Tensor<BT, T>,
         FF: Fn(f64, f64) -> f64,
@@ -584,20 +570,14 @@ mod tests {
         }
     }
 
-    fn permute_grad_test<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    >(
+    fn permute_grad_test<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
         t: Tensor<BT, T>,
         o: Order,
     ) {
         unary_grad_assert(t, move |t| t.permute(o.clone()));
     }
 
-    fn reduce_grad_test<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    >(
+    fn reduce_grad_test<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
         t: Tensor<BT, T>,
     ) {
         unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
@@ -605,10 +585,7 @@ mod tests {
         unary_grad_assert(t.clone(), |t| t.mean(None));
     }
 
-    fn binary_grad_test<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    >(
+    fn binary_grad_test<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
         t1: Tensor<BT, T>,
         t2: Tensor<BT, T>,
     ) {
@@ -624,7 +601,7 @@ mod tests {
     }
 
     fn binary_grad_broadcast_test<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     >(
         t1: Tensor<BT, T>,
@@ -651,7 +628,7 @@ mod tests {
     }
 
     fn unary_grad_complex_test1_<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     >(
         t: Tensor<BT, T>,
@@ -663,7 +640,7 @@ mod tests {
     }
 
     fn unary_grad_complex_test2_<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     >(
         t: Tensor<BT, T>,
@@ -680,10 +657,7 @@ mod tests {
         unary_grad_assert(t.clone(), ft);
     }
 
-    fn unary_grad_test<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    >(
+    fn unary_grad_test<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
         t: Tensor<BT, T>,
     ) {
         unary_grad_assert(t.clone(), |t| -t);
@@ -696,10 +670,7 @@ mod tests {
         unary_grad_assert(t.clone(), |t| t.exp());
     }
 
-    fn unary_test<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    >(
+    fn unary_test<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
         t: Tensor<BT, T>,
     ) {
         unary_assert(t.clone(), |t| -t, |f| -f);
@@ -713,7 +684,7 @@ mod tests {
     }
 
     fn unary_complex_test1_<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     >(
         t: Tensor<BT, T>,
@@ -726,7 +697,7 @@ mod tests {
     }
 
     fn unary_complex_test2_<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     >(
         t: Tensor<BT, T>,
@@ -744,10 +715,7 @@ mod tests {
         unary_assert(t.clone(), ft, ff);
     }
 
-    fn binary_test<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    >(
+    fn binary_test<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
         t1: Tensor<BT, T>,
         t2: Tensor<BT, T>,
     ) {
@@ -867,10 +835,7 @@ mod tests {
         }
     }
 
-    fn view_test<
-        BT: BackendType + Clone + std::fmt::Debug,
-        T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
-    >(
+    fn view_test<BT: BackendType, T: Backend<BT> + TensorData + Clone + std::fmt::Debug>(
         t: Tensor<BT, T>,
     ) {
         assert_eq!(&Shape::new(vec![2, 3]), t.data.shape());
@@ -896,7 +861,7 @@ mod tests {
     }
 
     fn reduce_forward_one_dim_test<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     >(
         t: Tensor<BT, T>,
@@ -921,7 +886,7 @@ mod tests {
     }
 
     fn reduce_forward_one_dim_2_test<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     >(
         t: Tensor<BT, T>,
@@ -947,7 +912,7 @@ mod tests {
     }
 
     fn reduce_forward_all_dim_test<
-        BT: BackendType + Clone + std::fmt::Debug,
+        BT: BackendType,
         T: Backend<BT> + TensorData + Clone + std::fmt::Debug,
     >(
         t: Tensor<BT, T>,
