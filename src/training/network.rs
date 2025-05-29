@@ -2,20 +2,20 @@ use std::collections::HashMap;
 
 use crate::{
     autodiff::history::History,
-    backend::{backend::TensorBackend, backend_type::TensorBackendType},
+    backend::{backend::Backend, backend_type::BackendType},
     optim::optimizer::Optimizer,
     tensor::Tensor,
 };
 
 use super::layer::Layer;
 
-pub struct Network<'a, BT: TensorBackendType, T: TensorBackend<BT>> {
+pub struct Network<'a, BT: BackendType, T: Backend<BT>> {
     layer1: Layer<'a, BT, T>,
     layer2: Layer<'a, BT, T>,
     layer3: Layer<'a, BT, T>,
 }
 
-impl<BT: TensorBackendType, T: TensorBackend<BT>> Network<'_, BT, T> {
+impl<BT: BackendType, T: Backend<BT>> Network<'_, BT, T> {
     pub fn new(hidden_layer_size: usize) -> Self {
         let layer1 = Layer::new("layer1", 2, hidden_layer_size);
         let layer2 = Layer::new("layer2", hidden_layer_size, hidden_layer_size);
@@ -49,7 +49,7 @@ impl<BT: TensorBackendType, T: TensorBackend<BT>> Network<'_, BT, T> {
     }
 }
 
-impl<BT: TensorBackendType, T: TensorBackend<BT>> Optimizer<BT, T> for Network<'_, BT, T> {
+impl<BT: BackendType, T: Backend<BT>> Optimizer<BT, T> for Network<'_, BT, T> {
     fn zero(&mut self) {
         self.layer1.weights.grad = None;
         self.layer2.weights.grad = None;

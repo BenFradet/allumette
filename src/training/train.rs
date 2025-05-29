@@ -1,5 +1,5 @@
 use crate::{
-    backend::{backend::TensorBackend, backend_type::TensorBackendType},
+    backend::{backend::Backend, backend_type::BackendType},
     data::tensor_data::TensorData,
     optim::optimizer::Optimizer,
     shaping::shape::Shape,
@@ -8,7 +8,7 @@ use crate::{
 
 use super::{dataset::Dataset, network::Network};
 
-pub fn train<BT: TensorBackendType, T: TensorBackend<BT>>(
+pub fn train<BT: BackendType, T: Backend<BT>>(
     data: Dataset,
     learning_rate: f64,
     iterations: usize,

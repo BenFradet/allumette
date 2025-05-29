@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     autodiff::{context::Context, history::History},
-    backend::{backend::TensorBackend, backend_type::TensorBackendType},
+    backend::{backend::Backend, backend_type::BackendType},
     ops::{binary::Binary, function::Function, unary::Unary},
     tensor::Tensor,
 };
@@ -10,7 +10,7 @@ use crate::{
 pub struct Forward;
 
 impl Forward {
-    pub fn binary<BT: TensorBackendType, T: TensorBackend<BT>>(
+    pub fn binary<BT: BackendType, T: Backend<BT>>(
         b: impl Binary<BT, T> + 'static,
         lhs: Tensor<BT, T>,
         rhs: Tensor<BT, T>,
@@ -31,7 +31,7 @@ impl Forward {
         Tensor::new(res, new_history)
     }
 
-    pub fn unary<BT: TensorBackendType, T: TensorBackend<BT>>(
+    pub fn unary<BT: BackendType, T: Backend<BT>>(
         u: impl Unary<BT, T> + 'static,
         a: Tensor<BT, T>,
     ) -> Tensor<BT, T> {

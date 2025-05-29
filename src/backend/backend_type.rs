@@ -1,11 +1,11 @@
-pub trait BackendType {}
+pub trait TensorBackendType {}
 
 #[derive(Debug, Clone)]
 pub struct Seq;
 #[derive(Debug, Clone)]
 pub struct Par;
 
-impl BackendType for Seq {}
-impl BackendType for Par {}
+impl TensorBackendType for Seq {}
+impl TensorBackendType for Par {}
 
-pub trait TensorBackendType = BackendType + Clone + std::fmt::Debug;
+pub trait BackendType = TensorBackendType + Clone + std::fmt::Debug;

@@ -1,6 +1,6 @@
 use crate::{
     autodiff::{forward::Forward, history::History},
-    backend::{backend::TensorBackend, backend_type::TensorBackendType},
+    backend::{backend::Backend, backend_type::BackendType},
     data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
     ops::{
         binary_ops::{Add, All, Eq, IsClose, Lt, Mul, Permute, Sum, View},
@@ -16,7 +16,7 @@ use std::{
 };
 
 #[derive(Clone, Debug)]
-pub struct Tensor<BT: TensorBackendType, T: TensorBackend<BT>> {
+pub struct Tensor<BT: BackendType, T: Backend<BT>> {
     pub data: T,
     pub grad: Option<Box<Tensor<BT, T>>>,
     pub history: History<BT, T>,
@@ -26,7 +26,7 @@ pub struct Tensor<BT: TensorBackendType, T: TensorBackend<BT>> {
 
 //static TENSOR_COUNT: AtomicU32 = AtomicU32::new(0);
 
-impl<BT: TensorBackendType, T: TensorBackend<BT>> Tensor<BT, T>
+impl<BT: BackendType, T: Backend<BT>> Tensor<BT, T>
 where
     BT: std::fmt::Debug + Clone,
     T: TensorData + std::fmt::Debug + Clone,
@@ -164,7 +164,7 @@ where
     fn topological_sort_dfs(&self) -> impl Iterator<Item = &Self> {
         let mut q = VecDeque::new();
         let mut visited = HashSet::new();
-        fn dfs<'a, BT: TensorBackendType, T: TensorBackend<BT>>(
+        fn dfs<'a, BT: BackendType, T: Backend<BT>>(
             t: &'a Tensor<BT, T>,
             visited: &mut HashSet<&'a str>,
             q: &mut VecDeque<&'a Tensor<BT, T>>,
@@ -308,9 +308,9 @@ where
     }
 }
 
-impl<BT: TensorBackendType> Tensor<BT, CpuTensorData>
+impl<BT: BackendType> Tensor<BT, CpuTensorData>
 where
-    CpuTensorData: TensorBackend<BT>,
+    CpuTensorData: Backend<BT>,
 {
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         CpuTensorData::arbitrary().prop_map(Self::from_data)
@@ -344,7 +344,7 @@ where
     }
 }
 
-impl<BT: TensorBackendType, T: TensorBackend<BT>> ops::Add<Tensor<BT, T>> for Tensor<BT, T> {
+impl<BT: BackendType, T: Backend<BT>> ops::Add<Tensor<BT, T>> for Tensor<BT, T> {
     type Output = Tensor<BT, T>;
 
     fn add(self, rhs: Tensor<BT, T>) -> Self::Output {
@@ -352,7 +352,7 @@ impl<BT: TensorBackendType, T: TensorBackend<BT>> ops::Add<Tensor<BT, T>> for Te
     }
 }
 
-impl<BT: TensorBackendType, T: TensorBackend<BT>> ops::Sub<Tensor<BT, T>> for Tensor<BT, T> {
+impl<BT: BackendType, T: Backend<BT>> ops::Sub<Tensor<BT, T>> for Tensor<BT, T> {
     type Output = Tensor<BT, T>;
 
     fn sub(self, rhs: Tensor<BT, T>) -> Self::Output {
@@ -361,7 +361,7 @@ impl<BT: TensorBackendType, T: TensorBackend<BT>> ops::Sub<Tensor<BT, T>> for Te
     }
 }
 
-impl<BT: TensorBackendType, T: TensorBackend<BT>> ops::Mul<Tensor<BT, T>> for Tensor<BT, T> {
+impl<BT: BackendType, T: Backend<BT>> ops::Mul<Tensor<BT, T>> for Tensor<BT, T> {
     type Output = Tensor<BT, T>;
 
     fn mul(self, rhs: Tensor<BT, T>) -> Self::Output {
@@ -369,7 +369,7 @@ impl<BT: TensorBackendType, T: TensorBackend<BT>> ops::Mul<Tensor<BT, T>> for Te
     }
 }
 
-impl<BT: TensorBackendType, T: TensorBackend<BT>> ops::Div<Tensor<BT, T>> for Tensor<BT, T> {
+impl<BT: BackendType, T: Backend<BT>> ops::Div<Tensor<BT, T>> for Tensor<BT, T> {
     type Output = Tensor<BT, T>;
 
     fn div(self, rhs: Tensor<BT, T>) -> Self::Output {
@@ -378,7 +378,7 @@ impl<BT: TensorBackendType, T: TensorBackend<BT>> ops::Div<Tensor<BT, T>> for Te
     }
 }
 
-impl<BT: TensorBackendType, T: TensorBackend<BT>> ops::Neg for Tensor<BT, T> {
+impl<BT: BackendType, T: Backend<BT>> ops::Neg for Tensor<BT, T> {
     type Output = Tensor<BT, T>;
 
     fn neg(self) -> Self::Output {
@@ -399,11 +399,7 @@ mod tests {
 
     use super::*;
 
-    fn unary_grad_assert<
-        BT: TensorBackendType,
-        T: TensorBackend<BT>,
-        F: Fn(Tensor<BT, T>) -> Tensor<BT, T>,
-    >(
+    fn unary_grad_assert<BT: BackendType, T: Backend<BT>, F: Fn(Tensor<BT, T>) -> Tensor<BT, T>>(
         tensor: Tensor<BT, T>,
         f: F,
     ) {
@@ -425,8 +421,8 @@ mod tests {
     }
 
     fn binary_grad_assert<
-        BT: TensorBackendType,
-        T: TensorBackend<BT>,
+        BT: BackendType,
+        T: Backend<BT>,
         F: Fn(Tensor<BT, T>, Tensor<BT, T>) -> Tensor<BT, T>,
     >(
         tensor1: Tensor<BT, T>,
@@ -470,8 +466,8 @@ mod tests {
     }
 
     fn unary_grad_central_diff<
-        BT: TensorBackendType,
-        T: TensorBackend<BT>,
+        BT: BackendType,
+        T: Backend<BT>,
         F: Fn(Tensor<BT, T>) -> Tensor<BT, T>,
     >(
         tensor: Tensor<BT, T>,
@@ -489,8 +485,8 @@ mod tests {
     }
 
     fn binary_grad_central_diff<
-        BT: TensorBackendType,
-        T: TensorBackend<BT>,
+        BT: BackendType,
+        T: Backend<BT>,
         F: Fn(Tensor<BT, T>, Tensor<BT, T>) -> Tensor<BT, T>,
     >(
         tensor1: Tensor<BT, T>,
@@ -522,8 +518,8 @@ mod tests {
     }
 
     fn unary_assert<
-        BT: TensorBackendType,
-        T: TensorBackend<BT>,
+        BT: BackendType,
+        T: Backend<BT>,
         FT: Fn(Tensor<BT, T>) -> Tensor<BT, T>,
         FF: Fn(f64) -> f64,
     >(
@@ -539,8 +535,8 @@ mod tests {
     }
 
     fn binary_assert<
-        BT: TensorBackendType,
-        T: TensorBackend<BT>,
+        BT: BackendType,
+        T: Backend<BT>,
         FT: Fn(Tensor<BT, T>, Tensor<BT, T>) -> Tensor<BT, T>,
         FF: Fn(f64, f64) -> f64,
     >(
@@ -560,20 +556,17 @@ mod tests {
         }
     }
 
-    fn permute_grad_test<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>, o: Order) {
+    fn permute_grad_test<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>, o: Order) {
         unary_grad_assert(t, move |t| t.permute(o.clone()));
     }
 
-    fn reduce_grad_test<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn reduce_grad_test<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
         unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
         unary_grad_assert(t.clone(), |t| t.mean(None));
     }
 
-    fn binary_grad_test<BT: TensorBackendType, T: TensorBackend<BT>>(
-        t1: Tensor<BT, T>,
-        t2: Tensor<BT, T>,
-    ) {
+    fn binary_grad_test<BT: BackendType, T: Backend<BT>>(t1: Tensor<BT, T>, t2: Tensor<BT, T>) {
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
@@ -585,7 +578,7 @@ mod tests {
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
     }
 
-    fn binary_grad_broadcast_test<BT: TensorBackendType, T: TensorBackend<BT>>(
+    fn binary_grad_broadcast_test<BT: BackendType, T: Backend<BT>>(
         t1: Tensor<BT, T>,
         t2: Tensor<BT, T>,
     ) {
@@ -609,14 +602,14 @@ mod tests {
         binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.eq(t2));
     }
 
-    fn unary_grad_complex_test1_<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn unary_grad_complex_test1_<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         let ft_seq = |t: Tensor<BT, T>| {
             (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp()
         };
         unary_grad_assert(t.clone(), ft_seq);
     }
 
-    fn unary_grad_complex_test2_<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn unary_grad_complex_test2_<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         let ft = |t: Tensor<BT, T>| {
             ((((t * Tensor::scalar(10.) + Tensor::scalar(7.)).relu() * Tensor::scalar(6.)
                 + Tensor::scalar(5.))
@@ -629,7 +622,7 @@ mod tests {
         unary_grad_assert(t.clone(), ft);
     }
 
-    fn unary_grad_test<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn unary_grad_test<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         unary_grad_assert(t.clone(), |t| -t);
         unary_grad_assert(t.clone(), |t| t.clone() * t);
         unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
@@ -640,7 +633,7 @@ mod tests {
         unary_grad_assert(t.clone(), |t| t.exp());
     }
 
-    fn unary_test<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn unary_test<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         unary_assert(t.clone(), |t| -t, |f| -f);
         unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
         unary_assert(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
@@ -651,7 +644,7 @@ mod tests {
         unary_assert(t.clone(), |t| t.exp(), exp);
     }
 
-    fn unary_complex_test1_<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn unary_complex_test1_<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         let ft = |t: Tensor<BT, T>| {
             (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp()
         };
@@ -659,7 +652,7 @@ mod tests {
         unary_assert(t.clone(), ft, ff);
     }
 
-    fn unary_complex_test2_<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn unary_complex_test2_<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         let ft = |t: Tensor<BT, T>| {
             ((((t * Tensor::scalar(10.) + Tensor::scalar(7.)).relu() * Tensor::scalar(6.)
                 + Tensor::scalar(5.))
@@ -673,10 +666,7 @@ mod tests {
         unary_assert(t.clone(), ft, ff);
     }
 
-    fn binary_test<BT: TensorBackendType, T: TensorBackend<BT>>(
-        t1: Tensor<BT, T>,
-        t2: Tensor<BT, T>,
-    ) {
+    fn binary_test<BT: BackendType, T: Backend<BT>>(t1: Tensor<BT, T>, t2: Tensor<BT, T>) {
         binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
         binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
         binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
@@ -793,7 +783,7 @@ mod tests {
         }
     }
 
-    fn view_test<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn view_test<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         assert_eq!(&Shape::new(vec![2, 3]), t.data.shape());
         let t2 = t.clone().view(&Shape::new(vec![6]));
         assert_eq!(&Shape::new(vec![6]), t2.data.shape());
@@ -816,7 +806,7 @@ mod tests {
         view_test(t_par);
     }
 
-    fn reduce_forward_one_dim_test<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn reduce_forward_one_dim_test<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         let summed = t.sum(Some(0));
         let exp = Tensor::vec(vec![11., 16.]);
         let is_close = summed.is_close(exp);
@@ -836,9 +826,7 @@ mod tests {
         reduce_forward_one_dim_test(t_par);
     }
 
-    fn reduce_forward_one_dim_2_test<BT: TensorBackendType, T: TensorBackend<BT>>(
-        t: Tensor<BT, T>,
-    ) {
+    fn reduce_forward_one_dim_2_test<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         let summed = t.sum(Some(1));
         let exp =
             Tensor::from_data(TensorData::matrix(vec![vec![5.], vec![10.], vec![12.]]).unwrap());
@@ -859,7 +847,7 @@ mod tests {
         reduce_forward_one_dim_2_test(t_par);
     }
 
-    fn reduce_forward_all_dim_test<BT: TensorBackendType, T: TensorBackend<BT>>(t: Tensor<BT, T>) {
+    fn reduce_forward_all_dim_test<BT: BackendType, T: Backend<BT>>(t: Tensor<BT, T>) {
         let summed = t.sum(None);
         assert_eq!(Some(27.), summed.item());
     }
