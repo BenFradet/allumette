@@ -26,6 +26,17 @@ impl Shape {
         &self.data
     }
 
+    pub fn push(&mut self, e: usize) {
+        self.data.push(e);
+    }
+
+    pub fn drop_right(mut self, nr: usize) -> Self {
+        for _ in 0..nr {
+            self.data.remove(self.data.len() - 1);
+        }
+        self
+    }
+
     #[inline(always)]
     pub fn broadcast(&self, other: &Shape) -> Option<Shape> {
         let n = self.data.len();
