@@ -94,6 +94,10 @@ impl TensorBackend<Par> for CpuTensorData {
             None
         }
     }
+
+    fn matmul(&self, other: &Self) -> Self {
+        todo!()
+    }
 }
 
 #[cfg(test)]

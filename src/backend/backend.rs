@@ -13,6 +13,7 @@ pub trait TensorBackend<T: BackendType> {
     fn reduce<F: Fn(f64, f64) -> f64 + Sync>(&self, f: F, dim: usize, init: f64) -> Option<Self>
     where
         Self: Sized;
+    fn matmul(&self, other: &Self) -> Self;
 
     fn expand(&self, other: Self) -> Option<Self>
     where
