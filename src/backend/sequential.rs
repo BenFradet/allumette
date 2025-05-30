@@ -87,7 +87,43 @@ impl TensorBackend<Seq> for CpuTensorData {
     }
 
     fn matmul(&self, other: &Self) -> Self {
-        todo!()
+        let self_shape_len = self.shape.len();
+        let other_shape_len = other.shape.len();
+        assert!(self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]);
+
+        let self_shape = self.shape.clone().drop_right(2);
+        let other_shape = other.shape.clone().drop_right(2);
+
+        let mut shape = self_shape.broadcast(&other_shape).unwrap();
+        shape.push(self.shape[self_shape_len - 2]);
+        shape.push(other.shape[other_shape_len - 1]);
+        let shape_len = shape.len();
+        let len = shape.size;
+        let strides: Strides = (&shape).into();
+
+        let self_batch_stride = if self.shape[0] > 1 { self.strides[0] } else { 0 };
+        let other_batch_stride = if other.shape[0] > 1 { other.strides[0] } else { 0 };
+
+        let mut out = vec![0.; len];
+        for i in 0..len {
+            let out0 = i / (shape[shape_len - 1] * shape[shape_len - 2]);
+            let out1 = (i % (shape[shape_len - 1] * shape[shape_len - 2])) / shape[shape_len - 1];
+            let out2 = i % shape[shape_len - 1];
+
+            let out_i = out0 * strides[0] + out1 * strides[1] * out2 * strides[2];
+
+            let self_start = out0 * self_batch_stride + out1 * self.strides[1];
+            let other_start = out0 * other_batch_stride + out2 * self.strides[2];
+
+            let mut tmp = 0.;
+            for position in 0..self_shape[self_shape_len - 1] {
+                tmp += self.data[self_start + position * self.strides[2]] *
+                    other.data[other_start + position * other.strides[1]];
+            }
+            out[out_i] = tmp;
+        }
+
+        Self::new(out, shape, strides)
     }
 }
 
