@@ -188,3 +188,28 @@ impl<BT: BackendType, T: Backend<BT>> Binary<BT, T> for View {
         "view"
     }
 }
+
+pub struct MatMul;
+impl<BT: BackendType, T: Backend<BT>> Binary<BT, T> for MatMul {
+    fn forward(&self, lhs: &T, rhs: &T) -> T {
+        lhs.matmul(rhs)
+    }
+
+    fn backward(&self, ctx: &Context<T>, d: &T) -> (T, T) {
+        // TODO: transpose
+        (
+            ctx.snd
+                .as_ref()
+                .map(|b| d.matmul(b))
+                .unwrap_or(<T as TensorData>::ones(d.shape().clone())),
+            ctx.fst
+                .as_ref()
+                .map(|a| a.matmul(d))
+                .unwrap_or(<T as TensorData>::ones(d.shape().clone())),
+        )
+    }
+
+    fn tag(&self) -> &str {
+        "matmul"
+    }
+}
