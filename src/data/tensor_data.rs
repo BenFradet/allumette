@@ -1,6 +1,6 @@
 use std::slice::Iter;
 
-use crate::shaping::{idx::Idx, shape::Shape, strides::Strides};
+use crate::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
 pub trait TensorData {
     fn shape(&self) -> &Shape;
@@ -12,6 +12,14 @@ pub trait TensorData {
     fn permute(&self, order: &Self) -> Option<Self>
     where
         Self: Sized;
+    fn transpose(&self) -> Option<Self>
+    where
+        Self: Sized {
+        let mut order: Vec<_> = Order::range(self.shape().len()).data.iter().map(|&u| u as f64).collect();
+        let len = order.len();
+        order.swap(len - 2, len - 1);
+        self.permute(&Self::vec(order))
+    }
     fn index(&self, idx: Idx) -> f64;
     fn indices(&self) -> impl Iterator<Item = Idx>;
 
