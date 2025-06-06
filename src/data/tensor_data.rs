@@ -14,8 +14,13 @@ pub trait TensorData {
         Self: Sized;
     fn transpose(&self) -> Option<Self>
     where
-        Self: Sized {
-        let mut order: Vec<_> = Order::range(self.shape().len()).data.iter().map(|&u| u as f64).collect();
+        Self: Sized,
+    {
+        let mut order: Vec<_> = Order::range(self.shape().len())
+            .data
+            .iter()
+            .map(|&u| u as f64)
+            .collect();
         let len = order.len();
         order.swap(len - 2, len - 1);
         self.permute(&Self::vec(order))

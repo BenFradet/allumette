@@ -111,14 +111,23 @@ impl TensorBackend<Par> for CpuTensorData {
         let len = shape.size;
         let strides: Strides = (&shape).into();
 
-        let self_batch_stride = if self.shape[0] > 1 { self.strides[0] } else { 0 };
-        let other_batch_stride = if other.shape[0] > 1 { other.strides[0] } else { 0 };
+        let self_batch_stride = if self.shape[0] > 1 {
+            self.strides[0]
+        } else {
+            0
+        };
+        let other_batch_stride = if other.shape[0] > 1 {
+            other.strides[0]
+        } else {
+            0
+        };
 
         let mut out_with_index: Vec<_> = (0..len)
             .into_par_iter()
             .map(|i| {
                 let out0 = i / (shape[shape_len - 1] * shape[shape_len - 2]);
-                let out1 = (i % (shape[shape_len - 1] * shape[shape_len - 2])) / shape[shape_len - 1];
+                let out1 =
+                    (i % (shape[shape_len - 1] * shape[shape_len - 2])) / shape[shape_len - 1];
                 let out2 = i % shape[shape_len - 1];
 
                 let out_i = out0 * strides[0] + out1 * strides[1] * out2 * strides[2];
@@ -128,14 +137,13 @@ impl TensorBackend<Par> for CpuTensorData {
 
                 let mut tmp = 0.;
                 for position in 0..self_shape[self_shape_len - 1] {
-                    tmp += self.data[self_start + position * self.strides[2]] *
-                        other.data[other_start + position * other.strides[1]];
+                    tmp += self.data[self_start + position * self.strides[2]]
+                        * other.data[other_start + position * other.strides[1]];
                 }
                 (out_i, tmp)
             })
             .collect();
-        out_with_index
-            .par_sort_unstable_by_key(|oi| oi.0);
+        out_with_index.par_sort_unstable_by_key(|oi| oi.0);
         let out = out_with_index.iter().map(|oi| oi.1).collect();
 
         Self::new(out, shape, strides)

@@ -196,14 +196,15 @@ impl<BT: BackendType, T: Backend<BT>> Binary<BT, T> for MatMul {
     }
 
     fn backward(&self, ctx: &Context<T>, d: &T) -> (T, T) {
-        // TODO: transpose
         (
             ctx.snd
                 .as_ref()
-                .map(|b| d.matmul(b))
+                .and_then(|b| b.transpose())
+                .map(|b| d.matmul(&b))
                 .unwrap_or(<T as TensorData>::ones(d.shape().clone())),
             ctx.fst
                 .as_ref()
+                .and_then(|a| a.transpose())
                 .map(|a| a.matmul(d))
                 .unwrap_or(<T as TensorData>::ones(d.shape().clone())),
         )
