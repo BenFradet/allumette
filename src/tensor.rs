@@ -3,7 +3,7 @@ use crate::{
     backend::{backend::Backend, backend_type::BackendType},
     data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
     ops::{
-        binary_ops::{Add, All, Eq, IsClose, Lt, Mul, Permute, Sum, View},
+        binary_ops::{Add, All, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
         function::Function,
         unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
@@ -232,6 +232,10 @@ where
 
     pub fn eq(self, rhs: Tensor<BT, T>) -> Self {
         Forward::binary(Eq {}, self, rhs)
+    }
+
+    pub fn mm(self, rhs: Tensor<BT, T>) -> Self {
+        Forward::binary(MatMul {}, self, rhs)
     }
 
     pub fn all(self, dim: Option<usize>) -> Self {
