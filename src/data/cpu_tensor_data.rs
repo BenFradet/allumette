@@ -38,6 +38,13 @@ impl CpuTensorData {
                 Self::new(data, shape, strides)
             })
     }
+
+    pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
+        let size = shape.size;
+        let strides: Strides = (&shape).into();
+        collection::vec(0.0f64..1., size)
+            .prop_map(move |data| Self::new(data, shape.clone(), strides.clone()))
+    }
 }
 
 impl Index<Idx> for CpuTensorData {
