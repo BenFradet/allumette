@@ -320,6 +320,10 @@ where
         CpuTensorData::arbitrary().prop_map(Self::from_data)
     }
 
+    pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
+        CpuTensorData::arbitrary_with_shape(shape).prop_map(Self::from_data)
+    }
+
     pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
         Shape::arbitrary()
             .prop_flat_map(|shape| {
