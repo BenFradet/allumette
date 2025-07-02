@@ -27,16 +27,7 @@ impl CpuTensorData {
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Self> {
-        Shape::arbitrary()
-            .prop_flat_map(|shape| {
-                let size = shape.size;
-                let data = collection::vec(0.0f64..1., size);
-                (data, Just(shape))
-            })
-            .prop_map(|(data, shape)| {
-                let strides: Strides = (&shape).into();
-                Self::new(data, shape, strides)
-            })
+        Shape::arbitrary().prop_flat_map(Self::arbitrary_with_shape)
     }
 
     pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {

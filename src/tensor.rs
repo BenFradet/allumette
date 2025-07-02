@@ -686,6 +686,13 @@ mod tests {
     }
 
     proptest! {
+        #[test]
+        fn matmul_grad_tests(
+            t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
+        ) {
+
+        }
+
         // TODO: reimplement backward
         // #[test]
         fn permute_grad_tests(
