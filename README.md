@@ -39,5 +39,6 @@ The set of dependencies is otherwise pretty limited:
 
 - [x] parallel backend
 - [ ] gpu backend
+- [ ] ergonomics
 - [ ] optimizations
 - [ ] make encoding tensor dimension as a const generic work

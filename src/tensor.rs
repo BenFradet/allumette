@@ -691,10 +691,29 @@ mod tests {
 
     proptest! {
         #[test]
-        fn matmul_grad_tests(
-            t_seq in Tensor::<Seq, CpuTensorData>::arbitrary(),
+        fn matmul_tests(
+            a_seq in Tensor::<Seq, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
+            b_seq in Tensor::<Seq, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![3, 4])),
+            a_par in Tensor::<Par, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
+            b_par in Tensor::<Par, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![3, 4])),
         ) {
+            let c_seq = a_seq.clone().mm(b_seq.clone());
+            let cprime_seq = (
+                a_seq.view(&Shape::new(vec![2, 3, 1])) *
+                b_seq.view(&Shape::new(vec![1, 3, 4]))
+            ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
+            for idx in c_seq.data.indices() {
+                assert!(is_close(c_seq.data.index(idx.clone()), cprime_seq.data.index(idx)));
+            }
 
+            let c_par = a_par.clone().mm(b_par.clone());
+            let cprime_par = (
+                a_par.view(&Shape::new(vec![2, 3, 1])) *
+                b_par.view(&Shape::new(vec![1, 3, 4]))
+            ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
+            for idx in c_par.data.indices() {
+                assert!(is_close(c_par.data.index(idx.clone()), cprime_par.data.index(idx)));
+            }
         }
 
         // TODO: reimplement backward
