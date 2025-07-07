@@ -235,26 +235,7 @@ where
     }
 
     pub fn mm(self, other: Tensor<BT, T>) -> Self {
-        let lhs_shape = self.data.shape().clone();
-        let rhs_shape = other.data.shape().clone();
-
-        let mut both_2d = 0;
-        let lhs = if lhs_shape.len() == 2 {
-            both_2d += 1;
-            self.contiguous().view(&Shape::new(vec![1, lhs_shape[0], lhs_shape[1]]))
-        } else {
-            self
-        };
-        let rhs = if rhs_shape.len() == 2 {
-            both_2d += 1;
-            other.contiguous().view(&Shape::new(vec![1, rhs_shape[0], rhs_shape[1]]))
-        } else {
-            other
-        };
-        let both_2d = both_2d == 2;
-
-        todo!()
-        //Forward::binary(MatMul {}, self, other)
+        Forward::binary(MatMul {}, self, other)
     }
 
     pub fn all(self, dim: Option<usize>) -> Self {
