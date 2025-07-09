@@ -121,10 +121,10 @@ impl TensorBackend<Seq> for CpuTensorData {
             let out_i = out0 * strides[0] + out1 * strides[1] * out2 * strides[2];
 
             let self_start = out0 * self_batch_stride + out1 * self.strides[1];
-            let other_start = out0 * other_batch_stride + out2 * self.strides[2];
+            let other_start = out0 * other_batch_stride + out2 * other.strides[2];
 
             let mut tmp = 0.;
-            for position in 0..self_shape[self_shape_len - 1] {
+            for position in 0..self.shape[self_shape_len - 1] {
                 tmp += self.data[self_start + position * self.strides[2]]
                     * other.data[other_start + position * other.strides[1]];
             }
