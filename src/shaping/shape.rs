@@ -102,6 +102,19 @@ impl Shape {
         Idx::new(idx)
     }
 
+    #[allow(clippy::needless_range_loop)]
+    #[inline(always)]
+    pub fn idx(&self, pos: usize) -> Idx {
+        let n = self.data.len();
+        let mut res = vec![1; n];
+        let mut mut_pos = pos;
+        for i in (0..self.len()).rev() {
+            res[i] = mut_pos % self.data[i];
+            mut_pos /= self.data[i];
+        }
+        Idx::new(res)
+    }
+
     pub fn len(&self) -> usize {
         self.data.len()
     }
@@ -127,7 +140,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn broadcast_test() -> () {
+    fn idx_test() {
+        let s = Shape::new(vec![2, 8, 9]);
+        assert_eq!(Idx::new(vec![0, 0, 4]), s.idx(4));
+    }
+
+    #[test]
+    fn broadcast_test() {
         let s1 = Shape::new(vec![2, 3, 1]);
         let s2 = Shape::new(vec![7, 2, 3, 5]);
         assert_eq!(Some(Shape::new(vec![7, 2, 3, 5])), s1.broadcast(&s2));
