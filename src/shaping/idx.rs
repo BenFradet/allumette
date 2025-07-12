@@ -43,6 +43,14 @@ impl Idx {
         self
     }
 
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     pub fn arbitrary() -> impl Strategy<Value = Idx> {
         Shape::arbitrary()
             .prop_flat_map(|shape: Shape| {
