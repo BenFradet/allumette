@@ -28,12 +28,14 @@ impl Shape {
 
     pub fn push(&mut self, e: usize) {
         self.data.push(e);
+        self.size = self.data.iter().product::<usize>();
     }
 
     pub fn drop_right(mut self, nr: usize) -> Self {
         for _ in 0..nr {
             self.data.remove(self.data.len() - 1);
         }
+        self.size = self.data.iter().product::<usize>();
         self
     }
 
