@@ -98,7 +98,6 @@ impl TensorBackend<Seq> for CpuTensorData {
         let mut shape = self_shape.broadcast(&other_shape).unwrap();
         shape.push(self.shape[self_shape_len - 2]);
         shape.push(other.shape[other_shape_len - 1]);
-        //let shape_len = shape.len();
         let len = shape.size;
         let strides: Strides = (&shape).into();
 
@@ -130,22 +129,6 @@ impl TensorBackend<Seq> for CpuTensorData {
                 tmp += self.data[self_pos] * other.data[other_pos];
             }
             *out_i = tmp;
-
-            //let out0 = i / (shape[shape_len - 1] * shape[shape_len - 2]);
-            //let out1 = (i % (shape[shape_len - 1] * shape[shape_len - 2])) / shape[shape_len - 1];
-            //let out2 = i % shape[shape_len - 1];
-
-            //let out_i = out0 * strides[0] + out1 * strides[1] * out2 * strides[2];
-
-            //let self_start = out0 * self_batch_stride + out1 * self.strides[1];
-            //let other_start = out0 * other_batch_stride + out2 * self.strides[2];
-
-            //let mut tmp = 0.;
-            //for position in 0..self.shape[self_shape_len - 1] {
-            //    tmp += self.data[self_start + position * self.strides[2]]
-            //        * other.data[other_start + position * other.strides[1]];
-            //}
-            //out[out_i] = tmp;
         }
 
         Self::new(out, shape, strides)

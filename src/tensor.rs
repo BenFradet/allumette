@@ -712,29 +712,6 @@ mod tests {
         binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2), eq);
     }
 
-    #[test]
-    fn matmul_repro_test() {
-        let a: Tensor<Seq, _> = Tensor::from_data(CpuTensorData::new(
-            vec![0., 0., 0., 0., 0., 0.,],
-            Shape::new(vec![2, 3]),
-            Strides::new(vec![3, 1]),
-        ));
-        let b = Tensor::from_data(CpuTensorData::new(
-            vec![0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,],
-            Shape::new(vec![3, 4]),
-            Strides::new(vec![4, 1]),
-        ));
-
-        let c = a.clone().mm(b.clone());
-        let cprime = (
-            a.view(&Shape::new(vec![2, 3, 1])) *
-            b.view(&Shape::new(vec![1, 3, 4]))
-        ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
-        for idx in c.data.indices() {
-            assert!(is_close(c.data.index(idx.clone()), cprime.data.index(idx)));
-        }
-    }
-
     proptest! {
         #[test]
         fn matmul_tests(
