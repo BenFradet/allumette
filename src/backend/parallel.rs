@@ -107,44 +107,29 @@ impl TensorBackend<Par> for CpuTensorData {
         let mut shape = self_shape.broadcast(&other_shape).unwrap();
         shape.push(self.shape[self_shape_len - 2]);
         shape.push(other.shape[other_shape_len - 1]);
-        let shape_len = shape.len();
         let len = shape.size;
         let strides: Strides = (&shape).into();
 
-        let self_batch_stride = if self.shape[0] > 1 {
-            self.strides[0]
-        } else {
-            0
-        };
-        let other_batch_stride = if other.shape[0] > 1 {
-            other.strides[0]
-        } else {
-            0
-        };
-
-        let mut out_with_index: Vec<_> = (0..len)
+        let out: Vec<_> = (0..len)
             .into_par_iter()
             .map(|i| {
-                let out0 = i / (shape[shape_len - 1] * shape[shape_len - 2]);
-                let out1 =
-                    (i % (shape[shape_len - 1] * shape[shape_len - 2])) / shape[shape_len - 1];
-                let out2 = i % shape[shape_len - 1];
-
-                let out_i = out0 * strides[0] + out1 * strides[1] * out2 * strides[2];
-
-                let self_start = out0 * self_batch_stride + out1 * self.strides[1];
-                let other_start = out0 * other_batch_stride + out2 * self.strides[2];
+                let index = shape.idx(i);
+                let mut self_idx = index.broadcast(&self.shape).unwrap();
+                let self_idx_len = self_idx.len();
+                let mut other_idx = index.broadcast(&other.shape).unwrap();
+                let other_idx_len = other_idx.len();
 
                 let mut tmp = 0.;
-                for position in 0..self_shape[self_shape_len - 1] {
-                    tmp += self.data[self_start + position * self.strides[2]]
-                        * other.data[other_start + position * other.strides[1]];
+                for position in 0..self.shape[self_shape_len - 1] {
+                    self_idx[self_idx_len - 1] = position;
+                    other_idx[other_idx_len - 2] = position;
+                    let self_pos = self.strides.position(&self_idx);
+                    let other_pos = other.strides.position(&other_idx);
+                    tmp += self.data[self_pos] * other.data[other_pos];
                 }
-                (out_i, tmp)
+                tmp
             })
             .collect();
-        out_with_index.par_sort_unstable_by_key(|oi| oi.0);
-        let out = out_with_index.iter().map(|oi| oi.1).collect();
 
         Self::new(out, shape, strides)
     }

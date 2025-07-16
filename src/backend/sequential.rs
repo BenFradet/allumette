@@ -101,17 +101,6 @@ impl TensorBackend<Seq> for CpuTensorData {
         let len = shape.size;
         let strides: Strides = (&shape).into();
 
-        //let self_batch_stride = if self.shape[0] > 1 {
-        //    self.strides[0]
-        //} else {
-        //    0
-        //};
-        //let other_batch_stride = if other.shape[0] > 1 {
-        //    other.strides[0]
-        //} else {
-        //    0
-        //};
-
         let mut out = vec![0.; len];
         for (i, out_i) in out.iter_mut().enumerate() {
             let index = shape.idx(i);
