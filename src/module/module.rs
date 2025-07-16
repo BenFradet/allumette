@@ -19,7 +19,7 @@ impl<'a, A: Clone> Module<'a, A> {
         self.parameters.insert(param.name, param);
     }
 
-    pub fn add_child(&mut self, name: &'a str, module: Module<'a, A>) -> () {
+    pub fn add_child(&mut self, name: &'a str, module: Module<'a, A>) {
         self.children.insert(name, module);
     }
 
@@ -110,9 +110,9 @@ impl<'a, A: Clone> Module<'a, A> {
         res
     }
 
-    fn walk_rec<F>(&mut self, f: &mut F) -> ()
+    fn walk_rec<F>(&mut self, f: &mut F)
     where
-        F: FnMut(&mut Self) -> (),
+        F: FnMut(&mut Self),
     {
         f(self);
         for module in self.children.values_mut() {
@@ -120,9 +120,9 @@ impl<'a, A: Clone> Module<'a, A> {
         }
     }
 
-    fn walk<F>(&mut self, mut f: F) -> ()
+    fn walk<F>(&mut self, mut f: F)
     where
-        F: FnMut(&mut Self) -> (),
+        F: FnMut(&mut Self),
     {
         let mut stack = vec![self];
         while let Some(m) = stack.pop() {
@@ -133,17 +133,17 @@ impl<'a, A: Clone> Module<'a, A> {
         }
     }
 
-    fn train(&mut self) -> () {
+    fn train(&mut self) {
         self.walk(|module| module.training = true);
     }
 
-    fn eval(&mut self) -> () {
+    fn eval(&mut self) {
         self.walk(|module| module.training = false);
     }
 
-    fn assert_rec<F>(self, assertion: &mut F) -> ()
+    fn assert_rec<F>(self, assertion: &mut F)
     where
-        F: FnMut(&Module<'a, A>) -> (),
+        F: FnMut(&Module<'a, A>),
     {
         assertion(&self);
         self.children_values().for_each(|m| m.assert_rec(assertion));

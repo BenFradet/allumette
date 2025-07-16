@@ -67,7 +67,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn stride_from_shape_test() -> () {
+    fn stride_from_shape_test() {
         let res: Strides = (&Shape::new(vec![5, 4])).into();
         assert_eq!(vec![4, 1], res.data);
         let res2: Strides = (&Shape::new(vec![4, 2, 2])).into();

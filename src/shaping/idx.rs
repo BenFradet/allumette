@@ -78,7 +78,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn broadcast_test() -> () {
+    fn broadcast_test() {
         let s = Shape::new(vec![2, 3]);
         let i = Idx::new(vec![0, 0, 1]);
         assert_eq!(Some(Idx::new(vec![0, 1])), i.broadcast(&s));

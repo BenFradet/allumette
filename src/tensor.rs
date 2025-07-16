@@ -240,13 +240,16 @@ where
         let other_shape = other.data.shape().clone();
         let new_self = if self_shape.len() == 2 {
             both_2d += 1;
-            self.contiguous().view(&Shape::new(vec![1, self_shape[0], self_shape[1]]))
+            self.contiguous()
+                .view(&Shape::new(vec![1, self_shape[0], self_shape[1]]))
         } else {
             self
         };
         let new_other = if other_shape.len() == 2 {
             both_2d += 1;
-            other.contiguous().view(&Shape::new(vec![1, other_shape[0], other_shape[1]]))
+            other
+                .contiguous()
+                .view(&Shape::new(vec![1, other_shape[0], other_shape[1]]))
         } else {
             other
         };

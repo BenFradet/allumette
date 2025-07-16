@@ -183,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn pad_left_test() -> () {
+    fn pad_left_test() {
         let s = Shape::new(vec![1, 2, 1, 2]);
         let pad = s.pad_left(6, 0);
         assert_eq!(vec![0, 0, 1, 2, 1, 2], pad.data);

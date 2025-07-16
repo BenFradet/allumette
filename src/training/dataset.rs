@@ -83,7 +83,7 @@ impl Dataset {
 
 use proptest::prelude::*;
 
-fn common_test(ds: &Dataset, n: usize) -> () {
+fn common_test(ds: &Dataset, n: usize) {
     assert_eq!(n, ds.n);
     assert_eq!(n, ds.x.len());
     assert_eq!(n, ds.y.len());
