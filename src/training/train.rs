@@ -45,7 +45,7 @@ pub fn train<BT: BackendType, T: Backend<BT>>(
 
         network.step(lr_tensor.clone());
 
-        if iteration % 10 == 0 || iteration == iterations {
+        if iteration.is_multiple_of(10) || iteration == iterations {
             let y2 = y.clone();
             let correct = out
                 .clone()
