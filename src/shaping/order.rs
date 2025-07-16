@@ -31,7 +31,7 @@ impl Order {
         self
     }
 
-    pub fn iter(&self) -> Iter {
+    pub fn iter(&self) -> Iter<'_> {
         Iter::new(&self.data)
     }
 

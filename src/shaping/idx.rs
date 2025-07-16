@@ -15,7 +15,7 @@ impl Idx {
         Self { data }
     }
 
-    pub fn iter(&self) -> Iter {
+    pub fn iter(&self) -> Iter<'_> {
         Iter::new(&self.data)
     }
 

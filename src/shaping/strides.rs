@@ -34,7 +34,7 @@ impl Strides {
             .fold(0, |acc, (idx, stride)| acc + idx * stride)
     }
 
-    pub fn iter(&self) -> Iter {
+    pub fn iter(&self) -> Iter<'_> {
         Iter::new(&self.data)
     }
 
