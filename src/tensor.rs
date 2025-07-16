@@ -722,21 +722,23 @@ mod tests {
         ) {
             let c_seq = a_seq.clone().mm(b_seq.clone());
             let cprime_seq = (
-                a_seq.view(&Shape::new(vec![2, 3, 1])) *
-                b_seq.view(&Shape::new(vec![1, 3, 4]))
+                a_seq.clone().view(&Shape::new(vec![2, 3, 1])) *
+                b_seq.clone().view(&Shape::new(vec![1, 3, 4]))
             ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
             for idx in c_seq.data.indices() {
                 assert!(is_close(c_seq.data.index(idx.clone()), cprime_seq.data.index(idx)));
             }
+            binary_grad_assert(a_seq.clone(), b_seq.clone(), |t1, t2| t1.mm(t2));
 
-            //let c_par = a_par.clone().mm(b_par.clone());
-            //let cprime_par = (
-            //    a_par.view(&Shape::new(vec![2, 3, 1])) *
-            //    b_par.view(&Shape::new(vec![1, 3, 4]))
-            //).sum(Some(1)).view(&Shape::new(vec![2, 4]));
-            //for idx in c_par.data.indices() {
-            //    assert!(is_close(c_par.data.index(idx.clone()), cprime_par.data.index(idx)));
-            //}
+            let c_par = a_par.clone().mm(b_par.clone());
+            let cprime_par = (
+                a_par.clone().view(&Shape::new(vec![2, 3, 1])) *
+                b_par.clone().view(&Shape::new(vec![1, 3, 4]))
+            ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
+            for idx in c_par.data.indices() {
+                assert!(is_close(c_par.data.index(idx.clone()), cprime_par.data.index(idx)));
+            }
+            binary_grad_assert(a_par.clone(), b_par.clone(), |t1, t2| t1.mm(t2));
         }
 
         // TODO: reimplement backward
