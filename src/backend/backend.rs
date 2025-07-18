@@ -3,14 +3,14 @@ use crate::{data::tensor_data::TensorData, shaping::shape::Shape};
 use super::backend_type::BackendType;
 
 pub trait TensorBackend<T: BackendType> {
-    fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F) -> Self;
-    fn map_broadcast<F: Fn(f64) -> f64 + Sync>(&self, out: &Self, f: F) -> Option<Self>
+    fn map<F: Fn(f32) -> f32 + Sync>(&self, f: F) -> Self;
+    fn map_broadcast<F: Fn(f32) -> f32 + Sync>(&self, out: &Self, f: F) -> Option<Self>
     where
         Self: Sized;
-    fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F) -> Option<Self>
+    fn zip<F: Fn(f32, f32) -> f32 + Sync>(&self, other: &Self, f: F) -> Option<Self>
     where
         Self: Sized;
-    fn reduce<F: Fn(f64, f64) -> f64 + Sync>(&self, f: F, dim: usize, init: f64) -> Option<Self>
+    fn reduce<F: Fn(f32, f32) -> f32 + Sync>(&self, f: F, dim: usize, init: f32) -> Option<Self>
     where
         Self: Sized;
     fn matmul(&self, other: &Self) -> Self;

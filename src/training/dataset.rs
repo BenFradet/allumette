@@ -3,7 +3,7 @@ use rand::{thread_rng, Rng};
 #[derive(Clone, Debug)]
 pub struct Dataset {
     pub n: usize,
-    pub x: Vec<(f64, f64)>,
+    pub x: Vec<(f32, f32)>,
     pub y: Vec<usize>,
 }
 
@@ -69,7 +69,7 @@ impl Dataset {
         Self { n, x, y }
     }
 
-    fn make_points(n: usize) -> Vec<(f64, f64)> {
+    fn make_points(n: usize) -> Vec<(f32, f32)> {
         let mut res = vec![];
         let mut rng = thread_rng();
         for _i in 0..n {

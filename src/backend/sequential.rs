@@ -8,7 +8,7 @@ use crate::{
 use super::{backend::TensorBackend, backend_type::Seq};
 
 impl TensorBackend<Seq> for CpuTensorData {
-    fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F) -> Self {
+    fn map<F: Fn(f32) -> f32 + Sync>(&self, f: F) -> Self {
         let len = self.size();
         let mut out = vec![0.; len];
         // TODO: add an iterator
@@ -22,7 +22,7 @@ impl TensorBackend<Seq> for CpuTensorData {
         }
     }
 
-    fn map_broadcast<F: Fn(f64) -> f64 + Sync>(&self, out: &Self, f: F) -> Option<Self> {
+    fn map_broadcast<F: Fn(f32) -> f32 + Sync>(&self, out: &Self, f: F) -> Option<Self> {
         let strides: Strides = (&out.shape).into();
         let len = out.shape.size;
         let mut out_vec = vec![0.; len];
@@ -37,7 +37,7 @@ impl TensorBackend<Seq> for CpuTensorData {
         Some(Self::new(out_vec, out.shape.clone(), strides))
     }
 
-    fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F) -> Option<Self> {
+    fn zip<F: Fn(f32, f32) -> f32 + Sync>(&self, other: &Self, f: F) -> Option<Self> {
         let shape = if self.shape == other.shape {
             self.shape.clone()
         } else {
@@ -60,7 +60,7 @@ impl TensorBackend<Seq> for CpuTensorData {
         Some(Self::new(out, shape, strides))
     }
 
-    fn reduce<F: Fn(f64, f64) -> f64 + Sync>(&self, f: F, dim: usize, init: f64) -> Option<Self> {
+    fn reduce<F: Fn(f32, f32) -> f32 + Sync>(&self, f: F, dim: usize, init: f32) -> Option<Self> {
         if dim < self.shape.data().len() {
             let mut shape_data = self.shape.data().to_vec();
             shape_data[dim] = 1;
@@ -155,7 +155,7 @@ mod tests {
             }
             let res = t1.data.clone().iter().fold(0., |acc, a| acc + a);
             assert_eq!(1, t1p.data.len());
-            assert!((res - t1p.data[0]).abs() < f64::EPSILON * 10_f64.powf(2.));
+            assert!((res - t1p.data[0]).abs() < f32::EPSILON * 10_f32.powf(2.));
         }
 
         #[test]
@@ -166,7 +166,7 @@ mod tests {
             }
             let res = t1.data.clone().iter().fold(1., |acc, a| acc * a);
             assert_eq!(1, t1p.data.len());
-            assert!((res - t1p.data[0]).abs() < f64::EPSILON * 10_f64.powf(2.));
+            assert!((res - t1p.data[0]).abs() < f32::EPSILON * 10_f32.powf(2.));
         }
 
         #[test]
@@ -195,9 +195,9 @@ mod tests {
 
         #[test]
         fn map_composition_test(t in CpuTensorData::arbitrary()) {
-            let f = |a: f64| a * 2.;
-            let g = |a: f64| a.powf(2.);
-            let fg = |a: f64| g(f(a));
+            let f = |a: f32| a * 2.;
+            let g = |a: f32| a.powf(2.);
+            let fg = |a: f32| g(f(a));
             assert_tensor_eq(
                 &TensorBackend::<Seq>::map(&TensorBackend::<Seq>::map(&t.clone(), f), g),
                 &TensorBackend::<Seq>::map(&t, fg)
@@ -206,9 +206,9 @@ mod tests {
 
         #[test]
         fn map_broadcast_composition_test(t in CpuTensorData::arbitrary()) {
-            let f = |a: f64| a * 2.;
-            let g = |a: f64| a.powf(2.);
-            let fg = |a: f64| g(f(a));
+            let f = |a: f32| a * 2.;
+            let g = |a: f32| a.powf(2.);
+            let fg = |a: f32| g(f(a));
             let t1 = TensorBackend::<Seq>::map_broadcast(&t.clone(), &t, f)
                 .and_then(|t| TensorBackend::<Seq>::map_broadcast(&t, &t, g));
             let t2 = TensorBackend::<Seq>::map_broadcast(&t, &t, fg);
@@ -218,14 +218,14 @@ mod tests {
         }
 
         #[test]
-        fn map_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
+        fn map_test(shape in Shape::arbitrary(), f in -1_f32..1.) {
             let map = TensorBackend::<Seq>::map(&CpuTensorData::zeros(shape.clone()), |z| z + f);
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
         }
 
         #[test]
-        fn map_broadcast_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
+        fn map_broadcast_test(shape in Shape::arbitrary(), f in -1_f32..1.) {
             let t = CpuTensorData::zeros(shape.clone());
             let res = TensorBackend::<Seq>::map_broadcast(&t, &t, |z| z + f);
             assert!(res.is_some());

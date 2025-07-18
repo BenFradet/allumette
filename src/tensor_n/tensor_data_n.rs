@@ -11,13 +11,13 @@ use super::shaping_n::{idx_n::IdxN, order_n::OrderN, shape_n::ShapeN, strides_n:
 
 #[derive(Clone, Debug)]
 pub struct TensorDataN<const N: usize> {
-    pub data: Arc<Vec<f64>>,
+    pub data: Arc<Vec<f32>>,
     pub shape: ShapeN<N>,
     pub strides: StridesN<N>,
 }
 
 impl<const N: usize> TensorDataN<N> {
-    fn new(data: Vec<f64>, shape: ShapeN<N>, strides: StridesN<N>) -> Self {
+    fn new(data: Vec<f32>, shape: ShapeN<N>, strides: StridesN<N>) -> Self {
         TensorDataN {
             data: Arc::new(data),
             shape,
@@ -45,7 +45,7 @@ impl<const N: usize> TensorDataN<N> {
         }
     }
 
-    pub fn map(mut self, f: impl Fn(f64) -> f64) -> Self {
+    pub fn map(mut self, f: impl Fn(f32) -> f32) -> Self {
         let len = self.size();
         let mut out = vec![0.; len];
         // TODO: add an iterator
@@ -56,7 +56,7 @@ impl<const N: usize> TensorDataN<N> {
         self
     }
 
-    fn map_(mut self, f: impl Fn(f64) -> f64) -> Self {
+    fn map_(mut self, f: impl Fn(f32) -> f32) -> Self {
         let len = self.size();
         let mut out = vec![0.; len];
         for i in 0..len {
@@ -75,7 +75,7 @@ impl<const N: usize> TensorDataN<N> {
     pub fn zip<const M: usize>(
         &self,
         other: &TensorDataN<M>,
-        f: impl Fn(f64, f64) -> f64,
+        f: impl Fn(f32, f32) -> f32,
     ) -> Option<TensorDataN<{ max(M, N) }>>
     where
         [(); max(M, N)]:,
@@ -98,7 +98,7 @@ impl<const N: usize> TensorDataN<N> {
         Some(TensorDataN::new(out, shape, strides))
     }
 
-    pub fn zip_n(mut self, other: &TensorDataN<N>, f: impl Fn(f64, f64) -> f64) -> TensorDataN<N> {
+    pub fn zip_n(mut self, other: &TensorDataN<N>, f: impl Fn(f32, f32) -> f32) -> TensorDataN<N> {
         let len = self.shape.size;
         let mut out = vec![0.; len];
         for (i, o) in out.iter_mut().enumerate() {
@@ -108,7 +108,7 @@ impl<const N: usize> TensorDataN<N> {
         self
     }
 
-    pub fn reduce<const M: usize>(&self, f: impl Fn(f64, f64) -> f64) -> TensorDataN<N>
+    pub fn reduce<const M: usize>(&self, f: impl Fn(f32, f32) -> f32) -> TensorDataN<N>
     where
         TypeIf<{ M < N }>: TypeTrue,
     {
@@ -176,7 +176,7 @@ impl<const N: usize> TensorDataN<N> {
         ShapeN::arbitrary()
             .prop_flat_map(|shape| {
                 let size = shape.size;
-                let data = collection::vec(0.0f64..1., size);
+                let data = collection::vec(0.0f32..1., size);
                 (data, Just(shape))
             })
             .prop_map(|(data, shape)| {
@@ -196,7 +196,7 @@ mod tests {
         // TODO: find a way to have arbitrary const generics?
 
         #[test]
-        fn map_test(shape in ShapeN::<4>::arbitrary(), f in -1_f64..1.) {
+        fn map_test(shape in ShapeN::<4>::arbitrary(), f in -1_f32..1.) {
             let map_ = TensorDataN::zeros(shape.clone()).map_(|z| z + f);
             assert_eq!(shape.size, map_.data.len());
             assert!(map_.data.iter().all(|e| *e == f));

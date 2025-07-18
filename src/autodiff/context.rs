@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn default_test() {
-        let c: Context<f64> = Context::default();
+        let c: Context<f32> = Context::default();
         assert!(c.grad);
         assert!(c.fst.is_none());
         assert!(c.snd.is_none());

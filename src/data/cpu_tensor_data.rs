@@ -8,13 +8,13 @@ use super::tensor_data::TensorData;
 
 #[derive(Clone, Debug)]
 pub struct CpuTensorData {
-    pub data: Arc<Vec<f64>>,
+    pub data: Arc<Vec<f32>>,
     pub shape: Shape,
     pub strides: Strides,
 }
 
 impl CpuTensorData {
-    pub fn new(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
+    pub fn new(data: Vec<f32>, shape: Shape, strides: Strides) -> Self {
         Self {
             data: Arc::new(data),
             shape,
@@ -33,13 +33,13 @@ impl CpuTensorData {
     pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
         let size = shape.size;
         let strides: Strides = (&shape).into();
-        collection::vec(0.0f64..1., size)
+        collection::vec(0.0f32..1., size)
             .prop_map(move |data| Self::new(data, shape.clone(), strides.clone()))
     }
 }
 
 impl Index<Idx> for CpuTensorData {
-    type Output = f64;
+    type Output = f32;
 
     fn index(&self, index: Idx) -> &Self::Output {
         &self.data[self.strides.position(&index)]
@@ -55,11 +55,11 @@ impl TensorData for CpuTensorData {
         self.shape.size
     }
 
-    fn iter(&self) -> Iter<'_, f64> {
+    fn iter(&self) -> Iter<'_, f32> {
         self.data.iter()
     }
 
-    fn first(&self) -> Option<f64> {
+    fn first(&self) -> Option<f32> {
         self.data.first().copied()
     }
 
@@ -107,7 +107,7 @@ impl TensorData for CpuTensorData {
         }
     }
 
-    fn index(&self, idx: Idx) -> f64 {
+    fn index(&self, idx: Idx) -> f32 {
         self[idx]
     }
 
@@ -133,7 +133,7 @@ impl TensorData for CpuTensorData {
 
     fn rand(shape: Shape) -> Self {
         let mut rng = rand::thread_rng();
-        let data: Vec<f64> = (0..shape.size).map(|_| rng.gen()).collect();
+        let data: Vec<f32> = (0..shape.size).map(|_| rng.gen()).collect();
         let strides = (&shape).into();
         Self {
             data: Arc::new(data),
@@ -142,7 +142,7 @@ impl TensorData for CpuTensorData {
         }
     }
 
-    fn epsilon(shape: Shape, idx: &Idx, eps: f64) -> Self {
+    fn epsilon(shape: Shape, idx: &Idx, eps: f32) -> Self {
         let strides: Strides = (&shape).into();
         let mut data = vec![0.; shape.size];
         data[strides.position(idx)] = eps;
@@ -153,11 +153,11 @@ impl TensorData for CpuTensorData {
         }
     }
 
-    fn from(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
+    fn from(data: Vec<f32>, shape: Shape, strides: Strides) -> Self {
         Self::new(data, shape, strides)
     }
 
-    fn scalar(s: f64) -> Self {
+    fn scalar(s: f32) -> Self {
         let shape = Shape::new(vec![1]);
         let strides = (&shape).into();
         Self {
@@ -167,7 +167,7 @@ impl TensorData for CpuTensorData {
         }
     }
 
-    fn vec(v: Vec<f64>) -> Self {
+    fn vec(v: Vec<f32>) -> Self {
         let shape = Shape::new(vec![v.len()]);
         let strides = (&shape).into();
         Self {
@@ -177,7 +177,7 @@ impl TensorData for CpuTensorData {
         }
     }
 
-    fn matrix(m: Vec<Vec<f64>>) -> Option<Self>
+    fn matrix(m: Vec<Vec<f32>>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -244,7 +244,7 @@ mod tests {
             let reversed_index = idx.clone().reverse();
             let pos = tensor_data.strides.position(&idx);
             let order = Order::range(tensor_data.shape.data().len()).reverse();
-            let order_td = TensorData::vec(order.data.iter().map(|u| *u as f64).collect());
+            let order_td = TensorData::vec(order.data.iter().map(|u| *u as f32).collect());
             let perm_opt = tensor_data.permute(&order_td);
             assert!(perm_opt.is_some());
             let perm = perm_opt.unwrap();

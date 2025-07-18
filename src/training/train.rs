@@ -10,7 +10,7 @@ use super::{dataset::Dataset, network::Network};
 
 pub fn train<BT: BackendType, T: Backend<BT>>(
     data: Dataset,
-    learning_rate: f64,
+    learning_rate: f32,
     iterations: usize,
     hidden_layer_size: usize,
 ) {
@@ -21,7 +21,7 @@ pub fn train<BT: BackendType, T: Backend<BT>>(
     let x_strides = (&x_shape).into();
     let x_data = <T as TensorData>::from(flatten(&data.x), x_shape, x_strides);
     let x = Tensor::from_data(x_data);
-    let y_data = <T as TensorData>::vec(data.y.iter().map(|u| *u as f64).collect());
+    let y_data = <T as TensorData>::vec(data.y.iter().map(|u| *u as f32).collect());
     let y = Tensor::from_data(y_data);
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);
@@ -35,7 +35,7 @@ pub fn train<BT: BackendType, T: Backend<BT>>(
 
         let loss = -prob.clone().ln();
 
-        let res = (loss.clone() / Tensor::scalar(data.n as f64))
+        let res = (loss.clone() / Tensor::scalar(data.n as f32))
             .sum(None)
             .view(&one_shape)
             .backward();
@@ -59,7 +59,7 @@ pub fn train<BT: BackendType, T: Backend<BT>>(
     }
 }
 
-fn flatten(d: &[(f64, f64)]) -> Vec<f64> {
+fn flatten(d: &[(f32, f32)]) -> Vec<f32> {
     d.iter()
         .fold(Vec::with_capacity(d.len() * 2), |mut acc, t| {
             acc.push(t.0);
