@@ -1,4 +1,4 @@
-pub fn ln(a: f32) -> f32 {
+pub fn ln(a: f64) -> f64 {
     if a <= 0. {
         0.
     } else {
@@ -6,7 +6,7 @@ pub fn ln(a: f32) -> f32 {
     }
 }
 
-pub fn ln_back(a: f32, d: f32) -> f32 {
+pub fn ln_back(a: f64, d: f64) -> f64 {
     if a == 0. {
         d
     } else {
@@ -14,7 +14,7 @@ pub fn ln_back(a: f32, d: f32) -> f32 {
     }
 }
 
-pub fn inv(a: f32) -> f32 {
+pub fn inv(a: f64) -> f64 {
     if a == 0. {
         0.
     } else {
@@ -22,7 +22,7 @@ pub fn inv(a: f32) -> f32 {
     }
 }
 
-pub fn inv_back(a: f32, d: f32) -> f32 {
+pub fn inv_back(a: f64, d: f64) -> f64 {
     if a == 0. {
         -d
     } else {
@@ -30,15 +30,15 @@ pub fn inv_back(a: f32, d: f32) -> f32 {
     }
 }
 
-pub fn neg(a: f32) -> f32 {
+pub fn neg(a: f64) -> f64 {
     -a
 }
 
-pub fn neg_back(d: f32) -> f32 {
+pub fn neg_back(d: f64) -> f64 {
     -d
 }
 
-pub fn sig(a: f32) -> f32 {
+pub fn sig(a: f64) -> f64 {
     if a >= 0. {
         1. / (1. + (-a).exp())
     } else {
@@ -48,16 +48,16 @@ pub fn sig(a: f32) -> f32 {
 }
 
 // sig'(x) = sig(x) * (1 - sig(x))
-pub fn sig_back(a: f32, d: f32) -> f32 {
+pub fn sig_back(a: f64, d: f64) -> f64 {
     let sig_a = sig(a);
     sig_a * (1. - sig_a) * d
 }
 
-pub fn relu(a: f32) -> f32 {
+pub fn relu(a: f64) -> f64 {
     a.max(0.)
 }
 
-pub fn relu_back(a: f32, d: f32) -> f32 {
+pub fn relu_back(a: f64, d: f64) -> f64 {
     if a > 0. {
         d
     } else {
@@ -65,11 +65,11 @@ pub fn relu_back(a: f32, d: f32) -> f32 {
     }
 }
 
-pub fn exp(a: f32) -> f32 {
+pub fn exp(a: f64) -> f64 {
     a.exp()
 }
 
-pub fn exp_back(a: f32, d: f32) -> f32 {
+pub fn exp_back(a: f64, d: f64) -> f64 {
     a.exp() * d
 }
 
@@ -80,7 +80,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn ln_tests(a in any::<f32>()) {
+        fn ln_tests(a in any::<f64>()) {
             let f = ln(a);
             if a <= 0. {
                 assert_eq!(0., f);
@@ -93,7 +93,7 @@ mod tests {
         }
 
         #[test]
-        fn inv_tests(a in any::<f32>()) {
+        fn inv_tests(a in any::<f64>()) {
             let f = inv(a);
             if a == 0. {
                 assert_eq!(0., f);
@@ -106,7 +106,7 @@ mod tests {
         }
 
         #[test]
-        fn neg_tests(a in any::<f32>()) {
+        fn neg_tests(a in any::<f64>()) {
             let f = neg(a);
             assert_eq!(-a, f);
             let back = neg_back(a);
@@ -114,7 +114,7 @@ mod tests {
         }
 
         #[test]
-        fn sig_tests(a in any::<f32>()) {
+        fn sig_tests(a in any::<f64>()) {
             let f = sig(a);
             if a >= 0. {
                 assert_eq!(1. / (1. + (-a).exp()), f);
@@ -126,7 +126,7 @@ mod tests {
         }
 
         #[test]
-        fn relu_tests(a in any::<f32>()) {
+        fn relu_tests(a in any::<f64>()) {
             let f = relu(a);
             if a >= 0. {
                 assert_eq!(a, f);
@@ -142,7 +142,7 @@ mod tests {
         }
 
         #[test]
-        fn exp_tests(a in any::<f32>()) {
+        fn exp_tests(a in any::<f64>()) {
             let f = exp(a);
             assert_eq!(a.exp(), f);
             let back = exp_back(a, a);
