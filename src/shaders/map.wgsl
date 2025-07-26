@@ -55,6 +55,18 @@ fn broadcast_index(
     }
 }
 
+fn index_to_position(
+    index: array<u32, MAX_DIMS>,
+    strides: array<u32, MAX_DIMS>,
+    len: u32
+) -> u32 {
+    var result: u32 = 0u;
+    for (var i = start; i < len; i = i + 1u) {
+        result += index[i] * strides[i];
+    }
+    return result;
+}
+
 @compute
 @workgroup_size(64)
 fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -70,4 +82,8 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let in_shape_len = arrayLength(&in_shape);
     to_index(i, shape_len, out_index);
     broadcast_index(out_index, in_index, out_shape_len, in_shape_len);
+    let in_pos = index_to_position(in_index, in_strides);
+    let out_pos = index_to_position(out_index, out_strides);
+    // TODO: abstract over fn
+    output[out_pos] = exp(input[in_pos]);
 }
