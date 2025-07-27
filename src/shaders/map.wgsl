@@ -67,6 +67,9 @@ fn index_to_position(
     return result;
 }
 
+// parlor trick taken from https://github.com/kurtschelfthout/tensorken
+fn replace_with_actual_operation(in: f32) -> f32 { discard; }
+
 @compute
 @workgroup_size(64)
 fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -84,6 +87,5 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     broadcast_index(out_index, in_index, out_shape_len, in_shape_len);
     let in_pos = index_to_position(in_index, in_strides);
     let out_pos = index_to_position(out_index, out_strides);
-    // TODO: abstract over fn
-    output[out_pos] = exp(input[in_pos]);
+    output[out_pos] = replace_with_actual_operation(input[in_pos]);
 }
