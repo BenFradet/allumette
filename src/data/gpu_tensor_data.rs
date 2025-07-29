@@ -1,12 +1,31 @@
 use std::sync::Arc;
 
+use wgpu::{Device, util::BufferInitDescriptor, BufferUsages};
+
 use crate::{data::tensor_data::TensorData, shaping::{shape::Shape, strides::Strides}};
 
 #[derive(Clone, Debug)]
-pub struct GpuTensorData {
+pub struct GpuTensorData<'a> {
     buffer: Arc<wgpu::Buffer>,
     pub shape: Shape,
     pub strides: Strides,
+    device: &'a Device,
+}
+
+impl<'a> GpuTensorData<'a> {
+    pub fn new(data: &[f32], shape: Shape, strides: Strides, device: &'a Device) -> Self {
+        let buffer = device.create_buffer_init(BufferInitDescriptor {
+            label: Some("new gpu tensor data"),
+            contents: data,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        });
+        Self {
+            buffer: Arc::new(buffer),
+            shape,
+            strides,
+            device,
+        }
+    }
 }
 
 impl TensorData for GpuTensorData {
@@ -43,12 +62,7 @@ impl TensorData for GpuTensorData {
     }
 
     fn reshape(&self, shape: Shape) -> Self {
-        let strides = (&shape).into();
-        Self {
-            buffer: Arc::clone(&self.buffer),
-            shape,
-            strides,
-        }
+        todo!()
     }
 
     fn permute(&self, order: &Self) -> Option<Self>
