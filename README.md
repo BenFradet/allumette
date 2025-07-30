@@ -31,8 +31,10 @@ Part of the codebase makes use of the `generic_const_exprs` and `trait_alias` ex
 so it requires nightly.
 
 The set of dependencies is otherwise pretty limited:
-- `proptest` for property-based testing
+- `wgpu` for GPU computing
 - `rayon` for parallel computations
+- `flume` for channels (used for wgpu callbacks)
+- `proptest` for property-based testing
 - `rand` for synthetic data generation
 
 ### Next up
