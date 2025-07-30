@@ -1,8 +1,15 @@
 use std::sync::Arc;
 
-use wgpu::{Device, util::BufferInitDescriptor, BufferUsages};
+use wgpu::{
+    util::{BufferInitDescriptor, DeviceExt},
+    wgt::PollType,
+    BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Device, MapMode, Queue,
+};
 
-use crate::{data::tensor_data::TensorData, shaping::{shape::Shape, strides::Strides}};
+use crate::{
+    data::tensor_data::TensorData,
+    shaping::{shape::Shape, strides::Strides},
+};
 
 #[derive(Clone, Debug)]
 pub struct GpuTensorData<'a> {
@@ -10,13 +17,22 @@ pub struct GpuTensorData<'a> {
     pub shape: Shape,
     pub strides: Strides,
     device: &'a Device,
+    queue: &'a Queue,
 }
 
+const WGPU_ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
+
 impl<'a> GpuTensorData<'a> {
-    pub fn new(data: &[f32], shape: Shape, strides: Strides, device: &'a Device) -> Self {
-        let buffer = device.create_buffer_init(BufferInitDescriptor {
+    pub fn new(
+        data: &[f32],
+        shape: Shape,
+        strides: Strides,
+        device: &'a Device,
+        queue: &'a Queue,
+    ) -> Self {
+        let buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("new gpu tensor data"),
-            contents: data,
+            contents: bytemuck::cast_slice(data),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         });
         Self {
@@ -24,13 +40,47 @@ impl<'a> GpuTensorData<'a> {
             shape,
             strides,
             device,
+            queue,
         }
+    }
+
+    // see repeated_compute example in wgpu
+    pub async fn to_cpu(&self) -> Vec<f32> {
+        let size = Self::byte_size(self.shape.size);
+        let staging_buffer = self.device.create_buffer(&BufferDescriptor {
+            label: None,
+            size,
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor { label: None });
+        encoder.copy_buffer_to_buffer(&self.buffer, 0, &staging_buffer, 0, size);
+
+        self.queue.submit(Some(encoder.finish()));
+
+        let buffer_slice = staging_buffer.slice(..);
+        let (sender, receiver) = flume::bounded(1);
+        buffer_slice.map_async(MapMode::Read, move |r| sender.send(r).unwrap());
+        self.device.poll(PollType::wait()).unwrap();
+
+        if let Ok(Ok(())) = receiver.recv_async().await {
+            let data = buffer_slice.get_mapped_range();
+            bytemuck::cast_slice(&data).to_vec()
+        } else {
+            panic!("failed to read buffer from GPU: BufferAsyncError");
+        }
+    }
+
+    fn byte_size(size: usize) -> u64 {
+        u64::try_from(size * WGPU_ELEMENT_SIZE).unwrap()
     }
 }
 
-impl TensorData for GpuTensorData {
+impl TensorData for GpuTensorData<'_> {
     fn shape(&self) -> &Shape {
-        self.shape
+        &self.shape
     }
 
     fn size(&self) -> usize {
@@ -67,7 +117,8 @@ impl TensorData for GpuTensorData {
 
     fn permute(&self, order: &Self) -> Option<Self>
     where
-        Self: Sized {
+        Self: Sized,
+    {
         todo!()
     }
 
@@ -76,7 +127,7 @@ impl TensorData for GpuTensorData {
     }
 
     fn indices(&self) -> impl Iterator<Item = crate::shaping::idx::Idx> {
-        todo!()
+        std::iter::empty()
     }
 
     fn ones(shape: Shape) -> Self {
@@ -109,7 +160,8 @@ impl TensorData for GpuTensorData {
 
     fn matrix(m: Vec<Vec<f64>>) -> Option<Self>
     where
-        Self: Sized {
+        Self: Sized,
+    {
         todo!()
     }
 }
