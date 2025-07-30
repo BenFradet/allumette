@@ -34,6 +34,7 @@ The set of dependencies is otherwise pretty limited:
 - `wgpu` for GPU computing
 - `rayon` for parallel computations
 - `flume` for channels (used for wgpu callbacks)
+- `bytemuck` to convert binary buffers copied from the GPU
 - `proptest` for property-based testing
 - `rand` for synthetic data generation
 
