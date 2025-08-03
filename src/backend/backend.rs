@@ -1,4 +1,4 @@
-use crate::{data::tensor_data::TensorData, shaping::shape::Shape};
+use crate::{data::tensor_data::TensorData, math::element::Element, shaping::shape::Shape};
 
 use super::backend_type::BackendType;
 
@@ -15,9 +15,9 @@ pub trait TensorBackend<T: BackendType> {
         Self: Sized;
     fn matmul(&self, other: &Self) -> Self;
 
-    fn expand(&self, other: Self) -> Option<Self>
+    fn expand<E: Element>(&self, other: Self) -> Option<Self>
     where
-        Self: Sized + TensorData,
+        Self: Sized + TensorData<E>,
     {
         if self.shape() == other.shape() {
             return Some(other);
@@ -52,4 +52,5 @@ pub trait TensorBackend<T: BackendType> {
     }
 }
 
-pub trait Backend<T: BackendType> = TensorBackend<T> + TensorData + Clone + std::fmt::Debug;
+pub trait Backend<E: Element, T: BackendType> =
+    TensorBackend<T> + TensorData<E> + Clone + std::fmt::Debug;

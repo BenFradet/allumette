@@ -8,20 +8,20 @@ use crate::{
 
 use super::{dataset::Dataset, network::Network};
 
-pub fn train<BT: BackendType, T: Backend<BT>>(
+pub fn train<BT: BackendType, T: Backend<f64, BT>>(
     data: Dataset,
     learning_rate: f64,
     iterations: usize,
     hidden_layer_size: usize,
 ) {
-    let mut network: Network<'_, BT, T> = Network::new(hidden_layer_size);
+    let mut network: Network<'_, f64, BT, T> = Network::new(hidden_layer_size);
     let lr_tensor = Tensor::scalar(learning_rate);
 
     let x_shape = Shape::new(vec![data.x.len(), 2]);
     let x_strides = (&x_shape).into();
-    let x_data = <T as TensorData>::from(flatten(&data.x), x_shape, x_strides);
+    let x_data = <T as TensorData<f64>>::from(flatten(&data.x), x_shape, x_strides);
     let x = Tensor::from_data(x_data);
-    let y_data = <T as TensorData>::vec(data.y.iter().map(|u| *u as f64).collect());
+    let y_data = <T as TensorData<f64>>::vec(data.y.iter().map(|u| *u as f64).collect());
     let y = Tensor::from_data(y_data);
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);

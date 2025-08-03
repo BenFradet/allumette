@@ -22,6 +22,10 @@ impl CpuTensorData {
         }
     }
 
+    fn iter(&self) -> Iter<'_, f64> {
+        self.data.iter()
+    }
+
     pub fn dims(&self) -> usize {
         self.shape.len()
     }
@@ -46,7 +50,7 @@ impl Index<Idx> for CpuTensorData {
     }
 }
 
-impl TensorData for CpuTensorData {
+impl TensorData<f64> for CpuTensorData {
     fn shape(&self) -> &Shape {
         &self.shape
     }
@@ -61,6 +65,10 @@ impl TensorData for CpuTensorData {
 
     fn first(&self) -> Option<f64> {
         self.data.first().copied()
+    }
+
+    fn index(&self, idx: Idx) -> f64 {
+        self[idx]
     }
 
     fn is_contiguous(&self) -> bool {
@@ -107,8 +115,15 @@ impl TensorData for CpuTensorData {
         }
     }
 
-    fn index(&self, idx: Idx) -> f64 {
-        self[idx]
+    fn transpose(&self) -> Option<Self> {
+        let mut order: Vec<_> = Order::range(self.shape().len())
+            .data
+            .iter()
+            .map(|&u| u as f64)
+            .collect();
+        let len = order.len();
+        order.swap(len - 2, len - 1);
+        self.permute(&Self::vec(order))
     }
 
     fn ones(shape: Shape) -> Self {

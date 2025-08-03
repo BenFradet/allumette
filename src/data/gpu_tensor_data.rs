@@ -8,7 +8,7 @@ use wgpu::{
 
 use crate::{
     data::tensor_data::TensorData,
-    shaping::{shape::Shape, strides::Strides},
+    shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides},
 };
 
 #[derive(Clone, Debug)]
@@ -45,7 +45,7 @@ impl<'a> GpuTensorData<'a> {
     }
 
     // see repeated_compute example in wgpu
-    pub async fn to_cpu(&self) -> Vec<f32> {
+    pub fn to_cpu(&self) -> Vec<f32> {
         let size = Self::byte_size(self.shape.size);
         let staging_buffer = self.device.create_buffer(&BufferDescriptor {
             label: None,
@@ -65,7 +65,7 @@ impl<'a> GpuTensorData<'a> {
         buffer_slice.map_async(MapMode::Read, move |r| sender.send(r).unwrap());
         self.device.poll(PollType::wait()).unwrap();
 
-        if let Ok(Ok(())) = receiver.recv_async().await {
+        if let Ok(Ok(())) = receiver.recv() {
             let data = buffer_slice.get_mapped_range();
             bytemuck::cast_slice(&data).to_vec()
         } else {
@@ -78,7 +78,7 @@ impl<'a> GpuTensorData<'a> {
     }
 }
 
-impl TensorData for GpuTensorData<'_> {
+impl TensorData<f32> for GpuTensorData<'_> {
     fn shape(&self) -> &Shape {
         &self.shape
     }
@@ -87,11 +87,15 @@ impl TensorData for GpuTensorData<'_> {
         self.shape.size
     }
 
-    fn iter(&self) -> std::slice::Iter<'_, f64> {
+    fn iter(&self) -> std::slice::Iter<'_, f32> {
         todo!()
     }
 
-    fn first(&self) -> Option<f64> {
+    fn first(&self) -> Option<f32> {
+        todo!()
+    }
+
+    fn index(&self, idx: Idx) -> f32 {
         todo!()
     }
 
@@ -122,8 +126,15 @@ impl TensorData for GpuTensorData<'_> {
         todo!()
     }
 
-    fn index(&self, idx: crate::shaping::idx::Idx) -> f64 {
-        todo!()
+    fn transpose(&self) -> Option<Self> {
+        let mut order: Vec<_> = Order::range(self.shape().len())
+            .data
+            .iter()
+            .map(|&u| u as f32)
+            .collect();
+        let len = order.len();
+        order.swap(len - 2, len - 1);
+        self.permute(&Self::vec(order))
     }
 
     fn indices(&self) -> impl Iterator<Item = crate::shaping::idx::Idx> {
@@ -142,23 +153,23 @@ impl TensorData for GpuTensorData<'_> {
         todo!()
     }
 
-    fn epsilon(shape: Shape, idx: &crate::shaping::idx::Idx, eps: f64) -> Self {
+    fn epsilon(shape: Shape, idx: &crate::shaping::idx::Idx, eps: f32) -> Self {
         todo!()
     }
 
-    fn from(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
+    fn from(data: Vec<f32>, shape: Shape, strides: Strides) -> Self {
         todo!()
     }
 
-    fn scalar(s: f64) -> Self {
+    fn scalar(s: f32) -> Self {
         todo!()
     }
 
-    fn vec(v: Vec<f64>) -> Self {
+    fn vec(v: Vec<f32>) -> Self {
         todo!()
     }
 
-    fn matrix(m: Vec<Vec<f64>>) -> Option<Self>
+    fn matrix(m: Vec<Vec<f32>>) -> Option<Self>
     where
         Self: Sized,
     {

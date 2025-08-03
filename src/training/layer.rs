@@ -2,19 +2,21 @@ use crate::{
     autodiff::history::History,
     backend::{backend::Backend, backend_type::BackendType},
     data::tensor_data::TensorData,
+    math::element::Element,
     shaping::shape::Shape,
     tensor::Tensor,
+    util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
-pub struct Layer<'a, BT: BackendType, T: Backend<BT>> {
+pub struct Layer<'a, E: Element, BT: BackendType, T: Backend<E, BT>> {
     pub name: &'a str,
     pub in_size: usize,
     pub out_size: usize,
-    pub weights: Tensor<BT, T>,
-    pub biases: Tensor<BT, T>,
+    pub weights: Tensor<E, BT, T>,
+    pub biases: Tensor<E, BT, T>,
 }
 
-impl<'a, BT: BackendType, T: Backend<BT>> Layer<'a, BT, T> {
+impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Layer<'a, E, BT, T> {
     pub fn new(name: &'a str, in_size: usize, out_size: usize) -> Self {
         Self {
             name,
@@ -25,7 +27,7 @@ impl<'a, BT: BackendType, T: Backend<BT>> Layer<'a, BT, T> {
         }
     }
 
-    pub fn forward(&self, t: Tensor<BT, T>) -> Tensor<BT, T> {
+    pub fn forward(&self, t: Tensor<E, BT, T>) -> Tensor<E, BT, T> {
         let mut input_shape = t.data.shape().data().to_vec();
         let input_first_dim = input_shape[0];
 
@@ -64,29 +66,30 @@ impl<'a, BT: BackendType, T: Backend<BT>> Layer<'a, BT, T> {
                 .view(&Shape::new(vec![1, self.out_size]))
     }
 
-    pub fn update_weights(mut self, w: Tensor<BT, T>) -> Self {
+    pub fn update_weights(mut self, w: Tensor<E, BT, T>) -> Self {
         self.weights = w;
         self
     }
 
-    pub fn update_biases(mut self, b: Tensor<BT, T>) -> Self {
+    pub fn update_biases(mut self, b: Tensor<E, BT, T>) -> Self {
         self.biases = b;
         self
     }
 
-    pub fn weights(name: &str, in_size: usize, out_size: usize) -> Tensor<BT, T> {
+    pub fn weights(name: &str, in_size: usize, out_size: usize) -> Tensor<E, BT, T> {
         let id = Self::weights_key(name);
         Self::param(Shape::new(vec![in_size, out_size])).id(id)
     }
 
-    pub fn biases(name: &str, out_size: usize) -> Tensor<BT, T> {
+    pub fn biases(name: &str, out_size: usize) -> Tensor<E, BT, T> {
         let id = Self::biases_key(name);
         Self::param(Shape::new(vec![out_size])).id(id)
     }
 
-    fn param(shape: Shape) -> Tensor<BT, T> {
-        let t = Tensor::from_data(<T as TensorData>::rand(shape));
-        ((t - Tensor::scalar(0.5)) * Tensor::scalar(2.)).history(History::default())
+    fn param(shape: Shape) -> Tensor<E, BT, T> {
+        let t = Tensor::from_data(<T as TensorData<E>>::rand(shape));
+        ((t - Tensor::scalar(E::fromf(0.5))) * Tensor::scalar(E::fromf(2.)))
+            .history(History::default())
     }
 
     pub fn wkey(&self) -> String {
