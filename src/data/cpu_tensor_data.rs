@@ -59,8 +59,8 @@ impl TensorData<f64> for CpuTensorData {
         self.shape.size
     }
 
-    fn iter(&self) -> Iter<'_, f64> {
-        self.data.iter()
+    fn collect(&self) -> Vec<f64> {
+        self.data.to_vec()
     }
 
     fn first(&self) -> Option<f64> {

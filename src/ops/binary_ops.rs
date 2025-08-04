@@ -181,7 +181,7 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
 {
     fn forward(&self, lhs: &T, s: &T) -> T {
         assert!(lhs.is_contiguous(), "must be contiguous to view");
-        let shape = Shape::new(s.iter().map(|f| f.unsafe_to()).collect());
+        let shape = Shape::new(s.collect().iter().map(|f| f.unsafe_to()).collect());
         lhs.reshape(shape)
     }
 

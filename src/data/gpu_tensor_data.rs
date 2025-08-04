@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{slice::Iter, sync::Arc};
 
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
@@ -87,8 +87,8 @@ impl TensorData<f32> for GpuTensorData<'_> {
         self.shape.size
     }
 
-    fn iter(&self) -> std::slice::Iter<'_, f32> {
-        todo!()
+    fn collect(&self) -> Vec<f32> {
+        self.to_cpu()
     }
 
     fn first(&self) -> Option<f32> {

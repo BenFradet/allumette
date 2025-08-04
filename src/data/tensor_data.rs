@@ -2,14 +2,14 @@ use crate::{
     math::element::Element,
     shaping::{idx::Idx, shape::Shape, strides::Strides},
 };
-use std::slice::Iter;
 
 pub trait TensorData<E: Element> {
     fn shape(&self) -> &Shape;
     fn size(&self) -> usize;
 
-    // TODO: remove these since they require data to be on the CPU
-    fn iter(&self) -> Iter<'_, E>;
+    // expensive, use with parsimony (cpu: allocate, gpu: retrieve to cpu)
+    fn collect(&self) -> Vec<E>;
+    // TODO: remove these as much as possible since they require data to be on the CPU
     fn first(&self) -> Option<E>;
     fn index(&self, idx: Idx) -> E;
 
