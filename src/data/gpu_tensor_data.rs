@@ -95,10 +95,6 @@ impl TensorData<f32> for GpuTensorData<'_> {
         todo!()
     }
 
-    fn index(&self, idx: Idx) -> f32 {
-        todo!()
-    }
-
     // TODO: factor out
     fn is_contiguous(&self) -> bool {
         if self.strides.is_empty() {

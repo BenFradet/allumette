@@ -466,7 +466,7 @@ mod tests {
 
     fn unary_grad_assert<
         BT: BackendType,
-        T: Backend<f64, BT>,
+        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
         F: Fn(Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
     >(
         tensor: Tensor<f64, BT, T>,
@@ -482,7 +482,7 @@ mod tests {
         let unwrapped = tensor_after.unwrap();
         let check = unary_grad_central_diff(unwrapped.clone(), f, &idx);
         assert!(unwrapped.grad.is_some(), "tensor should have a grad");
-        let grad = unwrapped.grad.unwrap().data.index(idx);
+        let grad = unwrapped.grad.unwrap().data[idx];
         assert!(
             is_close(grad, check),
             "tensor grad ({grad:?}) should be close to central diff ({check:?})",
@@ -491,7 +491,7 @@ mod tests {
 
     fn binary_grad_assert<
         BT: BackendType,
-        T: Backend<f64, BT>,
+        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
         F: Fn(Tensor<f64, BT, T>, Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
     >(
         tensor1: Tensor<f64, BT, T>,
@@ -521,8 +521,8 @@ mod tests {
             "tensors should have grads"
         );
         let (grad1, grad2) = (
-            unwrapped1.grad.clone().unwrap().data.index(idx1),
-            unwrapped2.grad.clone().unwrap().data.index(idx2),
+            unwrapped1.grad.clone().unwrap().data[idx1],
+            unwrapped2.grad.clone().unwrap().data[idx2],
         );
         assert!(
             is_close(grad1, check1),
@@ -588,7 +588,7 @@ mod tests {
 
     fn unary_assert<
         BT: BackendType,
-        T: Backend<f64, BT>,
+        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
         FT: Fn(Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
         FF: Fn(f64) -> f64,
     >(
@@ -599,13 +599,13 @@ mod tests {
         let data = t.data.clone();
         let res = ft(t);
         for idx in res.data.indices() {
-            assert!(is_close(res.data.index(idx.clone()), ff(data.index(idx))));
+            assert!(is_close(res.data[idx.clone()], ff(data[idx])));
         }
     }
 
     fn binary_assert<
         BT: BackendType,
-        T: Backend<f64, BT>,
+        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
         FT: Fn(Tensor<f64, BT, T>, Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
         FF: Fn(f64, f64) -> f64,
     >(
@@ -619,23 +619,23 @@ mod tests {
         let res = ft(t1, t2);
         for idx in res.data.indices() {
             assert!(is_close(
-                res.data.index(idx.clone()),
-                ff(data1.index(idx.clone()), data2.index(idx))
+                res.data[idx.clone()],
+                ff(data1[idx.clone()], data2[idx])
             ));
         }
     }
 
-    fn permute_grad_test<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>, o: Order) {
+    fn permute_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>, o: Order) {
         unary_grad_assert(t, move |t| t.permute(o.clone()));
     }
 
-    fn reduce_grad_test<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
+    fn reduce_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
         unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
         unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
         unary_grad_assert(t.clone(), |t| t.mean(None));
     }
 
-    fn binary_grad_test<BT: BackendType, T: Backend<f64, BT>>(
+    fn binary_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
         t1: Tensor<f64, BT, T>,
         t2: Tensor<f64, BT, T>,
     ) {
@@ -650,7 +650,7 @@ mod tests {
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
     }
 
-    fn binary_grad_broadcast_test<BT: BackendType, T: Backend<f64, BT>>(
+    fn binary_grad_broadcast_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
         t1: Tensor<f64, BT, T>,
         t2: Tensor<f64, BT, T>,
     ) {
@@ -674,14 +674,14 @@ mod tests {
         binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.eq(t2));
     }
 
-    fn unary_grad_complex_test1_<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
+    fn unary_grad_complex_test1_<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
         let ft_seq = |t: Tensor<f64, BT, T>| {
             (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp()
         };
         unary_grad_assert(t.clone(), ft_seq);
     }
 
-    fn unary_grad_complex_test2_<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
+    fn unary_grad_complex_test2_<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
         let ft = |t: Tensor<f64, BT, T>| {
             ((((t * Tensor::scalar(10.) + Tensor::scalar(7.)).relu() * Tensor::scalar(6.)
                 + Tensor::scalar(5.))
@@ -694,7 +694,7 @@ mod tests {
         unary_grad_assert(t.clone(), ft);
     }
 
-    fn unary_grad_test<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
+    fn unary_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
         unary_grad_assert(t.clone(), |t| -t);
         unary_grad_assert(t.clone(), |t| t.clone() * t);
         unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
@@ -705,7 +705,7 @@ mod tests {
         unary_grad_assert(t.clone(), |t| t.exp());
     }
 
-    fn unary_test<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
+    fn unary_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
         unary_assert(t.clone(), |t| -t, |f| -f);
         unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
         unary_assert(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
@@ -716,7 +716,7 @@ mod tests {
         unary_assert(t.clone(), |t| t.exp(), exp);
     }
 
-    fn unary_complex_test1_<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
+    fn unary_complex_test1_<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
         let ft = |t: Tensor<f64, BT, T>| {
             (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp()
         };
@@ -724,7 +724,7 @@ mod tests {
         unary_assert(t.clone(), ft, ff);
     }
 
-    fn unary_complex_test2_<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
+    fn unary_complex_test2_<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
         let ft = |t: Tensor<f64, BT, T>| {
             ((((t * Tensor::scalar(10.) + Tensor::scalar(7.)).relu() * Tensor::scalar(6.)
                 + Tensor::scalar(5.))
@@ -738,7 +738,7 @@ mod tests {
         unary_assert(t.clone(), ft, ff);
     }
 
-    fn binary_test<BT: BackendType, T: Backend<f64, BT>>(
+    fn binary_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
         t1: Tensor<f64, BT, T>,
         t2: Tensor<f64, BT, T>,
     ) {
@@ -770,7 +770,7 @@ mod tests {
                 b_seq.clone().view(&Shape::new(vec![1, 3, 4]))
             ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
             for idx in c_seq.data.indices() {
-                assert!(is_close(c_seq.data.index(idx.clone()), cprime_seq.data.index(idx)));
+                assert!(is_close(c_seq.data[idx.clone()], cprime_seq.data[idx]));
             }
             binary_grad_assert(a_seq.clone(), b_seq.clone(), |t1, t2| t1.mm(t2));
 
@@ -780,7 +780,7 @@ mod tests {
                 b_par.clone().view(&Shape::new(vec![1, 3, 4]))
             ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
             for idx in c_par.data.indices() {
-                assert!(is_close(c_par.data.index(idx.clone()), cprime_par.data.index(idx)));
+                assert!(is_close(c_par.data[idx.clone()], cprime_par.data[idx]));
             }
             binary_grad_assert(a_par.clone(), b_par.clone(), |t1, t2| t1.mm(t2));
         }

@@ -67,10 +67,6 @@ impl TensorData<f64> for CpuTensorData {
         self.data.first().copied()
     }
 
-    fn index(&self, idx: Idx) -> f64 {
-        self[idx]
-    }
-
     fn is_contiguous(&self) -> bool {
         if self.strides.is_empty() {
             false

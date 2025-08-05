@@ -9,9 +9,8 @@ pub trait TensorData<E: Element> {
 
     // expensive, use with parsimony (cpu: allocate, gpu: retrieve to cpu)
     fn collect(&self) -> Vec<E>;
-    // TODO: remove these as much as possible since they require data to be on the CPU
     fn first(&self) -> Option<E>;
-    fn index(&self, idx: Idx) -> E;
+    //fn index(&self, idx: Idx) -> E;
 
     fn is_contiguous(&self) -> bool;
     fn reshape(&self, shape: Shape) -> Self;
