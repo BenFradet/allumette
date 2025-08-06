@@ -10,7 +10,6 @@ pub trait TensorData<E: Element> {
     // expensive, use with parsimony (cpu: allocate, gpu: retrieve to cpu)
     fn collect(&self) -> Vec<E>;
     fn first(&self) -> Option<E>;
-    //fn index(&self, idx: Idx) -> E;
 
     fn is_contiguous(&self) -> bool;
     fn reshape(&self, shape: Shape) -> Self;

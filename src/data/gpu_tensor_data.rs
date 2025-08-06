@@ -1,4 +1,4 @@
-use std::{slice::Iter, sync::Arc};
+use std::sync::Arc;
 
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
@@ -8,7 +8,7 @@ use wgpu::{
 
 use crate::{
     data::tensor_data::TensorData,
-    shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides},
+    shaping::{order::Order, shape::Shape, strides::Strides},
 };
 
 #[derive(Clone, Debug)]
@@ -92,7 +92,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
     }
 
     fn first(&self) -> Option<f32> {
-        todo!()
+        self.to_cpu().first().copied()
     }
 
     // TODO: factor out
