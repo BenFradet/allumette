@@ -71,7 +71,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Sig {
         let t = ctx.fst.as_ref().unwrap();
         let sig = self.forward(t);
         let minus_sig = sig.map(math::unary::neg);
-        let one_minus_sig = <T as TensorData<E>>::scalar(E::one())
+        let one_minus_sig = <T as TensorData<E>>::from_scalar(E::one())
             .zip(&minus_sig, math::binary::add)
             .unwrap();
         let deriv = sig.zip(&one_minus_sig, math::binary::mul).unwrap();

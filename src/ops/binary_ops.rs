@@ -96,7 +96,7 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
     }
 
     fn backward(&self, _ctx: &Context<T>, d: &T) -> (T, T) {
-        (d.clone(), <T as TensorData<E>>::scalar(E::zero()))
+        (d.clone(), <T as TensorData<E>>::from_scalar(E::zero()))
     }
 
     fn tag(&self) -> &str {
@@ -146,8 +146,8 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for IsClos
 
     fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
         (
-            <T as TensorData<E>>::scalar(E::zero()),
-            <T as TensorData<E>>::scalar(E::zero()),
+            <T as TensorData<E>>::from_scalar(E::zero()),
+            <T as TensorData<E>>::from_scalar(E::zero()),
         )
     }
 
@@ -165,8 +165,8 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
 
     fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
         (
-            <T as TensorData<E>>::scalar(E::zero()),
-            <T as TensorData<E>>::scalar(E::zero()),
+            <T as TensorData<E>>::from_scalar(E::zero()),
+            <T as TensorData<E>>::from_scalar(E::zero()),
         )
     }
 
@@ -191,7 +191,10 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
             .as_ref()
             .map(|o| o.shape().clone())
             .unwrap_or(d.shape().clone());
-        (d.reshape(shape), <T as TensorData<E>>::scalar(E::zero()))
+        (
+            d.reshape(shape),
+            <T as TensorData<E>>::from_scalar(E::zero()),
+        )
     }
 
     fn tag(&self) -> &str {

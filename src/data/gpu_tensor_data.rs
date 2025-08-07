@@ -130,7 +130,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
             .collect();
         let len = order.len();
         order.swap(len - 2, len - 1);
-        self.permute(&Self::vec(order))
+        self.permute(&Self::from_1d(&order))
     }
 
     fn indices(&self) -> impl Iterator<Item = crate::shaping::idx::Idx> {
@@ -153,19 +153,19 @@ impl TensorData<f32> for GpuTensorData<'_> {
         todo!()
     }
 
-    fn from(data: Vec<f32>, shape: Shape, strides: Strides) -> Self {
+    fn from(data: &[f32], shape: Shape, strides: Strides) -> Self {
         todo!()
     }
 
-    fn scalar(s: f32) -> Self {
+    fn from_scalar(s: f32) -> Self {
         todo!()
     }
 
-    fn vec(v: Vec<f32>) -> Self {
+    fn from_1d(v: &[f32]) -> Self {
         todo!()
     }
 
-    fn matrix(m: Vec<Vec<f32>>) -> Option<Self>
+    fn from_2d(m: &[&[f32]]) -> Option<Self>
     where
         Self: Sized,
     {

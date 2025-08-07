@@ -27,10 +27,10 @@ pub trait TensorData<E: Element> {
     fn rand(shape: Shape) -> Self;
     fn epsilon(shape: Shape, idx: &Idx, eps: E) -> Self;
 
-    fn from(data: Vec<E>, shape: Shape, strides: Strides) -> Self;
-    fn scalar(s: E) -> Self;
-    fn vec(v: Vec<E>) -> Self;
-    fn matrix(m: Vec<Vec<E>>) -> Option<Self>
+    fn from(data: &[E], shape: Shape, strides: Strides) -> Self;
+    fn from_scalar(s: E) -> Self;
+    fn from_1d(v: &[E]) -> Self;
+    fn from_2d(m: &[&[E]]) -> Option<Self>
     where
         Self: Sized;
 }

@@ -119,7 +119,7 @@ impl TensorData<f64> for CpuTensorData {
             .collect();
         let len = order.len();
         order.swap(len - 2, len - 1);
-        self.permute(&Self::vec(order))
+        self.permute(&Self::from_1d(&order))
     }
 
     fn ones(shape: Shape) -> Self {
@@ -164,11 +164,11 @@ impl TensorData<f64> for CpuTensorData {
         }
     }
 
-    fn from(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
-        Self::new(data, shape, strides)
+    fn from(data: &[f64], shape: Shape, strides: Strides) -> Self {
+        Self::new(data.to_vec(), shape, strides)
     }
 
-    fn scalar(s: f64) -> Self {
+    fn from_scalar(s: f64) -> Self {
         let shape = Shape::new(vec![1]);
         let strides = (&shape).into();
         Self {
@@ -178,17 +178,17 @@ impl TensorData<f64> for CpuTensorData {
         }
     }
 
-    fn vec(v: Vec<f64>) -> Self {
+    fn from_1d(v: &[f64]) -> Self {
         let shape = Shape::new(vec![v.len()]);
         let strides = (&shape).into();
         Self {
-            data: Arc::new(v),
+            data: Arc::new(v.to_vec()),
             shape,
             strides,
         }
     }
 
-    fn matrix(m: Vec<Vec<f64>>) -> Option<Self>
+    fn from_2d(m: &[&[f64]]) -> Option<Self>
     where
         Self: Sized,
     {
@@ -255,7 +255,7 @@ mod tests {
             let reversed_index = idx.clone().reverse();
             let pos = tensor_data.strides.position(&idx);
             let order = Order::range(tensor_data.shape.data().len()).reverse();
-            let order_td = TensorData::vec(order.data.iter().map(|u| *u as f64).collect());
+            let order_td = TensorData::from_1d(&order.data.iter().map(|u| *u as f64).collect::<Vec<_>>());
             let perm_opt = tensor_data.permute(&order_td);
             assert!(perm_opt.is_some());
             let perm = perm_opt.unwrap();

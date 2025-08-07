@@ -57,16 +57,16 @@ where
         }
     }
 
-    pub fn scalar(data: E) -> Self {
-        Self::from_data(<T as TensorData<E>>::scalar(data)).make_constant()
+    pub fn from_scalar(data: E) -> Self {
+        Self::from_data(<T as TensorData<E>>::from_scalar(data)).make_constant()
     }
 
-    pub fn vec(data: Vec<E>) -> Self {
-        Self::from_data(<T as TensorData<E>>::vec(data))
+    pub fn from_1d(data: &[E]) -> Self {
+        Self::from_data(<T as TensorData<E>>::from_1d(data))
     }
 
-    pub fn matrix(data: Vec<Vec<E>>) -> Option<Self> {
-        <T as TensorData<E>>::matrix(data).map(Self::from_data)
+    pub fn from_2d(data: &[&[E]]) -> Option<Self> {
+        <T as TensorData<E>>::from_2d(data).map(Self::from_data)
     }
 
     pub fn history(mut self, h: History<E, BT, T>) -> Self {
@@ -99,7 +99,7 @@ where
             *self.data.shape() == Shape::new(vec![1]),
             "use backprop for non-scalar tensors"
         );
-        self.backprop(Self::scalar(E::one()))
+        self.backprop(Self::from_scalar(E::one()))
     }
 
     pub fn backprop(&self, d: Tensor<E, BT, T>) -> HashMap<String, Self> {
@@ -272,12 +272,12 @@ where
             Some(d) => Forward::binary(
                 All {},
                 self,
-                Tensor::scalar(UnsafeUsizeConvert::unsafe_from(d)),
+                Tensor::from_scalar(UnsafeUsizeConvert::unsafe_from(d)),
             ),
             None => {
                 let shape = Shape::scalar(self.size());
                 let t = self.view(&shape);
-                Forward::binary(All {}, t, Tensor::scalar(E::zero()))
+                Forward::binary(All {}, t, Tensor::from_scalar(E::zero()))
             }
         }
     }
@@ -287,12 +287,12 @@ where
             Some(d) => Forward::binary(
                 Sum {},
                 self,
-                Tensor::scalar(UnsafeUsizeConvert::unsafe_from(d)),
+                Tensor::from_scalar(UnsafeUsizeConvert::unsafe_from(d)),
             ),
             None => {
                 let shape = Shape::scalar(self.size());
                 let t = self.contiguous().view(&shape);
-                Forward::binary(Sum {}, t, Tensor::scalar(E::zero()))
+                Forward::binary(Sum {}, t, Tensor::from_scalar(E::zero()))
             }
         }
     }
@@ -301,12 +301,12 @@ where
         match dim {
             Some(d) => {
                 let d = UnsafeUsizeConvert::unsafe_from(self.data.shape()[d]);
-                let div = Self::from_data(<T as TensorData<E>>::scalar(d));
+                let div = Self::from_data(<T as TensorData<E>>::from_scalar(d));
                 self.sum(dim) / div
             }
             None => {
                 let s = UnsafeUsizeConvert::unsafe_from(self.size());
-                let div = Self::from_data(<T as TensorData<E>>::scalar(s));
+                let div = Self::from_data(<T as TensorData<E>>::from_scalar(s));
                 self.sum(None) / div
             }
         }
@@ -317,8 +317,8 @@ where
             .data
             .iter()
             .map(|&u| UnsafeUsizeConvert::unsafe_from(u))
-            .collect();
-        Forward::binary(Permute {}, self, Tensor::vec(fs))
+            .collect::<Vec<_>>();
+        Forward::binary(Permute {}, self, Tensor::from_1d(&fs))
     }
 
     pub fn view(self, shape: &Shape) -> Self {
@@ -326,8 +326,8 @@ where
             .data()
             .iter()
             .map(|&u| UnsafeUsizeConvert::unsafe_from(u))
-            .collect();
-        Forward::binary(View {}, self, Tensor::vec(fs))
+            .collect::<Vec<_>>();
+        Forward::binary(View {}, self, Tensor::from_1d(&fs))
     }
 
     pub fn contiguous(self) -> Self {
@@ -625,11 +625,16 @@ mod tests {
         }
     }
 
-    fn permute_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>, o: Order) {
+    fn permute_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
+        t: Tensor<f64, BT, T>,
+        o: Order,
+    ) {
         unary_grad_assert(t, move |t| t.permute(o.clone()));
     }
 
-    fn reduce_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
+    fn reduce_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
+        t: Tensor<f64, BT, T>,
+    ) {
         unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
         unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
         unary_grad_assert(t.clone(), |t| t.mean(None));
@@ -643,14 +648,17 @@ mod tests {
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| {
-            t1 / (t2 + Tensor::scalar(5.5))
+            t1 / (t2 + Tensor::from_scalar(5.5))
         });
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
         binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
     }
 
-    fn binary_grad_broadcast_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
+    fn binary_grad_broadcast_test<
+        BT: BackendType,
+        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
+    >(
         t1: Tensor<f64, BT, T>,
         t2: Tensor<f64, BT, T>,
     ) {
@@ -661,10 +669,10 @@ mod tests {
         binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 * t2);
         binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 * t2);
         binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| {
-            t1 / (t2 + Tensor::scalar(5.5))
+            t1 / (t2 + Tensor::from_scalar(5.5))
         });
         binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| {
-            t1 / (t2 + Tensor::scalar(5.5))
+            t1 / (t2 + Tensor::from_scalar(5.5))
         });
         binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.gt(t2));
         binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.gt(t2));
@@ -674,38 +682,53 @@ mod tests {
         binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.eq(t2));
     }
 
-    fn unary_grad_complex_test1_<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
+    fn unary_grad_complex_test1_<
+        BT: BackendType,
+        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
+    >(
+        t: Tensor<f64, BT, T>,
+    ) {
         let ft_seq = |t: Tensor<f64, BT, T>| {
-            (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp()
+            (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
         };
         unary_grad_assert(t.clone(), ft_seq);
     }
 
-    fn unary_grad_complex_test2_<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
+    fn unary_grad_complex_test2_<
+        BT: BackendType,
+        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
+    >(
+        t: Tensor<f64, BT, T>,
+    ) {
         let ft = |t: Tensor<f64, BT, T>| {
-            ((((t * Tensor::scalar(10.) + Tensor::scalar(7.)).relu() * Tensor::scalar(6.)
-                + Tensor::scalar(5.))
+            ((((t * Tensor::from_scalar(10.) + Tensor::from_scalar(7.)).relu()
+                * Tensor::from_scalar(6.)
+                + Tensor::from_scalar(5.))
             .relu()
-                * Tensor::scalar(10.))
+                * Tensor::from_scalar(10.))
             .sigmoid())
             .ln()
-                / Tensor::scalar(50.)
+                / Tensor::from_scalar(50.)
         };
         unary_grad_assert(t.clone(), ft);
     }
 
-    fn unary_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
+    fn unary_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
+        t: Tensor<f64, BT, T>,
+    ) {
         unary_grad_assert(t.clone(), |t| -t);
         unary_grad_assert(t.clone(), |t| t.clone() * t);
         unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
-        unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(3.5)).inv());
+        unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
         unary_grad_assert(t.clone(), |t| t.sigmoid());
-        unary_grad_assert(t.clone(), |t| (t + Tensor::scalar(100000.)).ln());
+        unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
         unary_grad_assert(t.clone(), |t| t.relu());
         unary_grad_assert(t.clone(), |t| t.exp());
     }
 
-    fn unary_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
+    fn unary_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
+        t: Tensor<f64, BT, T>,
+    ) {
         unary_assert(t.clone(), |t| -t, |f| -f);
         unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
         unary_assert(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
@@ -716,23 +739,34 @@ mod tests {
         unary_assert(t.clone(), |t| t.exp(), exp);
     }
 
-    fn unary_complex_test1_<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
+    fn unary_complex_test1_<
+        BT: BackendType,
+        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
+    >(
+        t: Tensor<f64, BT, T>,
+    ) {
         let ft = |t: Tensor<f64, BT, T>| {
-            (t.clone() + Tensor::scalar(100000.)).ln() + (t - Tensor::scalar(200.)).exp()
+            (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
         };
         let ff = |f| ln(f + 100000.) + exp(f - 200.);
         unary_assert(t.clone(), ft, ff);
     }
 
-    fn unary_complex_test2_<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(t: Tensor<f64, BT, T>) {
+    fn unary_complex_test2_<
+        BT: BackendType,
+        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
+    >(
+        t: Tensor<f64, BT, T>,
+    ) {
         let ft = |t: Tensor<f64, BT, T>| {
-            ((((t * Tensor::scalar(10.) + Tensor::scalar(7.)).relu() * Tensor::scalar(6.)
-                + Tensor::scalar(5.))
+            ((((t * Tensor::from_scalar(10.) + Tensor::from_scalar(7.)).relu()
+                * Tensor::from_scalar(6.)
+                + Tensor::from_scalar(5.))
             .relu()
-                * Tensor::scalar(10.))
+                * Tensor::from_scalar(10.))
             .sigmoid())
             .ln()
-                / Tensor::scalar(50.)
+                / Tensor::from_scalar(50.)
         };
         let ff = |f| ln(sig(relu(relu(f * 10. + 7.) * 6. + 5.) * 10.)) / 50.;
         unary_assert(t.clone(), ft, ff);
@@ -902,18 +936,16 @@ mod tests {
     #[test]
     fn test_view() {
         let t_seq =
-            Tensor::<f64, Seq, CpuTensorData>::matrix(vec![vec![2., 3., 4.], vec![4., 5., 7.]])
-                .unwrap();
+            Tensor::<f64, Seq, CpuTensorData>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_seq);
         let t_par =
-            Tensor::<f64, Par, CpuTensorData>::matrix(vec![vec![2., 3., 4.], vec![4., 5., 7.]])
-                .unwrap();
+            Tensor::<f64, Par, CpuTensorData>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_par);
     }
 
     fn reduce_forward_one_dim_test<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
         let summed = t.sum(Some(0));
-        let exp = Tensor::vec(vec![11., 16.]);
+        let exp = Tensor::from_1d(&[11., 16.]);
         let is_close = summed.is_close(exp);
         let shape = Shape::scalar(is_close.size());
         assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
@@ -933,8 +965,7 @@ mod tests {
 
     fn reduce_forward_one_dim_2_test<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
         let summed = t.sum(Some(1));
-        let exp =
-            Tensor::from_data(TensorData::matrix(vec![vec![5.], vec![10.], vec![12.]]).unwrap());
+        let exp = Tensor::from_data(TensorData::from_2d(&[&[5.], &[10.], &[12.]]).unwrap());
         let is_close = summed.is_close(exp);
         let shape = Shape::new(vec![is_close.size()]);
         assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
@@ -960,11 +991,11 @@ mod tests {
     #[test]
     fn test_reduce_forward_all_dim() {
         let shape = Shape::new(vec![3, 2]);
-        let t_seq = Tensor::<f64, Seq, CpuTensorData>::vec(vec![2., 3., 4., 6., 5., 7.])
+        let t_seq = Tensor::<f64, Seq, CpuTensorData>::from_1d(&[2., 3., 4., 6., 5., 7.])
             .reshape(shape.clone());
         reduce_forward_all_dim_test(t_seq);
         let t_par =
-            Tensor::<f64, Par, CpuTensorData>::vec(vec![2., 3., 4., 6., 5., 7.]).reshape(shape);
+            Tensor::<f64, Par, CpuTensorData>::from_1d(&[2., 3., 4., 6., 5., 7.]).reshape(shape);
         reduce_forward_all_dim_test(t_par);
     }
 }

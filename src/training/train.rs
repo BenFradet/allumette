@@ -15,13 +15,14 @@ pub fn train<BT: BackendType, T: Backend<f64, BT>>(
     hidden_layer_size: usize,
 ) {
     let mut network: Network<'_, f64, BT, T> = Network::new(hidden_layer_size);
-    let lr_tensor = Tensor::scalar(learning_rate);
+    let lr_tensor = Tensor::from_scalar(learning_rate);
 
     let x_shape = Shape::new(vec![data.x.len(), 2]);
     let x_strides = (&x_shape).into();
-    let x_data = <T as TensorData<f64>>::from(flatten(&data.x), x_shape, x_strides);
+    let x_data = <T as TensorData<f64>>::from(&flatten(&data.x), x_shape, x_strides);
     let x = Tensor::from_data(x_data);
-    let y_data = <T as TensorData<f64>>::vec(data.y.iter().map(|u| *u as f64).collect());
+    let y_data =
+        <T as TensorData<f64>>::from_1d(&data.y.iter().map(|u| *u as f64).collect::<Vec<_>>());
     let y = Tensor::from_data(y_data);
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);
@@ -31,11 +32,11 @@ pub fn train<BT: BackendType, T: Backend<f64, BT>>(
 
         let out = network.forward(x.clone()).view(&n_shape);
         let prob = (out.clone() * y.clone())
-            + (out.clone() - Tensor::scalar(1.)) * (y.clone() - Tensor::scalar(1.));
+            + (out.clone() - Tensor::from_scalar(1.)) * (y.clone() - Tensor::from_scalar(1.));
 
         let loss = -prob.clone().ln();
 
-        let res = (loss.clone() / Tensor::scalar(data.n as f64))
+        let res = (loss.clone() / Tensor::from_scalar(data.n as f64))
             .sum(None)
             .view(&one_shape)
             .backward();
@@ -49,7 +50,7 @@ pub fn train<BT: BackendType, T: Backend<f64, BT>>(
             let y2 = y.clone();
             let correct = out
                 .clone()
-                .gt(Tensor::scalar(0.5))
+                .gt(Tensor::from_scalar(0.5))
                 .eq(y2)
                 .sum(None)
                 .item()

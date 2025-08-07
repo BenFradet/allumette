@@ -88,7 +88,7 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
 
     fn param(shape: Shape) -> Tensor<E, BT, T> {
         let t = Tensor::from_data(<T as TensorData<E>>::rand(shape));
-        ((t - Tensor::scalar(E::fromf(0.5))) * Tensor::scalar(E::fromf(2.)))
+        ((t - Tensor::from_scalar(E::fromf(0.5))) * Tensor::from_scalar(E::fromf(2.)))
             .history(History::default())
     }
 

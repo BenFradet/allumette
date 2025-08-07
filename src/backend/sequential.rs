@@ -132,8 +132,8 @@ mod tests {
 
     #[test]
     fn expand_test() {
-        let input = CpuTensorData::scalar(0.);
-        let deriv = CpuTensorData::vec(vec![1., 1.]);
+        let input = CpuTensorData::from_scalar(0.);
+        let deriv = CpuTensorData::from_1d(&[1., 1.]);
         let res = TensorBackend::<Seq>::expand(&input, deriv)
             .map(|d| d.data)
             .unwrap();
