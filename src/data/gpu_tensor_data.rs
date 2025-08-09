@@ -112,14 +112,39 @@ impl TensorData<f32> for GpuTensorData<'_> {
     }
 
     fn reshape(&self, shape: Shape) -> Self {
-        todo!()
+        let strides = (&shape).into();
+        Self {
+            buffer: Arc::clone(&self.buffer),
+            shape,
+            strides,
+            device: self.device,
+            queue: self.queue,
+        }
     }
 
     fn permute(&self, order: &Self) -> Option<Self>
     where
         Self: Sized,
     {
-        todo!()
+        let n = self.shape.data().len();
+        let ord = Order::from(order);
+        if ord.fits(n) {
+            let mut new_shape = vec![0; n];
+            let mut new_strides = vec![0; n];
+            for (idx, value) in ord.iter().enumerate() {
+                new_shape[idx] = self.shape[value];
+                new_strides[idx] = self.strides[value];
+            }
+            Some(Self {
+                buffer: Arc::clone(&self.buffer),
+                shape: Shape::new(new_shape),
+                strides: Strides::new(new_strides),
+                device: self.device,
+                queue: self.queue,
+            })
+        } else {
+            None
+        }
     }
 
     fn transpose(&self) -> Option<Self> {
