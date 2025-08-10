@@ -159,7 +159,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
     }
 
     fn indices(&self) -> impl Iterator<Item = crate::shaping::idx::Idx> {
-        std::iter::empty()
+        (0..self.size()).map(|i| self.strides.idx(i))
     }
 
     fn ones(shape: Shape) -> Self {
