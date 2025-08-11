@@ -31,9 +31,9 @@ Part of the codebase makes use of the `generic_const_exprs` and `trait_alias` ex
 so it requires nightly.
 
 The set of dependencies is otherwise pretty limited:
-- `wgpu` for GPU computing
-- `rayon` for parallel computations
-- `flume` for channels (used for wgpu callbacks)
+- `wgpu` for the GPU runtime
+- `rayon` for the parallel CPU runtime
+- `flume` and `futures` for wgpu callbacks
 - `bytemuck` to convert binary buffers copied from the GPU
 - `proptest` for property-based testing
 - `rand` for synthetic data generation
