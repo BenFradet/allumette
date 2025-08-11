@@ -14,3 +14,4 @@ pub mod shaping;
 pub mod tensor;
 pub mod training;
 pub mod util;
+pub mod wgpu;
