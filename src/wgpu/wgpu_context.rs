@@ -4,9 +4,10 @@ use wgpu::{Device, DeviceDescriptor, Features, Instance, Limits, MemoryHints, Qu
 
 // taken from kurtschelfthout/tensorken
 
+#[derive(Debug)]
 pub struct WgpuContext {
-    device: Device,
-    queue: Queue,
+    pub device: Device,
+    pub queue: Queue,
 }
 
 impl WgpuContext {
@@ -20,16 +21,20 @@ impl WgpuContext {
         let adapter = wgpu::util::initialize_adapter_from_env(&instance, None)
             .expect("No suitable GPU adapters found on the system");
         let info = adapter.get_info();
-        println!("Using {:#?} {} with {:#?} backend", info.device_type, info.name, info.backend);
-        let device_and_queue = adapter.request_device(
-            &DeviceDescriptor {
+        println!(
+            "Using {:#?} {} with {:#?} backend",
+            info.device_type, info.name, info.backend
+        );
+        let device_and_queue = adapter
+            .request_device(&DeviceDescriptor {
                 label: None,
                 required_features: Features::empty(),
                 required_limits: Limits::downlevel_defaults(),
                 memory_hints: MemoryHints::Performance,
                 trace: Trace::Off,
-            },
-        ).await.unwrap();
+            })
+            .await
+            .unwrap();
         device_and_queue
     }
 
@@ -41,11 +46,9 @@ impl WgpuContext {
 static mut WGPU_CONTEXT: Option<WgpuContext> = None;
 static INIT_WGPU_CONTEXT: Once = Once::new();
 
-pub fn get_wgpu_device() -> &'static WgpuContext {
+pub fn get_wgpu_context() -> &'static WgpuContext {
     unsafe {
-        INIT_WGPU_CONTEXT.call_once(|| {
-            WGPU_CONTEXT = Some(WgpuContext::new())
-        });
+        INIT_WGPU_CONTEXT.call_once(|| WGPU_CONTEXT = Some(WgpuContext::new()));
         WGPU_CONTEXT.as_ref().unwrap()
     }
 }

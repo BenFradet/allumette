@@ -9,6 +9,7 @@ use wgpu::{
 use crate::{
     data::tensor_data::TensorData,
     shaping::{order::Order, shape::Shape, strides::Strides},
+    wgpu::wgpu_context::{get_wgpu_context, WgpuContext},
 };
 
 #[derive(Clone, Debug)]
@@ -16,21 +17,14 @@ pub struct GpuTensorData<'a> {
     buffer: Arc<wgpu::Buffer>,
     pub shape: Shape,
     pub strides: Strides,
-    device: &'a Device,
-    queue: &'a Queue,
+    context: &'a WgpuContext,
 }
 
 const WGPU_ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
 
 impl<'a> GpuTensorData<'a> {
-    pub fn new(
-        data: &[f32],
-        shape: Shape,
-        strides: Strides,
-        device: &'a Device,
-        queue: &'a Queue,
-    ) -> Self {
-        let buffer = device.create_buffer_init(&BufferInitDescriptor {
+    pub fn new(data: &[f32], shape: Shape, strides: Strides, context: &'a WgpuContext) -> Self {
+        let buffer = context.device.create_buffer_init(&BufferInitDescriptor {
             label: Some("new gpu tensor data"),
             contents: bytemuck::cast_slice(data),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
@@ -39,31 +33,31 @@ impl<'a> GpuTensorData<'a> {
             buffer: Arc::new(buffer),
             shape,
             strides,
-            device,
-            queue,
+            context,
         }
     }
 
     // see repeated_compute example in wgpu
     pub fn to_cpu(&self) -> Vec<f32> {
         let size = Self::byte_size(self.shape.size);
-        let staging_buffer = self.device.create_buffer(&BufferDescriptor {
+        let staging_buffer = self.context.device.create_buffer(&BufferDescriptor {
             label: None,
             size,
             usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let mut encoder = self
+            .context
             .device
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
         encoder.copy_buffer_to_buffer(&self.buffer, 0, &staging_buffer, 0, size);
 
-        self.queue.submit(Some(encoder.finish()));
+        self.context.queue.submit(Some(encoder.finish()));
 
         let buffer_slice = staging_buffer.slice(..);
         let (sender, receiver) = flume::bounded(1);
         buffer_slice.map_async(MapMode::Read, move |r| sender.send(r).unwrap());
-        self.device.poll(PollType::wait()).unwrap();
+        self.context.device.poll(PollType::wait()).unwrap();
 
         if let Ok(Ok(())) = receiver.recv() {
             let data = buffer_slice.get_mapped_range();
@@ -117,8 +111,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
             buffer: Arc::clone(&self.buffer),
             shape,
             strides,
-            device: self.device,
-            queue: self.queue,
+            context: self.context,
         }
     }
 
@@ -139,8 +132,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
                 buffer: Arc::clone(&self.buffer),
                 shape: Shape::new(new_shape),
                 strides: Strides::new(new_strides),
-                device: self.device,
-                queue: self.queue,
+                context: self.context,
             })
         } else {
             None
@@ -163,7 +155,9 @@ impl TensorData<f32> for GpuTensorData<'_> {
     }
 
     fn ones(shape: Shape) -> Self {
-        todo!()
+        let data = vec![1.; shape.size];
+        let strides = (&shape).into();
+        Self::new(&data, shape, strides, get_wgpu_context())
     }
 
     fn zeros(shape: Shape) -> Self {
