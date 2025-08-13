@@ -1,8 +1,8 @@
-use std::sync::Once;
+use std::sync::LazyLock;
 
 use wgpu::{Device, DeviceDescriptor, Features, Instance, Limits, MemoryHints, Queue, Trace};
 
-// taken from kurtschelfthout/tensorken
+// original version in kurtschelfthout/tensorken
 
 #[derive(Debug)]
 pub struct WgpuContext {
@@ -43,12 +43,8 @@ impl WgpuContext {
     }
 }
 
-static mut WGPU_CONTEXT: Option<WgpuContext> = None;
-static INIT_WGPU_CONTEXT: Once = Once::new();
+static WGPU_CONTEXT: LazyLock<WgpuContext> = LazyLock::new(|| WgpuContext::new());
 
 pub fn get_wgpu_context() -> &'static WgpuContext {
-    unsafe {
-        INIT_WGPU_CONTEXT.call_once(|| WGPU_CONTEXT = Some(WgpuContext::new()));
-        WGPU_CONTEXT.as_ref().unwrap()
-    }
+    &WGPU_CONTEXT
 }
