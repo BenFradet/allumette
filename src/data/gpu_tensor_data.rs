@@ -1,9 +1,10 @@
+use rand::Rng;
 use std::sync::Arc;
 
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     wgt::PollType,
-    BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Device, MapMode, Queue,
+    BufferDescriptor, BufferUsages, CommandEncoderDescriptor, MapMode,
 };
 
 use crate::{
@@ -161,33 +162,57 @@ impl TensorData<f32> for GpuTensorData<'_> {
     }
 
     fn zeros(shape: Shape) -> Self {
-        todo!()
+        let data = vec![0.; shape.size];
+        let strides = (&shape).into();
+        Self::new(&data, shape, strides, get_wgpu_context())
     }
 
     fn rand(shape: Shape) -> Self {
-        todo!()
+        let mut rng = rand::thread_rng();
+        let data: Vec<f32> = (0..shape.size).map(|_| rng.gen()).collect();
+        let strides = (&shape).into();
+        Self::new(&data, shape, strides, get_wgpu_context())
     }
 
     fn epsilon(shape: Shape, idx: &crate::shaping::idx::Idx, eps: f32) -> Self {
-        todo!()
+        let strides: Strides = (&shape).into();
+        let mut data = vec![0.; shape.size];
+        data[strides.position(idx)] = eps;
+        Self::new(&data, shape, strides, get_wgpu_context())
     }
 
     fn from(data: &[f32], shape: Shape, strides: Strides) -> Self {
-        todo!()
+        Self::new(data, shape, strides, get_wgpu_context())
     }
 
     fn from_scalar(s: f32) -> Self {
-        todo!()
+        let shape = Shape::new(vec![1]);
+        let strides = (&shape).into();
+        Self::new(&[s], shape, strides, get_wgpu_context())
     }
 
     fn from_1d(v: &[f32]) -> Self {
-        todo!()
+        let shape = Shape::new(vec![v.len()]);
+        let strides = (&shape).into();
+        Self::new(v, shape, strides, get_wgpu_context())
     }
 
     fn from_2d(m: &[&[f32]]) -> Option<Self>
     where
         Self: Sized,
     {
-        todo!()
+        if m.is_empty() {
+            None
+        } else {
+            let rows = m[0].len();
+            if !m.iter().all(|v| v.len() == rows) {
+                None
+            } else {
+                let cols = m.len();
+                let shape = Shape::new(vec![cols, rows]);
+                let strides = (&shape).into();
+                Some(Self::new(&m.concat(), shape, strides, get_wgpu_context()))
+            }
+        }
     }
 }
