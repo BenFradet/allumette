@@ -1,4 +1,4 @@
-use std::{ops::Index, slice::Iter, sync::Arc};
+use std::{ops::Index, sync::Arc};
 
 use proptest::{collection, prelude::*};
 
@@ -20,14 +20,6 @@ impl CpuTensorData {
             shape,
             strides,
         }
-    }
-
-    fn iter(&self) -> Iter<'_, f64> {
-        self.data.iter()
-    }
-
-    pub fn dims(&self) -> usize {
-        self.shape.len()
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Self> {
@@ -122,6 +114,10 @@ impl TensorData<f64> for CpuTensorData {
         self.permute(&Self::from_1d(&order))
     }
 
+    fn indices(&self) -> impl Iterator<Item = Idx> {
+        (0..self.size()).map(|i| self.strides.idx(i))
+    }
+
     fn ones(shape: Shape) -> Self {
         let data = vec![1.; shape.size];
         let strides = (&shape).into();
@@ -209,10 +205,6 @@ impl TensorData<f64> for CpuTensorData {
                 })
             }
         }
-    }
-
-    fn indices(&self) -> impl Iterator<Item = Idx> {
-        (0..self.size()).map(|i| self.strides.idx(i))
     }
 }
 

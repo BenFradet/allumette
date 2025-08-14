@@ -216,3 +216,14 @@ impl TensorData<f32> for GpuTensorData<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_tensor_eq(t1: &GpuTensorData, t2: &GpuTensorData) {
+        assert_eq!(t1.shape, t2.shape);
+        assert_eq!(t1.strides, t2.strides);
+        assert_eq!(t1.to_cpu(), t2.to_cpu());
+    }
+}
