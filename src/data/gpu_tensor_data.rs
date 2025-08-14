@@ -1,3 +1,4 @@
+use proptest::{collection, prelude::Strategy};
 use rand::Rng;
 use std::sync::Arc;
 
@@ -66,6 +67,18 @@ impl<'a> GpuTensorData<'a> {
         } else {
             panic!("failed to read buffer from GPU: BufferAsyncError");
         }
+    }
+
+    pub fn arbitrary() -> impl Strategy<Value = Self> {
+        Shape::arbitrary().prop_flat_map(Self::arbitrary_with_shape)
+    }
+
+    pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
+        let size = shape.size;
+        let strides: Strides = (&shape).into();
+        collection::vec(0.0f32..1., size).prop_map(move |data| {
+            Self::new(&data, shape.clone(), strides.clone(), get_wgpu_context())
+        })
     }
 
     fn byte_size(size: usize) -> u64 {
