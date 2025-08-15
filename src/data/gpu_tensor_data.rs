@@ -1,4 +1,4 @@
-use proptest::{collection, prelude::Strategy};
+use proptest::{collection, prelude::*};
 use rand::Rng;
 use std::sync::Arc;
 
@@ -232,11 +232,84 @@ impl TensorData<f32> for GpuTensorData<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
+    use crate::shaping::idx::Idx;
+
     use super::*;
 
     fn assert_tensor_eq(t1: &GpuTensorData, t2: &GpuTensorData) {
         assert_eq!(t1.shape, t2.shape);
         assert_eq!(t1.strides, t2.strides);
         assert_eq!(t1.to_cpu(), t2.to_cpu());
+    }
+
+    proptest! {
+        #[test]
+        fn zeros_test(shape in Shape::arbitrary()) {
+            let zeros = GpuTensorData::zeros(shape.clone());
+            let zeros_cpu = zeros.to_cpu();
+            assert_eq!(shape.size, zeros_cpu.len());
+            assert!(zeros_cpu.iter().all(|f| *f == 0.));
+        }
+
+        #[test]
+        fn enumeration_test(tensor_data in GpuTensorData::arbitrary()) {
+            let indices: Vec<_> = tensor_data.indices().collect();
+            let count = indices.len();
+            assert_eq!(tensor_data.size(), count);
+            let set: HashSet<_> = indices.clone().into_iter().collect();
+            assert_eq!(set.len(), count);
+            for idx in indices {
+                for (i, p) in idx.iter().enumerate() {
+                    assert!(p < tensor_data.shape[i]);
+                }
+            }
+        }
+
+        #[test]
+        fn permute_test(tensor_data in GpuTensorData::arbitrary(), idx in Idx::arbitrary()) {
+            let reversed_index = idx.clone().reverse();
+            let pos = tensor_data.strides.position(&idx);
+            let order = Order::range(tensor_data.shape.data().len()).reverse();
+            let order_td = TensorData::from_1d(&order.data.iter().map(|u| *u as f32).collect::<Vec<_>>());
+            let perm_opt = tensor_data.permute(&order_td);
+            assert!(perm_opt.is_some());
+            let perm = perm_opt.unwrap();
+            assert_eq!(pos, perm.strides.position(&reversed_index));
+            let orig_opt = perm.permute(&order_td);
+            assert!(orig_opt.is_some());
+            let orig = orig_opt.unwrap();
+            assert_eq!(pos, orig.strides.position(&idx));
+        }
+    }
+
+    #[test]
+    fn layout_test1() {
+        let data = vec![0.; 15];
+        let shape = Shape::new(vec![3, 5]);
+        let strides = Strides::new(vec![5, 1]);
+        let tensor = GpuTensorData::new(&data, shape, strides, get_wgpu_context());
+        assert!(tensor.is_contiguous());
+        assert_eq!(Shape::new(vec![3, 5]), tensor.shape);
+        assert_eq!(5, tensor.strides.position(&Idx::new(vec![1, 0])));
+        assert_eq!(7, tensor.strides.position(&Idx::new(vec![1, 2])));
+    }
+
+    #[test]
+    fn layout_test2() {
+        let data = vec![0.; 15];
+        let shape = Shape::new(vec![5, 3]);
+        let strides = Strides::new(vec![1, 5]);
+        let tensor = GpuTensorData::new(&data, shape, strides, get_wgpu_context());
+        assert!(!tensor.is_contiguous());
+        assert_eq!(Shape::new(vec![5, 3]), tensor.shape);
+    }
+
+    #[test]
+    fn rand_test() {
+        let rand = GpuTensorData::rand(Shape::new(vec![2]));
+        let rand_cpu = rand.to_cpu();
+        assert!(rand_cpu[0] != rand_cpu[1]);
     }
 }
