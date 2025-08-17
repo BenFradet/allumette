@@ -1,21 +1,23 @@
+use std::ops::Add;
+
 use crate::{data::tensor_data::TensorData, math::element::Element, shaping::shape::Shape};
 
 use super::backend_type::BackendType;
 
-pub trait TensorBackend<T: BackendType> {
-    fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F) -> Self;
-    fn map_broadcast<F: Fn(f64) -> f64 + Sync>(&self, out: &Self, f: F) -> Option<Self>
+pub trait TensorBackend<E: Element + Add<Output = E>, T: BackendType> {
+    fn map<F: Fn(E) -> E + Sync>(&self, f: F) -> Self;
+    fn map_broadcast<F: Fn(E) -> E + Sync>(&self, out: &Self, f: F) -> Option<Self>
     where
         Self: Sized;
-    fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F) -> Option<Self>
+    fn zip<F: Fn(E, E) -> E + Sync>(&self, other: &Self, f: F) -> Option<Self>
     where
         Self: Sized;
-    fn reduce<F: Fn(f64, f64) -> f64 + Sync>(&self, f: F, dim: usize, init: f64) -> Option<Self>
+    fn reduce<F: Fn(E, E) -> E + Sync>(&self, f: F, dim: usize, init: f64) -> Option<Self>
     where
         Self: Sized;
     fn matmul(&self, other: &Self) -> Self;
 
-    fn expand<E: Element>(&self, other: Self) -> Option<Self>
+    fn expand(&self, other: Self) -> Option<Self>
     where
         Self: Sized + TensorData<E>,
     {
@@ -53,4 +55,4 @@ pub trait TensorBackend<T: BackendType> {
 }
 
 pub trait Backend<E: Element, T: BackendType> =
-    TensorBackend<T> + TensorData<E> + Clone + std::fmt::Debug;
+    TensorBackend<E, T> + TensorData<E> + Clone + std::fmt::Debug;

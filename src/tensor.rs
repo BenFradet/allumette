@@ -455,10 +455,6 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> ops::N
 mod tests {
     use crate::{
         backend::backend_type::{Par, Seq},
-        math::{
-            binary::{div, eq, is_close, lt},
-            unary::{exp, inv, ln, relu, sig},
-        },
         shaping::idx::Idx,
     };
 
@@ -484,7 +480,7 @@ mod tests {
         assert!(unwrapped.grad.is_some(), "tensor should have a grad");
         let grad = unwrapped.grad.unwrap().data[idx];
         assert!(
-            is_close(grad, check),
+            grad.is_close(check),
             "tensor grad ({grad:?}) should be close to central diff ({check:?})",
         );
     }
@@ -525,11 +521,11 @@ mod tests {
             unwrapped2.grad.clone().unwrap().data[idx2],
         );
         assert!(
-            is_close(grad1, check1),
+            grad1.is_close(check1),
             "tensor 1 grad ({grad1:?}) should be close to central diff ({check1:?})",
         );
         assert!(
-            is_close(grad2, check2),
+            grad2.is_close(check2),
             "tensor 2 grad ({grad2:?}) should be close to central diff ({check2:?})",
         );
     }
@@ -599,7 +595,7 @@ mod tests {
         let data = t.data.clone();
         let res = ft(t);
         for idx in res.data.indices() {
-            assert!(is_close(res.data[idx.clone()], ff(data[idx])));
+            assert!(res.data[idx.clone()].is_close(ff(data[idx])));
         }
     }
 
@@ -618,10 +614,7 @@ mod tests {
         let data2 = t2.data.clone();
         let res = ft(t1, t2);
         for idx in res.data.indices() {
-            assert!(is_close(
-                res.data[idx.clone()],
-                ff(data1[idx.clone()], data2[idx])
-            ));
+            assert!(res.data[idx.clone()].is_close(ff(data1[idx.clone()], data2[idx])));
         }
     }
 
@@ -732,11 +725,15 @@ mod tests {
         unary_assert(t.clone(), |t| -t, |f| -f);
         unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
         unary_assert(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
-        unary_assert(t.clone(), |t| t.inv(), inv);
-        unary_assert(t.clone(), |t| t.sigmoid(), sig);
-        unary_assert(t.clone(), |t| t.ln(), ln);
-        unary_assert(t.clone(), |t| t.relu(), relu);
-        unary_assert(t.clone(), |t| t.exp(), exp);
+        unary_assert(
+            t.clone(),
+            |t| t.inv(),
+            |f| if f != 0. { 1. / f } else { 0. },
+        );
+        unary_assert(t.clone(), |t| t.sigmoid(), |f| f.sig());
+        unary_assert(t.clone(), |t| t.ln(), |f| if f > 0. { f.ln() } else { 0. });
+        unary_assert(t.clone(), |t| t.relu(), |f| f.relu());
+        unary_assert(t.clone(), |t| t.exp(), |f| f.exp());
     }
 
     fn unary_complex_test1_<
@@ -748,7 +745,7 @@ mod tests {
         let ft = |t: Tensor<f64, BT, T>| {
             (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
         };
-        let ff = |f| ln(f + 100000.) + exp(f - 200.);
+        let ff = |f: f64| (f + 100000.).ln() + (f - 200.).exp();
         unary_assert(t.clone(), ft, ff);
     }
 
@@ -768,7 +765,7 @@ mod tests {
             .ln()
                 / Tensor::from_scalar(50.)
         };
-        let ff = |f| ln(sig(relu(relu(f * 10. + 7.) * 6. + 5.) * 10.)) / 50.;
+        let ff = |f: f64| ((((f * 10. + 7.).relu() * 6. + 5.).relu() * 10.).sig()).ln() / 50.;
         unary_assert(t.clone(), ft, ff);
     }
 
@@ -779,15 +776,30 @@ mod tests {
         binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
         binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
         binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
-        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 / t2, div);
+        binary_assert(
+            t1.clone(),
+            t2.clone(),
+            |t1, t2| t1 / t2,
+            |f1, f2| if f2 == 0. { 0. } else { f1 / f2 },
+        );
         binary_assert(
             t1.clone(),
             t2.clone(),
             |t1, t2| t1.gt(t2),
-            |f1, f2| lt(f2, f1),
+            |f1, f2| if f2 < f1 { 1. } else { 0. },
         );
-        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2), lt);
-        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2), eq);
+        binary_assert(
+            t1.clone(),
+            t2.clone(),
+            |t1, t2| t1.lt(t2),
+            |f1, f2| if f1 < f2 { 1. } else { 0. },
+        );
+        binary_assert(
+            t1.clone(),
+            t2.clone(),
+            |t1, t2| t1.eq(t2),
+            |f1, f2| if f1 == f2 { 1. } else { 0. },
+        );
     }
 
     proptest! {
@@ -804,7 +816,7 @@ mod tests {
                 b_seq.clone().view(&Shape::new(vec![1, 3, 4]))
             ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
             for idx in c_seq.data.indices() {
-                assert!(is_close(c_seq.data[idx.clone()], cprime_seq.data[idx]));
+                assert!(c_seq.data[idx.clone()].is_close(cprime_seq.data[idx]));
             }
             binary_grad_assert(a_seq.clone(), b_seq.clone(), |t1, t2| t1.mm(t2));
 
@@ -814,7 +826,7 @@ mod tests {
                 b_par.clone().view(&Shape::new(vec![1, 3, 4]))
             ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
             for idx in c_par.data.indices() {
-                assert!(is_close(c_par.data[idx.clone()], cprime_par.data[idx]));
+                assert!(c_par.data[idx.clone()].is_close(cprime_par.data[idx]));
             }
             binary_grad_assert(a_par.clone(), b_par.clone(), |t1, t2| t1.mm(t2));
         }

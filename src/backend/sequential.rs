@@ -7,7 +7,7 @@ use crate::{
 
 use super::{backend::TensorBackend, backend_type::Seq};
 
-impl TensorBackend<Seq> for CpuTensorData {
+impl TensorBackend<f64, Seq> for CpuTensorData {
     fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F) -> Self {
         let len = self.size();
         let mut out = vec![0.; len];
@@ -134,7 +134,7 @@ mod tests {
     fn expand_test() {
         let input = CpuTensorData::from_scalar(0.);
         let deriv = CpuTensorData::from_1d(&[1., 1.]);
-        let res = TensorBackend::<Seq>::expand(&input, deriv)
+        let res = TensorBackend::<f64, Seq>::expand(&input, deriv)
             .map(|d| d.data)
             .unwrap();
         assert_eq!(vec![2.], *res);
@@ -151,7 +151,7 @@ mod tests {
         fn reduce_test_sum(t1 in CpuTensorData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
-                t1p = TensorBackend::<Seq>::reduce(&t1p, |a, b| a + b, i, 0.).unwrap();
+                t1p = TensorBackend::<f64, Seq>::reduce(&t1p, |a, b| a + b, i, 0.).unwrap();
             }
             let res = t1.data.clone().iter().fold(0., |acc, a| acc + a);
             assert_eq!(1, t1p.data.len());
@@ -162,7 +162,7 @@ mod tests {
         fn reduce_test_mul(t1 in CpuTensorData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
-                t1p = TensorBackend::<Seq>::reduce(&t1p, |a, b| a * b, i, 1.).unwrap();
+                t1p = TensorBackend::<f64, Seq>::reduce(&t1p, |a, b| a * b, i, 1.).unwrap();
             }
             let res = t1.data.clone().iter().fold(1., |acc, a| acc * a);
             assert_eq!(1, t1p.data.len());
@@ -172,8 +172,8 @@ mod tests {
         #[test]
         fn zip_commutative_test(t1 in CpuTensorData::arbitrary(), t2 in CpuTensorData::arbitrary()) {
             // this works if f is commutative
-            let res1 = TensorBackend::<Seq>::zip(&t1, &t2, |a, b| a + b);
-            let res2 = TensorBackend::<Seq>::zip(&t2, &t1, |a, b| a + b);
+            let res1 = TensorBackend::<f64, Seq>::zip(&t1, &t2, |a, b| a + b);
+            let res2 = TensorBackend::<f64, Seq>::zip(&t2, &t1, |a, b| a + b);
             match (res1, res2) {
                 (Some(r1), Some(r2)) => assert_tensor_eq(&r1, &r2),
                 (None, None) => (),
@@ -183,12 +183,12 @@ mod tests {
 
         #[test]
         fn map_identity_test(t in CpuTensorData::arbitrary()) {
-            assert_tensor_eq(&t, &TensorBackend::<Seq>::map(&t, |f| f));
+            assert_tensor_eq(&t, &TensorBackend::<f64, Seq>::map(&t, |f| f));
         }
 
         #[test]
         fn map_broadcast_identity_test(t in CpuTensorData::arbitrary()) {
-            let bc = TensorBackend::<Seq>::map_broadcast(&t, &t, |f| f);
+            let bc = TensorBackend::<f64, Seq>::map_broadcast(&t, &t, |f| f);
             assert!(bc.is_some());
             assert_tensor_eq(&t, bc.as_ref().unwrap());
         }
@@ -199,8 +199,8 @@ mod tests {
             let g = |a: f64| a.powf(2.);
             let fg = |a: f64| g(f(a));
             assert_tensor_eq(
-                &TensorBackend::<Seq>::map(&TensorBackend::<Seq>::map(&t.clone(), f), g),
-                &TensorBackend::<Seq>::map(&t, fg)
+                &TensorBackend::<f64, Seq>::map(&TensorBackend::<f64, Seq>::map(&t.clone(), f), g),
+                &TensorBackend::<f64, Seq>::map(&t, fg)
             );
         }
 
@@ -209,9 +209,9 @@ mod tests {
             let f = |a: f64| a * 2.;
             let g = |a: f64| a.powf(2.);
             let fg = |a: f64| g(f(a));
-            let t1 = TensorBackend::<Seq>::map_broadcast(&t.clone(), &t, f)
-                .and_then(|t| TensorBackend::<Seq>::map_broadcast(&t, &t, g));
-            let t2 = TensorBackend::<Seq>::map_broadcast(&t, &t, fg);
+            let t1 = TensorBackend::<f64, Seq>::map_broadcast(&t.clone(), &t, f)
+                .and_then(|t| TensorBackend::<f64, Seq>::map_broadcast(&t, &t, g));
+            let t2 = TensorBackend::<f64, Seq>::map_broadcast(&t, &t, fg);
             assert!(t1.is_some());
             assert!(t2.is_some());
             assert_tensor_eq(t1.as_ref().unwrap(), t2.as_ref().unwrap());
@@ -219,7 +219,7 @@ mod tests {
 
         #[test]
         fn map_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
-            let map = TensorBackend::<Seq>::map(&CpuTensorData::zeros(shape.clone()), |z| z + f);
+            let map = TensorBackend::<f64, Seq>::map(&CpuTensorData::zeros(shape.clone()), |z| z + f);
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
         }
@@ -227,7 +227,7 @@ mod tests {
         #[test]
         fn map_broadcast_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
             let t = CpuTensorData::zeros(shape.clone());
-            let res = TensorBackend::<Seq>::map_broadcast(&t, &t, |z| z + f);
+            let res = TensorBackend::<f64, Seq>::map_broadcast(&t, &t, |z| z + f);
             assert!(res.is_some());
             let map = res.unwrap();
             assert_eq!(shape.size, map.data.len());
