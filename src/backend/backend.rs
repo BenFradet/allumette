@@ -1,12 +1,10 @@
-use std::ops::Add;
-
 use crate::{data::tensor_data::TensorData, math::element::Element, shaping::shape::Shape};
 
 use super::backend_type::BackendType;
 
-pub trait TensorBackend<E: Element + Add<Output = E>, T: BackendType> {
-    fn map<F: Fn(E) -> E + Sync>(&self, f: F) -> Self;
-    fn map_broadcast<F: Fn(E) -> E + Sync>(&self, out: &Self, f: F) -> Option<Self>
+pub trait TensorBackend<E: Element, T: BackendType> {
+    fn map<F: Fn(E) -> E + Sync>(&self, f: F, tag: &str) -> Self;
+    fn map_broadcast<F: Fn(E) -> E + Sync>(&self, out: &Self, f: F, tag: &str) -> Option<Self>
     where
         Self: Sized;
     fn zip<F: Fn(E, E) -> E + Sync>(&self, other: &Self, f: F) -> Option<Self>
@@ -27,7 +25,7 @@ pub trait TensorBackend<E: Element + Add<Output = E>, T: BackendType> {
 
         let bc_shape = self.shape().broadcast(other.shape())?;
         let buf = TensorData::zeros(bc_shape);
-        let mut out = other.map_broadcast(&buf, |f| f)?;
+        let mut out = other.map_broadcast(&buf, |f| f, "id")?;
         if self.shape() == out.shape() {
             return Some(out);
         }

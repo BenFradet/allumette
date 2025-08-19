@@ -10,11 +10,12 @@ use super::unary::Unary;
 pub struct Neg;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Neg {
     fn forward(&self, a: &T) -> T {
-        a.map(|e| -e)
+        // TODO: make self.tag() work
+        a.map(|e| -e, <Neg as Unary<E, BT, T>>::tag(self))
     }
 
     fn backward(&self, _ctx: &Context<T>, d: &T) -> T {
-        d.map(|e| -e)
+        d.map(|e| -e, <Neg as Unary<E, BT, T>>::tag(self))
     }
 
     fn tag(&self) -> &str {
@@ -25,13 +26,16 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Neg {
 pub struct Inv;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Inv {
     fn forward(&self, a: &T) -> T {
-        a.map(|e| {
-            if e != E::zero() {
-                E::one() / e
-            } else {
-                E::zero()
-            }
-        })
+        a.map(
+            |e| {
+                if e != E::zero() {
+                    E::one() / e
+                } else {
+                    E::zero()
+                }
+            },
+            <Inv as Unary<E, BT, T>>::tag(self),
+        )
     }
 
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
@@ -57,7 +61,10 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Inv {
 pub struct Ln;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Ln {
     fn forward(&self, a: &T) -> T {
-        a.map(|e| if e > E::zero() { e.ln() } else { E::zero() })
+        a.map(
+            |e| if e > E::zero() { e.ln() } else { E::zero() },
+            <Ln as Unary<E, BT, T>>::tag(self),
+        )
     }
 
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
@@ -75,7 +82,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Ln {
 pub struct Sig;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Sig {
     fn forward(&self, a: &T) -> T {
-        a.map(|e| e.sig())
+        a.map(|e| e.sig(), <Sig as Unary<E, BT, T>>::tag(self))
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
@@ -83,7 +90,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Sig {
         //todo: rm unwrap
         let t = ctx.fst.as_ref().unwrap();
         let sig = self.forward(t);
-        let minus_sig = sig.map(|e| -e);
+        let minus_sig = sig.map(|e| -e, "neg");
         let one_minus_sig = <T as TensorData<E>>::from_scalar(E::one())
             .zip(&minus_sig, |e1, e2| e1 + e2)
             .unwrap();
@@ -99,7 +106,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Sig {
 pub struct Relu;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Relu {
     fn forward(&self, a: &T) -> T {
-        a.map(|e| e.relu())
+        a.map(|e| e.relu(), <Relu as Unary<E, BT, T>>::tag(self))
     }
 
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
@@ -117,7 +124,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Relu {
 pub struct Exp;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Exp {
     fn forward(&self, a: &T) -> T {
-        a.map(|e| e.exp())
+        a.map(|e| e.exp(), <Exp as Unary<E, BT, T>>::tag(self))
     }
 
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
@@ -136,8 +143,12 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Exp {
 pub struct Copy;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Copy {
     fn forward(&self, a: &T) -> T {
-        a.map_broadcast(&<T as TensorData<E>>::zeros(a.shape().clone()), |f| f)
-            .unwrap_or(a.map(|f| f))
+        a.map_broadcast(
+            &<T as TensorData<E>>::zeros(a.shape().clone()),
+            |f| f,
+            <Copy as Unary<E, BT, T>>::tag(self),
+        )
+        .unwrap_or(a.map(|f| f, <Copy as Unary<E, BT, T>>::tag(self)))
     }
 
     fn backward(&self, _ctx: &Context<T>, d: &T) -> T {
@@ -145,6 +156,6 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Copy {
     }
 
     fn tag(&self) -> &str {
-        "copy"
+        "id"
     }
 }
