@@ -42,7 +42,7 @@ impl TensorBackend<f64, Seq> for CpuTensorData {
         Some(Self::new(out_vec, out.shape.clone(), strides))
     }
 
-    fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F) -> Option<Self> {
+    fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F, _tag: &str) -> Option<Self> {
         let shape = if self.shape == other.shape {
             self.shape.clone()
         } else {
@@ -177,8 +177,8 @@ mod tests {
         #[test]
         fn zip_commutative_test(t1 in CpuTensorData::arbitrary(), t2 in CpuTensorData::arbitrary()) {
             // this works if f is commutative
-            let res1 = TensorBackend::<f64, Seq>::zip(&t1, &t2, |a, b| a + b);
-            let res2 = TensorBackend::<f64, Seq>::zip(&t2, &t1, |a, b| a + b);
+            let res1 = TensorBackend::<f64, Seq>::zip(&t1, &t2, |a, b| a + b, "plus");
+            let res2 = TensorBackend::<f64, Seq>::zip(&t2, &t1, |a, b| a + b, "plus");
             match (res1, res2) {
                 (Some(r1), Some(r2)) => assert_tensor_eq(&r1, &r2),
                 (None, None) => (),

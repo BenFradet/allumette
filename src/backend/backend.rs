@@ -7,7 +7,7 @@ pub trait TensorBackend<E: Element, T: BackendType> {
     fn map_broadcast<F: Fn(E) -> E + Sync>(&self, out: &Self, f: F, tag: &str) -> Option<Self>
     where
         Self: Sized;
-    fn zip<F: Fn(E, E) -> E + Sync>(&self, other: &Self, f: F) -> Option<Self>
+    fn zip<F: Fn(E, E) -> E + Sync>(&self, other: &Self, f: F, tag: &str) -> Option<Self>
     where
         Self: Sized;
     fn reduce<F: Fn(E, E) -> E + Sync>(&self, f: F, dim: usize, init: f64) -> Option<Self>

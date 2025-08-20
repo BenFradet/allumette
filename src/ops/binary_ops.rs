@@ -12,7 +12,7 @@ use super::binary::Binary;
 pub struct Add;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Add {
     fn forward(&self, a: &T, b: &T) -> T {
-        a.zip(b, |e1, e2| e1 + e2)
+        a.zip(b, |e1, e2| e1 + e2, <Add as Binary<E, BT, T>>::tag(self))
             .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
     }
 
@@ -28,7 +28,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Add {
 pub struct Mul;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Mul {
     fn forward(&self, a: &T, b: &T) -> T {
-        a.zip(b, |e1, e2| e1 * e2)
+        a.zip(b, |e1, e2| e1 * e2, <Mul as Binary<E, BT, T>>::tag(self))
             .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
     }
 
@@ -36,11 +36,11 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Mul {
         (
             ctx.snd
                 .as_ref()
-                .and_then(|b| b.zip(d, |e1, e2| e1 * e2))
+                .and_then(|b| b.zip(d, |e1, e2| e1 * e2, <Mul as Binary<E, BT, T>>::tag(self)))
                 .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone())),
             ctx.fst
                 .as_ref()
-                .and_then(|a| a.zip(d, |e1, e2| e1 * e2))
+                .and_then(|a| a.zip(d, |e1, e2| e1 * e2, <Mul as Binary<E, BT, T>>::tag(self)))
                 .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone())),
         )
     }
@@ -53,8 +53,12 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Mul {
 pub struct Lt;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Lt {
     fn forward(&self, a: &T, b: &T) -> T {
-        a.zip(b, |e1, e2| if e1 < e2 { E::one() } else { E::zero() })
-            .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
+        a.zip(
+            b,
+            |e1, e2| if e1 < e2 { E::one() } else { E::zero() },
+            <Lt as Binary<E, BT, T>>::tag(self),
+        )
+        .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
     }
 
     fn backward(&self, _ctx: &Context<T>, d: &T) -> (T, T) {
@@ -72,8 +76,12 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Lt {
 pub struct Eq;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Eq {
     fn forward(&self, a: &T, b: &T) -> T {
-        a.zip(b, |e1, e2| if e1 == e2 { E::one() } else { E::zero() })
-            .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
+        a.zip(
+            b,
+            |e1, e2| if e1 == e2 { E::one() } else { E::zero() },
+            <Eq as Binary<E, BT, T>>::tag(self),
+        )
+        .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
     }
 
     fn backward(&self, _ctx: &Context<T>, d: &T) -> (T, T) {
@@ -143,6 +151,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for IsClos
         a.zip(
             b,
             |e1, e2| if e1.is_close(e2) { E::one() } else { E::zero() },
+            <IsClose as Binary<E, BT, T>>::tag(self),
         )
         .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
     }
@@ -155,7 +164,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for IsClos
     }
 
     fn tag(&self) -> &str {
-        "is close"
+        "is_close"
     }
 }
 

@@ -38,17 +38,22 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Inv {
         )
     }
 
+    // TODO: tag does not work for gpu, decompose
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
             .and_then(|a| {
-                a.zip(d, |e1, e2| {
-                    if e1 == E::zero() {
-                        -e2
-                    } else {
-                        -e2 / (e1.powf(E::two()))
-                    }
-                })
+                a.zip(
+                    d,
+                    |e1, e2| {
+                        if e1 == E::zero() {
+                            -e2
+                        } else {
+                            -e2 / (e1.powf(E::two()))
+                        }
+                    },
+                    "inv_back",
+                )
             })
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
@@ -70,7 +75,13 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Ln {
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
-            .and_then(|a| a.zip(d, |e1, e2| if e1 == E::zero() { e2 } else { e2 / e1 }))
+            .and_then(|a| {
+                a.zip(
+                    d,
+                    |e1, e2| if e1 == E::zero() { e2 } else { e2 / e1 },
+                    "inv",
+                )
+            })
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
@@ -92,10 +103,10 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Sig {
         let sig = self.forward(t);
         let minus_sig = sig.map(|e| -e, "neg");
         let one_minus_sig = <T as TensorData<E>>::from_scalar(E::one())
-            .zip(&minus_sig, |e1, e2| e1 + e2)
+            .zip(&minus_sig, |e1, e2| e1 + e2, "add")
             .unwrap();
-        let deriv = sig.zip(&one_minus_sig, |e1, e2| e1 * e2).unwrap();
-        d.zip(&deriv, |e1, e2| e1 * e2).unwrap()
+        let deriv = sig.zip(&one_minus_sig, |e1, e2| e1 * e2, "mul").unwrap();
+        d.zip(&deriv, |e1, e2| e1 * e2, "mul").unwrap()
     }
 
     fn tag(&self) -> &str {
@@ -109,10 +120,11 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Relu {
         a.map(|e| e.relu(), <Relu as Unary<E, BT, T>>::tag(self))
     }
 
+    // TODO: tag does not work for gpu, decompose
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
-            .and_then(|a| a.zip(d, |e1, e2| e1.relu_back(e2)))
+            .and_then(|a| a.zip(d, |e1, e2| e1.relu_back(e2), "relu_back"))
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
@@ -127,10 +139,11 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Exp {
         a.map(|e| e.exp(), <Exp as Unary<E, BT, T>>::tag(self))
     }
 
+    // TODO: tag does not work for gpu, decompose
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
-            .and_then(|a| a.zip(d, |e1, e2| e1.exp_back(e2)))
+            .and_then(|a| a.zip(d, |e1, e2| e1.exp_back(e2), "exp_back"))
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 

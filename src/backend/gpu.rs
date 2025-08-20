@@ -15,7 +15,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         todo!()
     }
 
-    fn zip<F: Fn(f32, f32) -> f32 + Sync>(&self, other: &Self, f: F) -> Option<Self>
+    fn zip<F: Fn(f32, f32) -> f32 + Sync>(&self, other: &Self, f: F, tag: &str) -> Option<Self>
     where
         Self: Sized,
     {
