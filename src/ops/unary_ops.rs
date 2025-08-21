@@ -38,23 +38,24 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Inv {
         )
     }
 
-    // TODO: tag does not work for gpu, decompose
+    // todo: rm unwrap
+    // decomposed for gpu, deriv 1/x => -1/x^2
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
-        ctx.fst
-            .as_ref()
-            .and_then(|a| {
-                a.zip(
-                    d,
-                    |e1, e2| {
-                        if e1 == E::zero() {
-                            -e2
-                        } else {
-                            -e2 / (e1.powf(E::two()))
-                        }
-                    },
-                    "inv_back",
-                )
-            })
+        let a = ctx.fst.as_ref().unwrap();
+        let a2 = a.zip(a, |e1, e2| e1 * e2, "mul").unwrap();
+        let a2_inv = a2.map(
+            |e| {
+                if e != E::zero() {
+                    E::one() / e
+                } else {
+                    E::zero()
+                }
+            },
+            "inv",
+        );
+        let d_neg = d.map(|e| -e, "neg");
+        d_neg
+            .zip(&a2_inv, |e1, e2| e1 * e2, "mul")
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
