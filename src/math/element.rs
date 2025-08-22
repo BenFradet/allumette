@@ -60,7 +60,6 @@ where
             Self::zero()
         }
     }
-
     fn relu_back(self, d: Self) -> Self {
         if self > Self::zero() {
             d
