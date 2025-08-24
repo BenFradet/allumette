@@ -22,27 +22,9 @@ where
 
     fn powf(self, exp: Self) -> Self;
 
-    fn inv_back(self, d: Self) -> Self {
-        if self == Self::zero() {
-            -d
-        } else {
-            -d / (self.powf(Self::two()))
-        }
-    }
-
     fn exp(self) -> Self;
-    fn exp_back(self, d: Self) -> Self {
-        self.exp() * d
-    }
 
     fn ln(self) -> Self;
-    fn ln_back(self, d: Self) -> Self {
-        if self == Self::zero() {
-            d
-        } else {
-            d / self
-        }
-    }
 
     fn sig(self) -> Self {
         if self >= Self::zero() {
@@ -144,32 +126,6 @@ mod tests {
 
     proptest! {
         #[test]
-        fn ln_tests(a in any::<f64>()) {
-            let f = if a > 0. { a.ln() } else { 0. };
-            if a <= 0. {
-                assert_eq!(0., f);
-            } else {
-                assert_eq!(a.ln(), f);
-            }
-            let back = a.ln_back(a);
-            let exp = if a == 0. { 1. } else { a };
-            assert_eq!(a / exp, back);
-        }
-
-        #[test]
-        fn inv_tests(a in any::<f64>()) {
-            let f = if a != 0. { 1. / a } else { 0. };
-            if a == 0. {
-                assert_eq!(0., f);
-            } else {
-                assert_eq!(1. / a, f);
-            }
-            let back = a.inv_back(a);
-            let exp = if a == 0. { 1. } else { a };
-            assert_eq!(-a / (exp.powf(2.)), back);
-        }
-
-        #[test]
         fn sig_tests(a in any::<f64>()) {
             let f = a.sig();
             if a >= 0. {
@@ -193,14 +149,6 @@ mod tests {
             } else {
                 assert_eq!(0., back);
             }
-        }
-
-        #[test]
-        fn exp_tests(a in any::<f64>()) {
-            let f = a.exp();
-            assert_eq!(a.exp(), f);
-            let back = a.exp_back(a);
-            assert_eq!(a.exp() * a, back);
         }
     }
 }
