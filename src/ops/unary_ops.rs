@@ -131,11 +131,10 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Exp {
         a.map(|e| e.exp(), <Exp as Unary<E, BT, T>>::tag(self))
     }
 
-    // TODO: rm unwrap
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
-        let t = ctx.fst.as_ref().unwrap();
-        let exp = self.forward(t);
-        exp.zip(d, |e1, e2| e1 * e2, "mul")
+        ctx.fst.as_ref()
+            .map(|t| self.forward(t))
+            .and_then(|exp| exp.zip(d, |e1, e2| e1 * e2, "mul"))
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
