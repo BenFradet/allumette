@@ -38,15 +38,14 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Inv {
         )
     }
 
-    // TODO: rm unwrap
     // decomposed for gpu, deriv 1/x => -1/x^2
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
-        let a = ctx.fst.as_ref().unwrap();
-        let a2 = a.zip(a, |e1, e2| e1 * e2, "mul").unwrap();
-        let a2_inv = self.forward(&a2);
         let d_neg = d.map(|e| -e, "neg");
-        d_neg
-            .zip(&a2_inv, |e1, e2| e1 * e2, "mul")
+        ctx.fst
+            .as_ref()
+            .and_then(|a| a.zip(a, |e1, e2| e1 * e2, "mul"))
+            .map(|a2| self.forward(&a2))
+            .and_then(|a2_inv| d_neg.zip(&a2_inv, |e1, e2| e1 * e2, "mul"))
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
@@ -90,15 +89,20 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Sig {
 
     // sig'(x) = sig(x) * (1 - sig(x))
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
-        //TODO: rm unwrap
-        let t = ctx.fst.as_ref().unwrap();
-        let sig = self.forward(t);
-        let minus_sig = sig.map(|e| -e, "neg");
-        let one_minus_sig = <T as TensorData<E>>::from_scalar(E::one())
-            .zip(&minus_sig, |e1, e2| e1 + e2, "add")
-            .unwrap();
-        let deriv = sig.zip(&one_minus_sig, |e1, e2| e1 * e2, "mul").unwrap();
-        d.zip(&deriv, |e1, e2| e1 * e2, "mul").unwrap()
+        ctx.fst
+            .as_ref()
+            .and_then(|t| {
+                let sig = self.forward(t);
+                let minus_sig = sig.map(|e| -e, "neg");
+                let one_minus_sig = <T as TensorData<E>>::from_scalar(E::one()).zip(
+                    &minus_sig,
+                    |e1, e2| e1 + e2,
+                    "add",
+                );
+                one_minus_sig.and_then(|oms| sig.zip(&oms, |e1, e2| e1 * e2, "mul"))
+            })
+            .and_then(|deriv| d.zip(&deriv, |e1, e2| e1 * e2, "mul"))
+            .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
     fn tag(&self) -> &str {
@@ -132,7 +136,8 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Exp {
     }
 
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
-        ctx.fst.as_ref()
+        ctx.fst
+            .as_ref()
             .map(|t| self.forward(t))
             .and_then(|exp| exp.zip(d, |e1, e2| e1 * e2, "mul"))
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
