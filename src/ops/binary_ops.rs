@@ -3,7 +3,7 @@ use crate::{
     backend::{backend::Backend, backend_type::BackendType},
     data::tensor_data::TensorData,
     math::element::Element,
-    shaping::shape::Shape,
+    shaping::{order::Order, shape::Shape},
     util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
@@ -99,8 +99,12 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Eq {
 pub struct Sum;
 impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Sum {
     fn forward(&self, a: &T, dim: &T) -> T {
-        a.reduce(|acc, v| acc + v, dim.first().unwrap().unsafe_to(), 0.)
-            .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
+        a.reduce(
+            |acc, v| acc + v,
+            dim.first().unwrap_or(E::one()).unsafe_to(),
+            0.,
+        )
+        .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
     }
 
     fn backward(&self, _ctx: &Context<T>, d: &T) -> (T, T) {
@@ -113,31 +117,38 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
 }
 
 pub struct Permute;
-impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Permute {
+impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T>
+    for Permute
+{
     fn forward(&self, a: &T, order: &T) -> T {
         let a_shape = a.shape().clone();
         a.permute(order)
             .unwrap_or(<T as TensorData<E>>::ones(a_shape))
     }
 
-    fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
-        todo!();
-        //let order = ctx
-        //    .snd
-        //    .as_ref()
-        //    .map(|o| o.into())
-        //    .unwrap_or(Order::range(d.dims()));
-        //let mut inv = vec![];
-        //for i in 0..order.len() {
-        //    let idx = order.index(i).unwrap_or(0);
-        //    inv.push(idx);
-        //}
-        //let inverse_order = Order::new(inv).unwrap_or(Order::range(order.len()));
-        //(
-        //    d.permute(&inverse_order)
-        //        .unwrap_or(TensorData::ones(d.shape.clone())),
-        //    TensorData::scalar(0.),
-        //)
+    fn backward(&self, ctx: &Context<T>, d: &T) -> (T, T) {
+        let order = ctx
+            .snd
+            .as_ref()
+            .map(|o| o.to_order())
+            .unwrap_or(Order::range(d.shape().len()));
+        let mut inv = vec![];
+        for i in 0..order.len() {
+            let idx = order.index(i).unwrap_or(0);
+            inv.push(idx);
+        }
+        let inverse_order = Order::new(inv).unwrap_or(Order::range(order.len()));
+        let inverse_data: Vec<_> = inverse_order
+            .data
+            .iter()
+            .map(|u| E::unsafe_from(*u))
+            .collect();
+        let inverse_order_td = <T as TensorData<E>>::from_1d(&inverse_data);
+        (
+            d.permute(&inverse_order_td)
+                .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone())),
+            <T as TensorData<E>>::from_scalar(E::zero()),
+        )
     }
 
     fn tag(&self) -> &str {

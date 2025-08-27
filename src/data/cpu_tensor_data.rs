@@ -118,6 +118,10 @@ impl TensorData<f64> for CpuTensorData {
         (0..self.size()).map(|i| self.strides.idx(i))
     }
 
+    fn to_order(&self) -> Order {
+        self.into()
+    }
+
     fn ones(shape: Shape) -> Self {
         let data = vec![1.; shape.size];
         let strides = (&shape).into();

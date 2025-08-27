@@ -1,6 +1,6 @@
 use crate::{
     math::element::Element,
-    shaping::{idx::Idx, shape::Shape, strides::Strides},
+    shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides},
 };
 
 pub trait TensorData<E: Element> {
@@ -21,6 +21,8 @@ pub trait TensorData<E: Element> {
         Self: Sized;
 
     fn indices(&self) -> impl Iterator<Item = Idx>;
+
+    fn to_order(&self) -> Order;
 
     fn ones(shape: Shape) -> Self;
     fn zeros(shape: Shape) -> Self;

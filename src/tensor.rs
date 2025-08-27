@@ -831,8 +831,7 @@ mod tests {
             binary_grad_assert(a_par.clone(), b_par.clone(), |t1, t2| t1.mm(t2));
         }
 
-        // TODO: reimplement backward
-        // #[test]
+        #[test]
         fn permute_grad_tests(
             (t_seq, o_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_with_order(),
             (t_par, o_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_with_order(),
