@@ -13,9 +13,13 @@ var<storage, read> in_strides: array<u32>;
 @group(0) @binding(5)
 var<storage, read> out_strides: array<u32>;
 
-const MAX_DIMS: u32 = 32;
+const MAX_DIMS: u32 = 32u;
 
-fn prod(start: u32, shape_len: u32) -> u32 {
+fn prod(
+    start: u32,
+    shape_len: u32,
+    shape: array<u32, MAX_DIMS>,
+) -> u32 {
     var result: u32 = 1u;
     for (var i = start; i < shape_len; i = i + 1u) {
         result *= shape[i];
@@ -26,33 +30,40 @@ fn prod(start: u32, shape_len: u32) -> u32 {
 fn to_index(
     ordinal: u32,
     shape_len: u32,
-    index: array<u32, MAX_DIMS>
-) {
+    shape: array<u32, MAX_DIMS>,
+) -> array<u32, MAX_DIMS> {
     var remaining = ordinal;
+    var out_index: array<u32, MAX_DIMS>;
 
     for (var i = 0u; i < shape_len; i = i + 1u) {
-        let product = prod(i, shape_len);
-        let divisor = product / out_shape[i];
+        let product = prod(i, shape_len, shape);
+        let divisor = product / shape[i];
         let index = remaining / divisor;
         remaining -= index * divisor;
 
-        index[i] = index;
+        out_index[i] = index;
     }
+    return out_index;
 }
 
 fn broadcast_index(
-    out_index: array<u32, MAX_DIMS>,
     in_index: array<u32, MAX_DIMS>,
+    in_shape_len: u32,
+    in_shape: array<u32, MAX_DIMS>,
     out_shape_len: u32,
-    in_shape_len: u32
-) {
-    for (var i = 0u; i < shape_len; i = i + 1u) {
-        if shape[i] > 1 {
-            in_index[i] = out_index[out_shape_len - in_shape_len - i]
+    out_shape: array<u32, MAX_DIMS>,
+) -> array<u32, MAX_DIMS> {
+    var out_index: array<u32, MAX_DIMS>;
+
+    for (var i = 0u; i < out_shape_len; i = i + 1u) {
+        if out_shape[i] > 1u {
+            out_index[i] = in_index[in_shape_len - out_shape_len - i];
         } else {
-            in_index[i] = 0u;
+            out_index[i] = 0u;
         }
     }
+
+    return out_index;
 }
 
 fn index_to_position(
@@ -61,7 +72,7 @@ fn index_to_position(
     len: u32
 ) -> u32 {
     var result: u32 = 0u;
-    for (var i = start; i < len; i = i + 1u) {
+    for (var i = 0u; i < len; i = i + 1u) {
         result += index[i] * strides[i];
     }
     return result;
@@ -79,8 +90,8 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    var out_index = array<u32, MAX_DIMS>;
-    var in_index = array<u32, MAX_DIMS>;
+    var out_index: array<u32, MAX_DIMS>;
+    var in_index: array<u32, MAX_DIMS>;
     let out_shape_len = arrayLength(&out_shape);
     let in_shape_len = arrayLength(&in_shape);
     to_index(i, shape_len, out_index);
