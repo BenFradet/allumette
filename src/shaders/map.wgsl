@@ -13,16 +13,20 @@ var<storage, read> in_strides: array<u32>;
 @group(0) @binding(5)
 var<storage, read> out_strides: array<u32>;
 
+@group(0) @binding(6)
+var<storage, read_write> in_index: array<u32>;
+@group(0) @binding(7)
+var<storage, read_write> out_index: array<u32>;
+
 const MAX_DIMS: u32 = 32u;
 
 fn prod(
     start: u32,
     shape_len: u32,
-    shape: array<u32, MAX_DIMS>,
 ) -> u32 {
     var result: u32 = 1u;
     for (var i = start; i < shape_len; i = i + 1u) {
-        result *= shape[i];
+        result *= out_shape[i];
     }
     return result;
 }
@@ -30,50 +34,49 @@ fn prod(
 fn to_index(
     ordinal: u32,
     shape_len: u32,
-    shape: array<u32, MAX_DIMS>,
-) -> array<u32, MAX_DIMS> {
+) {
     var remaining = ordinal;
-    var out_index: array<u32, MAX_DIMS>;
-
     for (var i = 0u; i < shape_len; i = i + 1u) {
-        let product = prod(i, shape_len, shape);
-        let divisor = product / shape[i];
+        let product = prod(i, shape_len);
+        let divisor = product / out_shape[i];
         let index = remaining / divisor;
         remaining -= index * divisor;
 
         out_index[i] = index;
     }
-    return out_index;
 }
 
 fn broadcast_index(
-    in_index: array<u32, MAX_DIMS>,
     in_shape_len: u32,
-    in_shape: array<u32, MAX_DIMS>,
     out_shape_len: u32,
-    out_shape: array<u32, MAX_DIMS>,
-) -> array<u32, MAX_DIMS> {
-    var out_index: array<u32, MAX_DIMS>;
-
-    for (var i = 0u; i < out_shape_len; i = i + 1u) {
-        if out_shape[i] > 1u {
-            out_index[i] = in_index[in_shape_len - out_shape_len - i];
+) {
+    for (var i = 0u; i < in_shape_len; i = i + 1u) {
+        if in_shape[i] > 1u {
+            let idx = out_shape_len - in_shape_len - i;
+            in_index[i] = out_index[idx];
         } else {
-            out_index[i] = 0u;
+            in_index[i] = 0u;
         }
     }
-
-    return out_index;
 }
 
-fn index_to_position(
-    index: array<u32, MAX_DIMS>,
-    strides: array<u32, MAX_DIMS>,
+// haven't found a way not to copy/paste
+fn index_to_position_in(
     len: u32
 ) -> u32 {
     var result: u32 = 0u;
     for (var i = 0u; i < len; i = i + 1u) {
-        result += index[i] * strides[i];
+        result += in_index[i] * in_strides[i];
+    }
+    return result;
+}
+
+fn index_to_position_out(
+    len: u32
+) -> u32 {
+    var result: u32 = 0u;
+    for (var i = 0u; i < len; i = i + 1u) {
+        result += out_index[i] * out_strides[i];
     }
     return result;
 }
@@ -90,13 +93,11 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    var out_index: array<u32, MAX_DIMS>;
-    var in_index: array<u32, MAX_DIMS>;
     let out_shape_len = arrayLength(&out_shape);
     let in_shape_len = arrayLength(&in_shape);
-    to_index(i, shape_len, out_index);
-    broadcast_index(out_index, in_index, out_shape_len, in_shape_len);
-    let in_pos = index_to_position(in_index, in_strides);
-    let out_pos = index_to_position(out_index, out_strides);
+    to_index(i, out_shape_len);
+    broadcast_index(in_shape_len, out_shape_len);
+    let in_pos = index_to_position_in(in_shape_len);
+    let out_pos = index_to_position_out(out_shape_len);
     output[out_pos] = replace_with_actual_operation(input[in_pos]);
 }
