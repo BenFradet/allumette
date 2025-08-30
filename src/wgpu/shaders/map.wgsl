@@ -60,7 +60,7 @@ fn broadcast_index(
     }
 }
 
-// haven't found a way not to copy/paste
+// haven't found a way not to copy/paste given array<u32, N> needs constant indexing
 fn index_to_position_in(
     len: u32
 ) -> u32 {

@@ -11,6 +11,13 @@ pub struct WgpuContext {
 }
 
 impl WgpuContext {
+    const MAP_SHADER: &'static str = include_str!("shaders/map.wgsl");
+
+    const REPLACE_OP_NAME: &'static str = "replace_me_with_actual_operation";
+
+    // neg, inv and relu are not supported out of the box
+    const MAP_OPS: [&'static str; 7] = ["log", "exp", "sig", "id", "neg", "inv", "relu"];
+
     fn new() -> Self {
         let (device, queue) = Self::get_device_and_queue();
         Self { device, queue }
