@@ -20,6 +20,10 @@ var<storage, read_write> out_index: array<u32>;
 
 const MAX_DIMS: u32 = 32u;
 
+fn id(in: f32) -> f32 {
+    return in;
+}
+
 fn prod(
     start: u32,
     shape_len: u32,
