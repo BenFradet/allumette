@@ -24,6 +24,17 @@ fn id(in: f32) -> f32 {
     return in;
 }
 
+fn neg(in: f32) -> f32 {
+    return -in;
+}
+
+fn inv(in: f32) -> f32 {
+    if in == 0.0 {
+        return 0.0;
+    }
+    return 1.0 / in;
+}
+
 fn prod(
     start: u32,
     shape_len: u32,
