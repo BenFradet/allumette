@@ -35,6 +35,10 @@ fn inv(in: f32) -> f32 {
     return 1.0 / in;
 }
 
+fn relu(in: f32) -> f32 {
+    return max(0.0, in)
+}
+
 fn prod(
     start: u32,
     shape_len: u32,
