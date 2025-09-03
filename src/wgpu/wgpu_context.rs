@@ -1,6 +1,9 @@
-use std::sync::LazyLock;
+use std::{borrow::Cow, sync::LazyLock};
 
-use wgpu::{Device, DeviceDescriptor, Features, Instance, Limits, MemoryHints, Queue, Trace};
+use wgpu::{
+    Device, DeviceDescriptor, Features, Instance, Limits, MemoryHints, Queue, ShaderModule,
+    ShaderModuleDescriptor, ShaderSource, Trace,
+};
 
 // original version in kurtschelfthout/tensorken
 
@@ -47,6 +50,13 @@ impl WgpuContext {
 
     fn get_device_and_queue() -> (Device, Queue) {
         futures::executor::block_on(Self::get_device_and_queue_async())
+    }
+
+    fn create_shader_module(&self, operation: &str, shader_source: &str) -> ShaderModule {
+        self.device.create_shader_module(ShaderModuleDescriptor {
+            label: Some(operation),
+            source: ShaderSource::Wgsl(Cow::Borrowed(&shader_source)),
+        })
     }
 }
 
