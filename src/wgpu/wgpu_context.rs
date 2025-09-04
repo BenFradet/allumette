@@ -1,8 +1,12 @@
-use std::{borrow::Cow, sync::LazyLock};
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    sync::{Arc, LazyLock, RwLockWriteGuard},
+};
 
 use wgpu::{
-    Device, DeviceDescriptor, Features, Instance, Limits, MemoryHints, Queue, ShaderModule,
-    ShaderModuleDescriptor, ShaderSource, Trace,
+    ComputePipeline, ComputePipelineDescriptor, Device, DeviceDescriptor, Features, Instance,
+    Limits, MemoryHints, Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource, Trace,
 };
 
 // original version in kurtschelfthout/tensorken
@@ -18,8 +22,10 @@ impl WgpuContext {
 
     const REPLACE_OP_NAME: &'static str = "replace_me_with_actual_operation";
 
-    // neg, inv and relu are not supported out of the box
+    // id, neg, inv and relu are not supported out of the box
     const MAP_OPS: [&'static str; 7] = ["log", "exp", "sig", "id", "neg", "inv", "relu"];
+
+    const ENTRY_POINT: &'static str = "call";
 
     fn new() -> Self {
         let (device, queue) = Self::get_device_and_queue();
@@ -57,6 +63,25 @@ impl WgpuContext {
             label: Some(operation),
             source: ShaderSource::Wgsl(Cow::Borrowed(&shader_source)),
         })
+    }
+
+    fn insert_into_compute_pipeline(
+        &self,
+        operation: &'static str,
+        module: &ShaderModule,
+        pipelines: &mut RwLockWriteGuard<HashMap<&str, Arc<ComputePipeline>>>,
+    ) {
+        let compute_pipeline = Arc::new(self.device.create_compute_pipeline(
+            &ComputePipelineDescriptor {
+                label: Some(operation),
+                layout: None,
+                module,
+                entry_point: Some(Self::ENTRY_POINT),
+                cache: None,
+                compilation_options: Default::default(),
+            },
+        ));
+        pipelines.insert(operation, compute_pipeline);
     }
 }
 

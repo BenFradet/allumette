@@ -36,7 +36,7 @@ fn inv(in: f32) -> f32 {
 }
 
 fn relu(in: f32) -> f32 {
-    return max(0.0, in)
+    return max(0.0, in);
 }
 
 fn prod(
