@@ -1,7 +1,7 @@
 use std::{
     borrow::Cow,
     collections::HashMap,
-    sync::{Arc, LazyLock, RwLockWriteGuard},
+    sync::{Arc, LazyLock, RwLock, RwLockWriteGuard},
 };
 
 use wgpu::{
@@ -15,6 +15,7 @@ use wgpu::{
 pub struct WgpuContext {
     pub device: Device,
     pub queue: Queue,
+    pipelines: RwLock<HashMap<&'static str, Arc<ComputePipeline>>>,
 }
 
 impl WgpuContext {
@@ -27,9 +28,34 @@ impl WgpuContext {
 
     const ENTRY_POINT: &'static str = "call";
 
-    fn new() -> Self {
+    pub fn new() -> Self {
         let (device, queue) = Self::get_device_and_queue();
-        Self { device, queue }
+        Self {
+            device,
+            queue,
+            pipelines: RwLock::new(HashMap::new()),
+        }
+    }
+
+    pub fn get_or_create_pipeline(
+        &self,
+        operation: &'static str,
+    ) -> Option<Arc<ComputePipeline>> {
+        self.pipelines.read().unwrap().get(operation)
+            .map(Arc::clone)
+            .or_else(|| {
+                let module = if Self::MAP_OPS.contains(&operation) {
+                    Some(self.create_shader_module(operation, Self::MAP_SHADER))
+                } else {
+                    None
+                };
+
+                module.and_then(|m| {
+                    let mut pipelines = self.pipelines.write().unwrap();
+                    self.insert_pipeline(operation, &m, &mut pipelines);
+                    pipelines.get(&operation).map(Arc::clone)
+                })
+            })
     }
 
     async fn get_device_and_queue_async() -> (Device, Queue) {
@@ -65,11 +91,11 @@ impl WgpuContext {
         })
     }
 
-    fn insert_into_compute_pipeline(
+    fn insert_pipeline(
         &self,
         operation: &'static str,
         module: &ShaderModule,
-        pipelines: &mut RwLockWriteGuard<HashMap<&str, Arc<ComputePipeline>>>,
+        pipelines: &mut RwLockWriteGuard<HashMap<&'static str, Arc<ComputePipeline>>>,
     ) {
         let compute_pipeline = Arc::new(self.device.create_compute_pipeline(
             &ComputePipelineDescriptor {
