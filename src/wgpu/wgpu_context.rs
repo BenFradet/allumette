@@ -37,11 +37,11 @@ impl WgpuContext {
         }
     }
 
-    pub fn get_or_create_pipeline(
-        &self,
-        operation: &'static str,
-    ) -> Option<Arc<ComputePipeline>> {
-        self.pipelines.read().unwrap().get(operation)
+    pub fn get_or_create_pipeline(&self, operation: &'static str) -> Option<Arc<ComputePipeline>> {
+        self.pipelines
+            .read()
+            .unwrap()
+            .get(operation)
             .map(Arc::clone)
             .or_else(|| {
                 let module = if Self::MAP_OPS.contains(&operation) {

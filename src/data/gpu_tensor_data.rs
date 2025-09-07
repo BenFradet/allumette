@@ -3,7 +3,9 @@ use rand::Rng;
 use std::sync::Arc;
 
 use wgpu::{
-    util::{BufferInitDescriptor, DeviceExt}, wgt::PollType, Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, MapMode
+    util::{BufferInitDescriptor, DeviceExt},
+    wgt::PollType,
+    Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, MapMode,
 };
 
 use crate::{
@@ -25,7 +27,7 @@ const WGPU_ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
 impl<'a> GpuTensorData<'a> {
     pub fn new(data: &[f32], shape: Shape, strides: Strides, context: &'a WgpuContext) -> Self {
         let buffer = context.device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("new gpu tensor data"),
+            label: Some("Tensor new"),
             contents: bytemuck::cast_slice(data),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         });
@@ -40,7 +42,8 @@ impl<'a> GpuTensorData<'a> {
     // see repeated_compute example in wgpu
     pub fn to_cpu(&self) -> Vec<f32> {
         let size = Self::byte_size(self.shape.size);
-        let staging_buffer = self.create_buffer("to_cpu", BufferUsages::MAP_READ | BufferUsages::COPY_DST);
+        let staging_buffer =
+            self.create_output_buffer("to_cpu", BufferUsages::MAP_READ | BufferUsages::COPY_DST);
         let mut encoder = self
             .context
             .device
@@ -74,7 +77,7 @@ impl<'a> GpuTensorData<'a> {
         })
     }
 
-    fn create_buffer(&self, operation: &str, usage: BufferUsages) -> Buffer {
+    fn create_output_buffer(&self, operation: &str, usage: BufferUsages) -> Buffer {
         let size = Self::byte_size(self.shape.size);
         self.context.device.create_buffer(&BufferDescriptor {
             label: Some(&format!("Tensor {operation}")),
@@ -82,6 +85,22 @@ impl<'a> GpuTensorData<'a> {
             usage,
             mapped_at_creation: false,
         })
+    }
+
+    fn create_shape_buffer(&self) -> Buffer {
+        let data: Vec<_> = self
+            .shape
+            .data()
+            .iter()
+            .map(|u| u32::try_from(*u).unwrap())
+            .collect();
+        self.context
+            .device
+            .create_buffer_init(&BufferInitDescriptor {
+                label: Some("shape"),
+                contents: bytemuck::cast_slice(&data),
+                usage: BufferUsages::STORAGE,
+            })
     }
 
     fn byte_size(size: usize) -> u64 {
