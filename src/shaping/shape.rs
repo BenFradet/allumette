@@ -3,7 +3,7 @@ use std::ops::Index;
 use proptest::prelude::Strategy;
 use rand::Rng;
 
-use super::idx::Idx;
+use super::{idx::Idx, iter::Iter};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shape {
@@ -123,6 +123,10 @@ impl Shape {
 
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
+    }
+
+    pub fn iter(&self) -> Iter<'_> {
+        Iter::new(&self.data)
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Shape> {
