@@ -95,6 +95,10 @@ impl<'a> GpuTensorData<'a> {
         self.create_storage_buffer(self.strides.iter(), "strides")
     }
 
+    pub fn create_index_buffer(&self) -> Buffer {
+        self.create_storage_buffer(self.shape.idx(0).iter(), "index")
+    }
+
     fn create_storage_buffer(&self, iter: Iter<'_>, label: &str) -> Buffer {
         let data: Vec<_> = iter.map(|u| u32::try_from(u).unwrap()).collect();
         self.context
