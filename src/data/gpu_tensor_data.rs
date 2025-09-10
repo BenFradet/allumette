@@ -5,7 +5,7 @@ use std::sync::Arc;
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     wgt::PollType,
-    Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, MapMode,
+    Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Device, MapMode,
 };
 
 use crate::{
@@ -16,7 +16,7 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct GpuTensorData<'a> {
-    buffer: Arc<wgpu::Buffer>,
+    pub buffer: Arc<wgpu::Buffer>,
     pub shape: Shape,
     pub strides: Strides,
     context: &'a WgpuContext,
@@ -37,6 +37,10 @@ impl<'a> GpuTensorData<'a> {
             strides,
             context,
         }
+    }
+
+    pub fn device(&self) -> &Device {
+        &self.context.device
     }
 
     // see repeated_compute example in wgpu
@@ -77,7 +81,7 @@ impl<'a> GpuTensorData<'a> {
         })
     }
 
-    fn create_output_buffer(&self, operation: &str, usage: BufferUsages) -> Buffer {
+    pub fn create_output_buffer(&self, operation: &str, usage: BufferUsages) -> Buffer {
         let size = Self::byte_size(self.shape.size);
         self.context.device.create_buffer(&BufferDescriptor {
             label: Some(&format!("Tensor {operation}")),
@@ -87,7 +91,7 @@ impl<'a> GpuTensorData<'a> {
         })
     }
 
-    fn create_shape_buffer(&self) -> Buffer {
+    pub fn create_shape_buffer(&self) -> Buffer {
         self.create_storage_buffer(self.shape.iter(), "shape")
     }
 
