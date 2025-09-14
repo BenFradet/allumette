@@ -7,9 +7,9 @@ use crate::shaping::shape::Shape;
 /// count: total number of workgroups
 /// size: number of threads per workgroup
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct WorkgroupInfo {
-    count: usize,
-    size: usize,
+pub struct WorkgroupInfo {
+    pub count: usize,
+    pub size: usize,
 }
 
 const MAX_WORKGROUP_COUNT: usize = 65535;

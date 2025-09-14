@@ -1,11 +1,12 @@
 use wgpu::{
     BindGroup, BindGroupDescriptor, BindGroupEntry, BufferUsages, CommandEncoderDescriptor,
-    ComputePassDescriptor, ComputePipeline,
+    ComputePassDescriptor, ComputePipeline, Device,
 };
 
 use crate::{
     backend::{backend::TensorBackend, backend_type::Gpu},
     data::gpu_tensor_data::GpuTensorData,
+    wgpu::workgroup_info::WorkgroupInfo,
 };
 
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
@@ -13,7 +14,12 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         todo!()
     }
 
-    fn map_broadcast<F: Fn(f32) -> f32 + Sync>(&self, out: &Self, f: F, tag: &str) -> Option<Self>
+    fn map_broadcast<F: Fn(f32) -> f32 + Sync>(
+        &self,
+        _out: &Self,
+        _f: F,
+        _tag: &str,
+    ) -> Option<Self>
     where
         Self: Sized,
     {
@@ -88,16 +94,18 @@ fn create_bind_group(
     })
 }
 
-fn encode(a: GpuTensorData<'_>, pipeline: &ComputePipeline, bind_group: &BindGroup) {
-    let mut encoder = a
-        .device()
-        .create_command_encoder(&CommandEncoderDescriptor { label: None });
+fn encode(
+    device: &Device,
+    workgroup_info: WorkgroupInfo,
+    pipeline: &ComputePipeline,
+    bind_group: &BindGroup,
+) {
+    let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
     let mut compute_pass = encoder.begin_compute_pass(&ComputePassDescriptor {
         label: None,
         timestamp_writes: None,
     });
     compute_pass.set_pipeline(pipeline);
     compute_pass.set_bind_group(0, Some(bind_group), &[]);
-    let workgroup_number = 4; // TODO: make configurable
-    compute_pass.dispatch_workgroups(workgroup_number, 1, 1);
+    compute_pass.dispatch_workgroups(workgroup_info.count.try_into().unwrap(), 1, 1);
 }
