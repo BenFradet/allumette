@@ -104,7 +104,7 @@ fn index_to_position_out(
 fn replace_with_actual_operation(in: f32) -> f32 { discard; }
 
 @compute
-@workgroup_size(64)
+@workgroup_size(1)
 fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let i = global_id.x;
 

@@ -9,6 +9,8 @@ use wgpu::{
     Limits, MemoryHints, Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource, Trace,
 };
 
+use crate::wgpu::workgroup_info::WorkgroupInfo;
+
 // original version in kurtschelfthout/tensorken
 
 #[derive(Debug)]
@@ -22,6 +24,7 @@ impl WgpuContext {
     const MAP_SHADER: &'static str = include_str!("shaders/map.wgsl");
 
     const REPLACE_OP_NAME: &'static str = "replace_me_with_actual_operation";
+    const REPLACE_WORKGROUP_SIZE: &'static str = "@workgroup_size(1)";
 
     // id, neg, inv and relu are not supported out of the box
     const MAP_OPS: [&'static str; 7] = ["log", "exp", "sig", "id", "neg", "inv", "relu"];
@@ -37,7 +40,11 @@ impl WgpuContext {
         }
     }
 
-    pub fn get_or_create_pipeline(&self, operation: &'static str) -> Option<Arc<ComputePipeline>> {
+    pub fn get_or_create_pipeline(
+        &self,
+        operation: &'static str,
+        workgroup_info: WorkgroupInfo,
+    ) -> Option<Arc<ComputePipeline>> {
         self.pipelines
             .read()
             .unwrap()
@@ -45,7 +52,7 @@ impl WgpuContext {
             .map(Arc::clone)
             .or_else(|| {
                 let module = if Self::MAP_OPS.contains(&operation) {
-                    Some(self.create_shader_module(operation, Self::MAP_SHADER))
+                    Some(self.create_shader_module(operation, Self::MAP_SHADER, workgroup_info))
                 } else {
                     None
                 };
@@ -84,10 +91,19 @@ impl WgpuContext {
         futures::executor::block_on(Self::get_device_and_queue_async())
     }
 
-    fn create_shader_module(&self, operation: &str, shader_source: &str) -> ShaderModule {
+    fn create_shader_module(
+        &self,
+        operation: &str,
+        shader_source: &str,
+        workgroup_info: WorkgroupInfo,
+    ) -> ShaderModule {
+        let source = shader_source.replace(
+            Self::REPLACE_WORKGROUP_SIZE,
+            &workgroup_info.workgroup_size(),
+        );
         self.device.create_shader_module(ShaderModuleDescriptor {
             label: Some(operation),
-            source: ShaderSource::Wgsl(Cow::Borrowed(&shader_source)),
+            source: ShaderSource::Wgsl(Cow::Borrowed(&source)),
         })
     }
 
