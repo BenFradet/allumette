@@ -5,8 +5,9 @@ use std::{
 };
 
 use wgpu::{
-    ComputePipeline, ComputePipelineDescriptor, Device, DeviceDescriptor, Features, Instance,
-    Limits, MemoryHints, Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource, Trace,
+    BindGroup, CommandBuffer, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline,
+    ComputePipelineDescriptor, Device, DeviceDescriptor, Features, Instance, Limits, MemoryHints,
+    Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource, Trace,
 };
 
 use crate::wgpu::workgroup_info::WorkgroupInfo;
@@ -38,6 +39,27 @@ impl WgpuContext {
             queue,
             pipelines: RwLock::new(HashMap::new()),
         }
+    }
+
+    pub fn encode_command(
+        &self,
+        workgroup_info: WorkgroupInfo,
+        pipeline: &ComputePipeline,
+        bind_group: &BindGroup,
+    ) -> CommandBuffer {
+        let mut encoder = self
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor { label: None });
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(pipeline);
+            compute_pass.set_bind_group(0, Some(bind_group), &[]);
+            compute_pass.dispatch_workgroups(workgroup_info.count.try_into().unwrap(), 1, 1);
+        }
+        encoder.finish()
     }
 
     pub fn get_or_create_pipeline(

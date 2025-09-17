@@ -1,12 +1,8 @@
-use wgpu::{
-    BindGroup, BindGroupDescriptor, BindGroupEntry, BufferUsages, CommandBuffer,
-    CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline, Device,
-};
+use wgpu::{BindGroup, BindGroupDescriptor, BindGroupEntry, BufferUsages, ComputePipeline};
 
 use crate::{
     backend::{backend::TensorBackend, backend_type::Gpu},
     data::gpu_tensor_data::GpuTensorData,
-    wgpu::workgroup_info::WorkgroupInfo,
 };
 
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
@@ -92,23 +88,4 @@ fn create_bind_group(
             },
         ],
     })
-}
-
-fn encode_command(
-    device: &Device,
-    workgroup_info: WorkgroupInfo,
-    pipeline: &ComputePipeline,
-    bind_group: &BindGroup,
-) -> CommandBuffer {
-    let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
-    {
-        let mut compute_pass = encoder.begin_compute_pass(&ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
-        compute_pass.set_pipeline(pipeline);
-        compute_pass.set_bind_group(0, Some(bind_group), &[]);
-        compute_pass.dispatch_workgroups(workgroup_info.count.try_into().unwrap(), 1, 1);
-    }
-    encoder.finish()
 }
