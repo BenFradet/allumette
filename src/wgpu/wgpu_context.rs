@@ -7,7 +7,8 @@ use std::{
 use wgpu::{
     BindGroup, CommandBuffer, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline,
     ComputePipelineDescriptor, Device, DeviceDescriptor, Features, Instance, Limits, MemoryHints,
-    Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource, Trace,
+    PollError, PollStatus, PollType, Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource,
+    Trace,
 };
 
 use crate::wgpu::workgroup_info::WorkgroupInfo;
@@ -60,6 +61,12 @@ impl WgpuContext {
             compute_pass.dispatch_workgroups(workgroup_info.count.try_into().unwrap(), 1, 1);
         }
         encoder.finish()
+    }
+
+    // blocks until execution is complete
+    pub fn submit_command(&self, command_buffer: CommandBuffer) -> Result<PollStatus, PollError> {
+        let index = self.queue.submit(Some(command_buffer));
+        self.device.poll(PollType::WaitForSubmissionIndex(index))
     }
 
     pub fn get_or_create_pipeline(
