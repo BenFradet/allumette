@@ -10,5 +10,5 @@ pub trait Unary<E: Element, BT: BackendType, B: Backend<E, BT>> {
     // TODO: remove ctx
     fn backward(&self, ctx: &Context<B>, d: &B) -> B;
 
-    fn tag(&self) -> &str;
+    fn tag(&self) -> &'static str;
 }

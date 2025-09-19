@@ -20,7 +20,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Add {
         (d.clone(), d.clone())
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "add"
     }
 }
@@ -45,7 +45,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Mul {
         )
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "mul"
     }
 }
@@ -68,7 +68,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Lt {
         )
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "lt"
     }
 }
@@ -91,7 +91,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Eq {
         )
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "eq"
     }
 }
@@ -111,7 +111,7 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
         (d.clone(), <T as TensorData<E>>::from_scalar(E::zero()))
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "sum"
     }
 }
@@ -151,7 +151,7 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
         )
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "permute"
     }
 }
@@ -174,7 +174,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for IsClos
         )
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "is_close"
     }
 }
@@ -193,7 +193,7 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
         )
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "all"
     }
 }
@@ -220,7 +220,7 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
         )
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "view"
     }
 }
@@ -246,7 +246,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for MatMul
         )
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "matmul"
     }
 }

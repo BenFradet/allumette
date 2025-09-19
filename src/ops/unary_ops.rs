@@ -18,7 +18,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Neg {
         d.map(|e| -e, <Neg as Unary<E, BT, T>>::tag(self))
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "neg"
     }
 }
@@ -49,7 +49,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Inv {
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "inv"
     }
 }
@@ -76,7 +76,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Ln {
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "ln"
     }
 }
@@ -105,7 +105,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Sig {
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "sig"
     }
 }
@@ -124,7 +124,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Relu {
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "relu"
     }
 }
@@ -143,7 +143,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Exp {
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "exp"
     }
 }
@@ -164,7 +164,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Copy {
         d.clone()
     }
 
-    fn tag(&self) -> &str {
+    fn tag(&self) -> &'static str {
         "id"
     }
 }
