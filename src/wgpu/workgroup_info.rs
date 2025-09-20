@@ -21,8 +21,8 @@ impl WorkgroupInfo {
 const MAX_WORKGROUP_COUNT: usize = 65535;
 const MAX_WORKGROUP_SIZE: usize = 256;
 
-impl From<Shape> for WorkgroupInfo {
-    fn from(shape: Shape) -> Self {
+impl From<&Shape> for WorkgroupInfo {
+    fn from(shape: &Shape) -> Self {
         let tensor_size = shape.size;
 
         // TODO: None if tensor size > SIZE * COUNT
@@ -52,11 +52,11 @@ mod tests {
                 count: 2,
                 size: 256
             },
-            Shape::new(vec![257]).into()
+            (&Shape::new(vec![257])).into()
         );
         assert_eq!(
             WorkgroupInfo { count: 1, size: 32 },
-            Shape::new(vec![14, 2]).into()
+            (&Shape::new(vec![14, 2])).into()
         );
     }
 }
