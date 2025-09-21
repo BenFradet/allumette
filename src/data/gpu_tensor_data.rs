@@ -16,10 +16,10 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct GpuTensorData<'a> {
-    pub buffer: Arc<wgpu::Buffer>,
+    pub buffer: Arc<Buffer>,
     pub shape: Shape,
     pub strides: Strides,
-    context: &'a WgpuContext,
+    pub context: &'a WgpuContext,
 }
 
 const WGPU_ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
@@ -36,6 +36,15 @@ impl<'a> GpuTensorData<'a> {
             shape,
             strides,
             context,
+        }
+    }
+
+    pub fn with_buffer(&self, buffer: Buffer) -> Self {
+        Self {
+            buffer: Arc::new(buffer),
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+            context: self.context,
         }
     }
 
