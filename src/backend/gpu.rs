@@ -6,23 +6,37 @@ use crate::{
 };
 
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
-    fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, _tag: &str) -> Self {
+    fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, _tag: &'static str) -> Self {
         todo!()
     }
 
     fn map_broadcast<F: Fn(f32) -> f32 + Sync>(
         &self,
-        _out: &Self,
+        out: &Self,
         _f: F,
-        _tag: &str,
+        tag: &'static str,
     ) -> Option<Self>
     where
         Self: Sized,
     {
-        todo!()
+        let workgroup_info = (&out.shape).into();
+        let output_buffer =
+            out.create_output_buffer(tag, BufferUsages::STORAGE | BufferUsages::COPY_SRC);
+        let pipeline = self.context.get_or_create_pipeline(tag, workgroup_info)?;
+        let bind_group = create_bind_group(self, out, tag, &pipeline);
+        let command = self
+            .context
+            .encode_command(workgroup_info, &pipeline, &bind_group);
+        self.context.submit_command(command).ok()?;
+        Some(out.with_buffer(output_buffer))
     }
 
-    fn zip<F: Fn(f32, f32) -> f32 + Sync>(&self, _other: &Self, _f: F, _tag: &str) -> Option<Self>
+    fn zip<F: Fn(f32, f32) -> f32 + Sync>(
+        &self,
+        _other: &Self,
+        _f: F,
+        _tag: &'static str,
+    ) -> Option<Self>
     where
         Self: Sized,
     {
@@ -42,8 +56,8 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 }
 
 fn create_bind_group(
-    a: GpuTensorData<'_>,
-    b: GpuTensorData<'_>,
+    a: &GpuTensorData<'_>,
+    b: &GpuTensorData<'_>,
     operation: &str,
     pipeline: &ComputePipeline,
 ) -> BindGroup {
