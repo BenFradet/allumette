@@ -5,13 +5,14 @@ use std::{
 };
 
 use wgpu::{
-    BindGroup, CommandBuffer, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline,
-    ComputePipelineDescriptor, Device, DeviceDescriptor, Features, Instance, Limits, MemoryHints,
-    PollError, PollStatus, PollType, Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource,
-    Trace,
+    util::{BufferInitDescriptor, DeviceExt},
+    BindGroup, Buffer, BufferUsages, CommandBuffer, CommandEncoderDescriptor,
+    ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor, Device, DeviceDescriptor,
+    Features, Instance, Limits, MemoryHints, PollError, PollStatus, PollType, Queue, ShaderModule,
+    ShaderModuleDescriptor, ShaderSource, Trace,
 };
 
-use crate::wgpu::workgroup_info::WorkgroupInfo;
+use crate::{shaping::iter::Iter, wgpu::workgroup_info::WorkgroupInfo};
 
 // original version in kurtschelfthout/tensorken
 
@@ -92,6 +93,15 @@ impl WgpuContext {
                     pipelines.get(&operation).map(Arc::clone)
                 })
             })
+    }
+
+    pub fn create_storage_buffer(&self, iter: Iter<'_>, label: &str) -> Buffer {
+        let data: Vec<_> = iter.map(|u| u32::try_from(u).unwrap()).collect();
+        self.device.create_buffer_init(&BufferInitDescriptor {
+            label: Some(label),
+            contents: bytemuck::cast_slice(&data),
+            usage: BufferUsages::STORAGE,
+        })
     }
 
     async fn get_device_and_queue_async() -> (Device, Queue) {

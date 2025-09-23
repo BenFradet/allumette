@@ -4,13 +4,13 @@ use std::sync::Arc;
 
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    wgt::PollType,
-    Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Device, MapMode,
+    wgt::{BufferDescriptor, PollType},
+    Buffer, BufferUsages, CommandEncoderDescriptor, Device, MapMode,
 };
 
 use crate::{
     data::tensor_data::TensorData,
-    shaping::{iter::Iter, order::Order, shape::Shape, strides::Strides},
+    shaping::{order::Order, shape::Shape, strides::Strides},
     wgpu::wgpu_context::{get_wgpu_context, WgpuContext},
 };
 
@@ -101,26 +101,18 @@ impl<'a> GpuTensorData<'a> {
     }
 
     pub fn create_shape_buffer(&self) -> Buffer {
-        self.create_storage_buffer(self.shape.iter(), "shape")
+        self.context
+            .create_storage_buffer(self.shape.iter(), "shape")
     }
 
     pub fn create_strides_buffer(&self) -> Buffer {
-        self.create_storage_buffer(self.strides.iter(), "strides")
+        self.context
+            .create_storage_buffer(self.strides.iter(), "strides")
     }
 
     pub fn create_index_buffer(&self) -> Buffer {
-        self.create_storage_buffer(self.shape.idx(0).iter(), "index")
-    }
-
-    fn create_storage_buffer(&self, iter: Iter<'_>, label: &str) -> Buffer {
-        let data: Vec<_> = iter.map(|u| u32::try_from(u).unwrap()).collect();
         self.context
-            .device
-            .create_buffer_init(&BufferInitDescriptor {
-                label: Some(label),
-                contents: bytemuck::cast_slice(&data),
-                usage: BufferUsages::STORAGE,
-            })
+            .create_storage_buffer(self.shape.idx(0).iter(), "index")
     }
 
     fn byte_size(size: usize) -> u64 {
