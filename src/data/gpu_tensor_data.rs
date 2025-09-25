@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    wgt::{BufferDescriptor, PollType},
+    wgt::PollType,
     Buffer, BufferUsages, CommandEncoderDescriptor, Device, MapMode,
 };
 
@@ -21,8 +21,6 @@ pub struct GpuTensorData<'a> {
     pub strides: Strides,
     pub context: &'a WgpuContext,
 }
-
-const WGPU_ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
 
 impl<'a> GpuTensorData<'a> {
     pub fn new(data: &[f32], shape: Shape, strides: Strides, context: &'a WgpuContext) -> Self {
@@ -54,9 +52,12 @@ impl<'a> GpuTensorData<'a> {
 
     // see repeated_compute example in wgpu
     pub fn to_cpu(&self) -> Vec<f32> {
-        let size = Self::byte_size(self.shape.size);
-        let staging_buffer =
-            self.create_output_buffer("to_cpu", BufferUsages::MAP_READ | BufferUsages::COPY_DST);
+        let size = self.shape.gpu_byte_size();
+        let staging_buffer = self.context.create_output_buffer(
+            size,
+            "to_cpu",
+            BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+        );
         let mut encoder = self
             .context
             .device
@@ -90,16 +91,6 @@ impl<'a> GpuTensorData<'a> {
         })
     }
 
-    pub fn create_output_buffer(&self, operation: &str, usage: BufferUsages) -> Buffer {
-        let size = Self::byte_size(self.shape.size);
-        self.context.device.create_buffer(&BufferDescriptor {
-            label: Some(&format!("Tensor {operation}")),
-            size,
-            usage,
-            mapped_at_creation: false,
-        })
-    }
-
     pub fn create_shape_buffer(&self) -> Buffer {
         self.context
             .create_storage_buffer(self.shape.iter(), "shape")
@@ -113,10 +104,6 @@ impl<'a> GpuTensorData<'a> {
     pub fn create_index_buffer(&self) -> Buffer {
         self.context
             .create_storage_buffer(self.shape.idx(0).iter(), "index")
-    }
-
-    fn byte_size(size: usize) -> u64 {
-        u64::try_from(size * WGPU_ELEMENT_SIZE).unwrap()
     }
 }
 

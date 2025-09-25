@@ -6,7 +6,7 @@ use std::{
 
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    BindGroup, Buffer, BufferUsages, CommandBuffer, CommandEncoderDescriptor,
+    BindGroup, Buffer, BufferDescriptor, BufferUsages, CommandBuffer, CommandEncoderDescriptor,
     ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor, Device, DeviceDescriptor,
     Features, Instance, Limits, MemoryHints, PollError, PollStatus, PollType, Queue, ShaderModule,
     ShaderModuleDescriptor, ShaderSource, Trace,
@@ -14,8 +14,9 @@ use wgpu::{
 
 use crate::{shaping::iter::Iter, wgpu::workgroup_info::WorkgroupInfo};
 
-// original version in kurtschelfthout/tensorken
+pub const WGPU_ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
 
+// original version in kurtschelfthout/tensorken
 #[derive(Debug)]
 pub struct WgpuContext {
     pub device: Device,
@@ -93,6 +94,15 @@ impl WgpuContext {
                     pipelines.get(&operation).map(Arc::clone)
                 })
             })
+    }
+
+    pub fn create_output_buffer(&self, size: u64, operation: &str, usage: BufferUsages) -> Buffer {
+        self.device.create_buffer(&BufferDescriptor {
+            label: Some(&format!("Tensor {operation}")),
+            size,
+            usage,
+            mapped_at_creation: false,
+        })
     }
 
     pub fn create_storage_buffer(&self, iter: Iter<'_>, label: &str) -> Buffer {

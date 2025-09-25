@@ -6,8 +6,11 @@ use crate::{
 };
 
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
-    fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, _tag: &'static str) -> Self {
-        todo!()
+    fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
+        //let shape = self.shape.clone();
+        //// make contiguous
+        //let strides = (&shape).into();
+        todo!();
     }
 
     fn map_broadcast<F: Fn(f32) -> f32 + Sync>(
@@ -20,8 +23,12 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         Self: Sized,
     {
         let workgroup_info = (&out.shape).into();
-        let output_buffer =
-            out.create_output_buffer(tag, BufferUsages::STORAGE | BufferUsages::COPY_SRC);
+        let out_gpu_size = out.shape.gpu_byte_size();
+        let output_buffer = out.context.create_output_buffer(
+            out_gpu_size,
+            tag,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
         let pipeline = self.context.get_or_create_pipeline(tag, workgroup_info)?;
         let bind_group = create_bind_group(self, out, tag, &pipeline);
         let command = self
@@ -62,6 +69,7 @@ fn create_bind_group(
     pipeline: &ComputePipeline,
 ) -> BindGroup {
     let bind_group_layout = pipeline.get_bind_group_layout(0);
+    let b_gpu_size = b.shape.gpu_byte_size();
     a.device().create_bind_group(&BindGroupDescriptor {
         label: Some("map bind group"),
         layout: &bind_group_layout,
@@ -73,7 +81,12 @@ fn create_bind_group(
             BindGroupEntry {
                 binding: 1,
                 resource: b
-                    .create_output_buffer(operation, BufferUsages::STORAGE | BufferUsages::COPY_DST)
+                    .context
+                    .create_output_buffer(
+                        b_gpu_size,
+                        operation,
+                        BufferUsages::STORAGE | BufferUsages::COPY_DST,
+                    )
                     .as_entire_binding(),
             },
             BindGroupEntry {
