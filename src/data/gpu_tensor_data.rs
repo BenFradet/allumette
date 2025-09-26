@@ -37,6 +37,20 @@ impl<'a> GpuTensorData<'a> {
         }
     }
 
+    pub fn from_buffer(
+        shape: Shape,
+        strides: Strides,
+        buffer: Buffer,
+        context: &'a WgpuContext,
+    ) -> Self {
+        Self {
+            buffer: Arc::new(buffer),
+            shape,
+            strides,
+            context,
+        }
+    }
+
     pub fn with_buffer(&self, buffer: Buffer) -> Self {
         Self {
             buffer: Arc::new(buffer),
