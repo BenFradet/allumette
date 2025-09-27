@@ -6,11 +6,33 @@ use crate::{
 };
 
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
+    // TODO: rm unwrap
     fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
-        //let shape = self.shape.clone();
-        //// make contiguous
-        //let strides = (&shape).into();
-        todo!();
+        let shape = self.shape.clone();
+        let gpu_size = shape.gpu_byte_size();
+        // make contiguous
+        let strides = (&shape).into();
+
+        let buffer = self.context.create_output_buffer(
+            gpu_size,
+            tag,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
+        let td = GpuTensorData::from_buffer(shape, strides, buffer, self.context);
+
+        let workgroup_info = (&td.shape).into();
+        let pipeline = td
+            .context
+            .get_or_create_pipeline(tag, workgroup_info)
+            .unwrap();
+
+        let bind_group = create_bind_group(self, &td, tag, &pipeline);
+        let command = self
+            .context
+            .encode_command(workgroup_info, &pipeline, &bind_group);
+        self.context.submit_command(command).ok().unwrap();
+
+        td
     }
 
     fn map_broadcast<F: Fn(f32) -> f32 + Sync>(
