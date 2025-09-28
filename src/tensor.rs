@@ -1,7 +1,12 @@
 use crate::{
     autodiff::{forward::Forward, history::History},
-    backend::{backend::Backend, backend_type::BackendType},
-    data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
+    backend::{
+        backend::Backend,
+        backend_type::BackendType,
+    },
+    data::{
+        cpu_tensor_data::CpuTensorData, tensor_data::TensorData,
+    },
     math::element::Element,
     ops::{
         binary_ops::{Add, All, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
@@ -583,12 +588,13 @@ mod tests {
     }
 
     fn unary_assert<
+        E: Element,
         BT: BackendType,
-        T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-        FT: Fn(Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
-        FF: Fn(f64) -> f64,
+        T: Backend<E, BT> + ops::Index<Idx, Output = E>,
+        FT: Fn(Tensor<E, BT, T>) -> Tensor<E, BT, T>,
+        FF: Fn(E) -> E,
     >(
-        t: Tensor<f64, BT, T>,
+        t: Tensor<E, BT, T>,
         ft: FT,
         ff: FF,
     ) {
@@ -719,8 +725,12 @@ mod tests {
         unary_grad_assert(t.clone(), |t| t.exp());
     }
 
-    fn unary_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
-        t: Tensor<f64, BT, T>,
+    fn unary_test<
+        E: Element + UnsafeUsizeConvert,
+        BT: BackendType,
+        T: Backend<E, BT> + ops::Index<Idx, Output = E>,
+    >(
+        t: Tensor<E, BT, T>,
     ) {
         unary_assert(t.clone(), |t| -t, |f| -f);
         unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
@@ -728,10 +738,20 @@ mod tests {
         unary_assert(
             t.clone(),
             |t| t.inv(),
-            |f| if f != 0. { 1. / f } else { 0. },
+            |f| {
+                if f != E::zero() {
+                    E::one() / f
+                } else {
+                    E::zero()
+                }
+            },
         );
         unary_assert(t.clone(), |t| t.sigmoid(), |f| f.sig());
-        unary_assert(t.clone(), |t| t.ln(), |f| if f > 0. { f.ln() } else { 0. });
+        unary_assert(
+            t.clone(),
+            |t| t.ln(),
+            |f| if f > E::zero() { f.ln() } else { E::zero() },
+        );
         unary_assert(t.clone(), |t| t.relu(), |f| f.relu());
         unary_assert(t.clone(), |t| t.exp(), |f| f.exp());
     }
