@@ -2,10 +2,10 @@ use crate::{
     autodiff::{forward::Forward, history::History},
     backend::{
         backend::Backend,
-        backend_type::BackendType,
+        backend_type::{BackendType, Gpu},
     },
     data::{
-        cpu_tensor_data::CpuTensorData, tensor_data::TensorData,
+        cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
     },
     math::element::Element,
     ops::{
@@ -404,6 +404,15 @@ where
     }
 }
 
+impl<'a, E: Element + UnsafeUsizeConvert> Tensor<E, Gpu, GpuTensorData<'a>>
+where
+    GpuTensorData<'a>: Backend<E, Gpu>,
+{
+    pub fn arbitrary() -> impl Strategy<Value = Self> {
+        GpuTensorData::arbitrary().prop_map(Self::from_data)
+    }
+}
+
 impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> ops::Add<Tensor<E, BT, T>>
     for Tensor<E, BT, T>
 {
@@ -459,7 +468,8 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> ops::N
 #[cfg(test)]
 mod tests {
     use crate::{
-        backend::backend_type::{Par, Seq},
+        backend::backend_type::{Gpu, Par, Seq},
+        data::gpu_tensor_data::GpuTensorData,
         shaping::idx::Idx,
     };
 
@@ -945,6 +955,7 @@ mod tests {
         fn unary_tests(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
+            _t_gpu in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
         ) {
             unary_test(t_seq);
             unary_test(t_par);
