@@ -615,6 +615,24 @@ mod tests {
         }
     }
 
+    fn unary_assert_gpu<
+        FT: Fn(Tensor<f32, Gpu, GpuTensorData>) -> Tensor<f32, Gpu, GpuTensorData>,
+        FF: Fn(f32) -> f32,
+    >(
+        t: Tensor<f32, Gpu, GpuTensorData>,
+        ft: FT,
+        ff: FF,
+    ) {
+        let data = t.data.to_cpu();
+        let strides = t.data.strides.clone();
+        let res = ft(t);
+        let res_data = res.data.to_cpu();
+        let res_strides = res.data.strides.clone();
+        for idx in res.data.indices() {
+            assert!(res_data[res_strides.position(&idx)].is_close(ff(data[strides.position(&idx)])));
+        }
+    }
+
     fn binary_assert<
         BT: BackendType,
         T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
@@ -955,10 +973,37 @@ mod tests {
         fn unary_tests(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
-            _t_gpu in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
         ) {
             unary_test(t_seq);
             unary_test(t_par);
+        }
+
+        #[test]
+        fn unary_tests_gpu(
+            t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+        ) {
+            unary_assert_gpu(t.clone(), |t| -t, |f| -f);
+            unary_assert_gpu(t.clone(), |t| t.clone() * t, |f| f * f);
+            unary_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
+            unary_assert_gpu(
+                t.clone(),
+                |t| t.inv(),
+                |f| {
+                    if f != 0. {
+                        1. / f
+                    } else {
+                        0.
+                    }
+                },
+            );
+            unary_assert_gpu(t.clone(), |t| t.sigmoid(), |f| f.sig());
+            unary_assert_gpu(
+                t.clone(),
+                |t| t.ln(),
+                |f| if f > 0. { f.ln() } else { 0. },
+            );
+            unary_assert_gpu(t.clone(), |t| t.relu(), |f| f.relu());
+            unary_assert_gpu(t.clone(), |t| t.exp(), |f| f.exp());
         }
     }
 

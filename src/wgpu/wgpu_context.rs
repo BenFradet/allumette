@@ -16,7 +16,7 @@ use crate::{shaping::iter::Iter, wgpu::workgroup_info::WorkgroupInfo};
 
 pub const WGPU_ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
 
-// original version in kurtschelfthout/tensorken
+// inspired from kurtschelfthout/tensorken
 #[derive(Debug)]
 pub struct WgpuContext {
     pub device: Device,
