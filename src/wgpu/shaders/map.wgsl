@@ -29,7 +29,7 @@ fn neg(in: f32) -> f32 {
 }
 
 fn inv(in: f32) -> f32 {
-    if in == 0.0 {
+    if (in == 0.0) {
         return 0.0;
     }
     return 1.0 / in;
@@ -70,7 +70,7 @@ fn broadcast_index(
     out_shape_len: u32,
 ) {
     for (var i = 0u; i < in_shape_len; i = i + 1u) {
-        if in_shape[i] > 1u {
+        if (in_shape[i] > 1u) {
             let idx = out_shape_len - in_shape_len - i;
             in_index[i] = out_index[idx];
         } else {
@@ -100,15 +100,12 @@ fn index_to_position_out(
     return result;
 }
 
-// parlor trick taken from https://github.com/kurtschelfthout/tensorken
-fn replace_with_actual_operation(in: f32) -> f32 { discard; }
-
 @compute
 @workgroup_size(1)
 fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let i = global_id.x;
 
-    if i > arrayLength(&output) {
+    if (i > arrayLength(&output)) {
         return;
     }
 

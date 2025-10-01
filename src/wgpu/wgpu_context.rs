@@ -27,7 +27,7 @@ pub struct WgpuContext {
 impl WgpuContext {
     const MAP_SHADER: &'static str = include_str!("shaders/map.wgsl");
 
-    const REPLACE_OP_NAME: &'static str = "replace_me_with_actual_operation";
+    const REPLACE_OP_NAME: &'static str = "replace_with_actual_operation";
     const REPLACE_WORKGROUP_SIZE: &'static str = "@workgroup_size(1)";
 
     // id, neg, inv and relu are not supported out of the box
@@ -37,6 +37,9 @@ impl WgpuContext {
 
     pub fn new() -> Self {
         let (device, queue) = Self::get_device_and_queue();
+        unsafe {
+            device.start_graphics_debugger_capture();
+        }
         Self {
             device,
             queue,
@@ -83,7 +86,11 @@ impl WgpuContext {
             .map(Arc::clone)
             .or_else(|| {
                 let module = if Self::MAP_OPS.contains(&operation) {
-                    Some(self.create_shader_module(operation, Self::MAP_SHADER, workgroup_info))
+                    Some(self.create_shader_module(
+                        operation,
+                        &Self::MAP_SHADER.replace(Self::REPLACE_OP_NAME, operation),
+                        workgroup_info,
+                    ))
                 } else {
                     None
                 };
