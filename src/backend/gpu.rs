@@ -138,3 +138,21 @@ fn create_bind_group(
         ],
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{shaping::shape::Shape, wgpu::wgpu_context::get_wgpu_context};
+
+    use super::*;
+
+    #[test]
+    fn gpu_map_broadcast_test() {
+        let shape = Shape::new(vec![3]);
+        let strides = (&shape).into();
+        let td = GpuTensorData::new(&[1., 2., 3.], shape, strides, get_wgpu_context());
+        let res = td.map_broadcast(&td, |f| -f, "neg");
+        let cpu_data = res.unwrap().to_cpu();
+        println!("{:?}", cpu_data);
+        assert!(true);
+    }
+}
