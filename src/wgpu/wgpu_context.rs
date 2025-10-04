@@ -94,10 +94,12 @@ impl WgpuContext {
                 } else {
                     None
                 };
+                println!("module created {:?}", module);
 
                 module.and_then(|m| {
                     let mut pipelines = self.pipelines.write().unwrap();
                     self.insert_pipeline(operation, &m, &mut pipelines);
+                    println!("pipeline inserted");
                     pipelines.get(&operation).map(Arc::clone)
                 })
             })
@@ -179,6 +181,7 @@ impl WgpuContext {
                 compilation_options: Default::default(),
             },
         ));
+        println!("compute pipeline created: {:?}", compute_pipeline);
         pipelines.insert(operation, compute_pipeline);
     }
 }
