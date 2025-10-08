@@ -132,6 +132,13 @@ impl WgpuContext {
             "Using {:#?} {} with {:#?} backend",
             info.device_type, info.name, info.backend
         );
+        let downlevel_capabilities = adapter.get_downlevel_capabilities();
+        if !downlevel_capabilities
+            .flags
+            .contains(wgpu::DownlevelFlags::COMPUTE_SHADERS)
+        {
+            panic!("Adapter does not support compute shaders");
+        }
         let device_and_queue = adapter
             .request_device(&DeviceDescriptor {
                 label: None,
