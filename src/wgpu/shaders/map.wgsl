@@ -18,8 +18,6 @@ var<storage, read_write> in_index: array<u32>;
 @group(0) @binding(7)
 var<storage, read_write> out_index: array<u32>;
 
-const MAX_DIMS: u32 = 32u;
-
 fn id(in: f32) -> f32 {
     return in;
 }

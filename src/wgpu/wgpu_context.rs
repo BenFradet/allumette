@@ -49,7 +49,7 @@ impl WgpuContext {
 
     pub fn encode_command(
         &self,
-        workgroup_info: WorkgroupInfo,
+        workgroup_info: &WorkgroupInfo,
         pipeline: &ComputePipeline,
         bind_group: &BindGroup,
     ) -> CommandBuffer {
@@ -77,7 +77,7 @@ impl WgpuContext {
     pub fn get_or_create_pipeline(
         &self,
         operation: &'static str,
-        workgroup_info: WorkgroupInfo,
+        workgroup_info: &WorkgroupInfo,
     ) -> Option<Arc<ComputePipeline>> {
         self.pipelines
             .read()
@@ -89,7 +89,7 @@ impl WgpuContext {
                     Some(self.create_shader_module(
                         operation,
                         &Self::MAP_SHADER.replace(Self::REPLACE_OP_NAME, operation),
-                        workgroup_info,
+                        &workgroup_info,
                     ))
                 } else {
                     None
@@ -160,12 +160,13 @@ impl WgpuContext {
         &self,
         operation: &str,
         shader_source: &str,
-        workgroup_info: WorkgroupInfo,
+        workgroup_info: &WorkgroupInfo,
     ) -> ShaderModule {
         let source = shader_source.replace(
             Self::REPLACE_WORKGROUP_SIZE,
             &workgroup_info.workgroup_size(),
         );
+        println!("shader source: {:?}", source);
         self.device.create_shader_module(ShaderModuleDescriptor {
             label: Some(operation),
             source: ShaderSource::Wgsl(Cow::Borrowed(&source)),

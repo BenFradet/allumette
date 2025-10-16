@@ -23,13 +23,13 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let workgroup_info = (&td.shape).into();
         let pipeline = td
             .context
-            .get_or_create_pipeline(tag, workgroup_info)
+            .get_or_create_pipeline(tag, &workgroup_info)
             .unwrap();
 
         let bind_group = create_bind_group(self, &td, tag, &pipeline);
         let command = self
             .context
-            .encode_command(workgroup_info, &pipeline, &bind_group);
+            .encode_command(&workgroup_info, &pipeline, &bind_group);
         self.context.submit_command(command).ok().unwrap();
 
         td
@@ -45,6 +45,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         Self: Sized,
     {
         let workgroup_info = (&out.shape).into();
+        // TODO: use out.buffer.size?
         let out_gpu_size = out.shape.gpu_byte_size();
         let output_buffer = out.context.create_output_buffer(
             out_gpu_size,
@@ -52,12 +53,12 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
         println!("created output buffer");
-        let pipeline = self.context.get_or_create_pipeline(tag, workgroup_info)?;
+        let pipeline = self.context.get_or_create_pipeline(tag, &workgroup_info)?;
         println!("pipeline gotten {:?}", pipeline);
         let bind_group = create_bind_group(self, out, tag, &pipeline);
         let command = self
             .context
-            .encode_command(workgroup_info, &pipeline, &bind_group);
+            .encode_command(&workgroup_info, &pipeline, &bind_group);
         self.context.submit_command(command).ok()?;
         Some(out.with_buffer(output_buffer))
     }
@@ -92,6 +93,7 @@ fn create_bind_group(
     operation: &str,
     pipeline: &ComputePipeline,
 ) -> BindGroup {
+    // TODO: create layout manually before pipeline?
     let bind_group_layout = pipeline.get_bind_group_layout(0);
     let b_gpu_size = b.shape.gpu_byte_size();
     a.device().create_bind_group(&BindGroupDescriptor {
