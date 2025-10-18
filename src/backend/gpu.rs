@@ -62,7 +62,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 
         // TODO: move layouts creation to get_or_create_pipeline
         let bind_group_layout = create_bind_group_layout(self.device());
-        //let pipeline_layout = self.context.create_pipeline_layout(&bind_group_layout);
+        let pipeline_layout = self.context.create_pipeline_layout(&bind_group_layout);
         println!("created layouts: bg and pipeline");
 
         let pipeline = self.context.get_or_create_pipeline(tag, &workgroup_info)?;

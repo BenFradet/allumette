@@ -6,9 +6,10 @@ use std::{
 
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    BindGroup, Buffer, BufferDescriptor, BufferUsages, CommandBuffer, CommandEncoderDescriptor,
-    ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor, Device, DeviceDescriptor,
-    Features, Instance, Limits, MemoryHints, PollError, PollStatus, PollType, Queue, ShaderModule,
+    BindGroup, BindGroupLayout, Buffer, BufferDescriptor, BufferUsages, CommandBuffer,
+    CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor,
+    Device, DeviceDescriptor, Features, Instance, Limits, MemoryHints, PipelineLayout,
+    PipelineLayoutDescriptor, PollError, PollStatus, PollType, Queue, ShaderModule,
     ShaderModuleDescriptor, ShaderSource, Trace,
 };
 
@@ -72,6 +73,15 @@ impl WgpuContext {
     pub fn submit_command(&self, command_buffer: CommandBuffer) -> Result<PollStatus, PollError> {
         let index = self.queue.submit(Some(command_buffer));
         self.device.poll(PollType::WaitForSubmissionIndex(index))
+    }
+
+    pub fn create_pipeline_layout(&self, bind_group_layout: &BindGroupLayout) -> PipelineLayout {
+        self.device
+            .create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: Some("pipeline layout"),
+                bind_group_layouts: &[bind_group_layout],
+                push_constant_ranges: &[],
+            })
     }
 
     pub fn get_or_create_pipeline(
