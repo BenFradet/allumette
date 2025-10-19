@@ -88,6 +88,7 @@ impl WgpuContext {
         &self,
         operation: &'static str,
         workgroup_info: &WorkgroupInfo,
+        pipeline_layout: &PipelineLayout,
     ) -> Option<Arc<ComputePipeline>> {
         self.pipelines
             .read()
@@ -108,7 +109,7 @@ impl WgpuContext {
 
                 module.and_then(|m| {
                     let mut pipelines = self.pipelines.write().unwrap();
-                    self.insert_pipeline(operation, &m, &mut pipelines);
+                    self.insert_pipeline(operation, &m, &pipeline_layout, &mut pipelines);
                     println!("pipeline inserted");
                     pipelines.get(&operation).map(Arc::clone)
                 })
@@ -142,6 +143,7 @@ impl WgpuContext {
             "Using {:#?} {} with {:#?} backend",
             info.device_type, info.name, info.backend
         );
+        println!("GPU limits: {:#?}", adapter.limits());
         let downlevel_capabilities = adapter.get_downlevel_capabilities();
         if !downlevel_capabilities
             .flags
@@ -187,12 +189,13 @@ impl WgpuContext {
         &self,
         operation: &'static str,
         module: &ShaderModule,
+        pipeline_layout: &PipelineLayout,
         pipelines: &mut RwLockWriteGuard<HashMap<&'static str, Arc<ComputePipeline>>>,
     ) {
         let compute_pipeline = Arc::new(self.device.create_compute_pipeline(
             &ComputePipelineDescriptor {
                 label: Some(operation),
-                layout: None,
+                layout: Some(pipeline_layout),
                 module,
                 entry_point: Some(Self::ENTRY_POINT),
                 cache: None,

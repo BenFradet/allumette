@@ -29,7 +29,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let workgroup_info = (&td.shape).into();
         let pipeline = td
             .context
-            .get_or_create_pipeline(tag, &workgroup_info)
+            .get_or_create_pipeline(tag, &workgroup_info, todo!())
             .unwrap();
 
         let bind_group = create_bind_group(self, &td, tag, &pipeline);
@@ -65,7 +65,9 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let pipeline_layout = self.context.create_pipeline_layout(&bind_group_layout);
         println!("created layouts: bg and pipeline");
 
-        let pipeline = self.context.get_or_create_pipeline(tag, &workgroup_info)?;
+        let pipeline =
+            self.context
+                .get_or_create_pipeline(tag, &workgroup_info, &pipeline_layout)?;
         println!("pipeline gotten {:?}", pipeline);
         let bind_group = create_bind_group(self, out, tag, &pipeline);
         let command = self
