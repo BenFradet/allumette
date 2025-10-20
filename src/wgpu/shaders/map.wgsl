@@ -107,11 +107,11 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    //let out_shape_len = arrayLength(&out_shape);
-    //let in_shape_len = arrayLength(&in_shape);
-    //to_index(i, out_shape_len);
-    //broadcast_index(in_shape_len, out_shape_len);
-    //let in_pos = index_to_position_in(in_shape_len);
-    //let out_pos = index_to_position_out(out_shape_len);
-    output[i] = replace_with_actual_operation(input[i]);
+    let out_shape_len = arrayLength(&out_shape);
+    let in_shape_len = arrayLength(&in_shape);
+    to_index(i, out_shape_len);
+    broadcast_index(in_shape_len, out_shape_len);
+    let in_pos = index_to_position_in(in_shape_len);
+    let out_pos = index_to_position_out(out_shape_len);
+    output[out_pos] = replace_with_actual_operation(input[in_pos]);
 }
