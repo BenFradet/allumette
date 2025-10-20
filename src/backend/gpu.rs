@@ -29,7 +29,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let workgroup_info = (&td.shape).into();
         let pipeline = td
             .context
-            .get_or_create_pipeline(tag, &workgroup_info, todo!())
+            .get_or_create_pipeline(tag, &workgroup_info)
             .unwrap();
 
         let bind_group = create_bind_group(self, &td, tag, &pipeline);
@@ -58,17 +58,14 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             tag,
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        println!("created output buffer");
 
         // TODO: move layouts creation to get_or_create_pipeline
-        let bind_group_layout = create_bind_group_layout(self.device());
-        let pipeline_layout = self.context.create_pipeline_layout(&bind_group_layout);
-        println!("created layouts: bg and pipeline");
+        //let bind_group_layout = create_bind_group_layout(self.device());
+        //let pipeline_layout = self.context.create_pipeline_layout(&bind_group_layout);
 
         let pipeline =
             self.context
-                .get_or_create_pipeline(tag, &workgroup_info, &pipeline_layout)?;
-        println!("pipeline gotten {:?}", pipeline);
+                .get_or_create_pipeline(tag, &workgroup_info)?;
         let bind_group = create_bind_group(self, out, tag, &pipeline);
         let command = self
             .context
@@ -256,9 +253,7 @@ mod tests {
         let shape = Shape::new(vec![3]);
         let strides = (&shape).into();
         let td = GpuTensorData::new(&[1., 2., 3.], shape, strides, get_wgpu_context());
-        println!("creation done");
         let res = td.map_broadcast(&td, |f| -f, "neg");
-        println!("mapped");
         let cpu_data = res.unwrap().to_cpu();
         println!("{:?}", cpu_data);
         assert!(true);

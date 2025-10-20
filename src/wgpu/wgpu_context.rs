@@ -91,13 +91,14 @@ impl WgpuContext {
         &self,
         operation: &'static str,
         workgroup_info: &WorkgroupInfo,
-        pipeline_layout: &PipelineLayout,
+        //pipeline_layout: &PipelineLayout,
     ) -> Option<Arc<ComputePipeline>> {
-        self.pipelines
-            .read()
-            .unwrap()
-            .get(operation)
-            .map(Arc::clone)
+        let pipeline_opt = {
+            let pipelines = self.pipelines.read().unwrap();
+            pipelines.get(operation).map(Arc::clone)
+        };
+
+        pipeline_opt
             .or_else(|| {
                 let module = if Self::MAP_OPS.contains(&operation) {
                     Some(self.create_shader_module(
@@ -108,12 +109,10 @@ impl WgpuContext {
                 } else {
                     None
                 };
-                println!("module created {:?}", module);
 
                 module.and_then(|m| {
                     let mut pipelines = self.pipelines.write().unwrap();
-                    self.insert_pipeline(operation, &m, &pipeline_layout, &mut pipelines);
-                    println!("pipeline inserted");
+                    self.insert_pipeline(operation, &m, &mut pipelines);
                     pipelines.get(&operation).map(Arc::clone)
                 })
             })
@@ -182,7 +181,6 @@ impl WgpuContext {
             Self::REPLACE_WORKGROUP_SIZE,
             &workgroup_info.workgroup_size(),
         );
-        println!("shader source: {:?}", source);
         self.device.create_shader_module(ShaderModuleDescriptor {
             label: Some(operation),
             source: ShaderSource::Wgsl(Cow::Borrowed(&source)),
@@ -193,20 +191,19 @@ impl WgpuContext {
         &self,
         operation: &'static str,
         module: &ShaderModule,
-        pipeline_layout: &PipelineLayout,
+        //pipeline_layout: &PipelineLayout,
         pipelines: &mut RwLockWriteGuard<HashMap<&'static str, Arc<ComputePipeline>>>,
     ) {
         let compute_pipeline = Arc::new(self.device.create_compute_pipeline(
             &ComputePipelineDescriptor {
                 label: Some(operation),
-                layout: Some(pipeline_layout),
+                layout: None,
                 module,
                 entry_point: Some(Self::ENTRY_POINT),
                 cache: None,
                 compilation_options: Default::default(),
             },
         ));
-        println!("compute pipeline created: {:?}", compute_pipeline);
         pipelines.insert(operation, compute_pipeline);
     }
 }
