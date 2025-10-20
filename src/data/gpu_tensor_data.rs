@@ -83,7 +83,10 @@ impl<'a> GpuTensorData<'a> {
         let buffer_slice = staging_buffer.slice(..);
         let (sender, receiver) = flume::bounded(1);
         buffer_slice.map_async(MapMode::Read, move |r| sender.send(r).unwrap());
-        self.context.device.poll(PollType::wait()).unwrap();
+        self.context
+            .device
+            .poll(PollType::wait_indefinitely())
+            .unwrap();
 
         if let Ok(Ok(())) = receiver.recv() {
             let data = buffer_slice.get_mapped_range();
