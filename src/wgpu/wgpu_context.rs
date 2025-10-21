@@ -1,16 +1,18 @@
 use std::{
     borrow::Cow,
     collections::HashMap,
+    num::NonZeroU64,
     sync::{Arc, LazyLock, RwLock, RwLockWriteGuard},
 };
 
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    BindGroup, BindGroupLayout, Buffer, BufferDescriptor, BufferUsages, CommandBuffer,
+    BindGroup, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType,
+    Buffer, BufferBindingType, BufferDescriptor, BufferUsages, CommandBuffer,
     CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor,
     Device, DeviceDescriptor, ExperimentalFeatures, Features, Instance, Limits, MemoryHints,
     PipelineLayout, PipelineLayoutDescriptor, PollError, PollStatus, PollType, Queue, ShaderModule,
-    ShaderModuleDescriptor, ShaderSource, Trace,
+    ShaderModuleDescriptor, ShaderSource, ShaderStages, Trace,
 };
 
 use crate::{shaping::iter::Iter, wgpu::workgroup_info::WorkgroupInfo};
@@ -91,31 +93,29 @@ impl WgpuContext {
         &self,
         operation: &'static str,
         workgroup_info: &WorkgroupInfo,
-        //pipeline_layout: &PipelineLayout,
     ) -> Option<Arc<ComputePipeline>> {
         let pipeline_opt = {
             let pipelines = self.pipelines.read().unwrap();
             pipelines.get(operation).map(Arc::clone)
         };
 
-        pipeline_opt
-            .or_else(|| {
-                let module = if Self::MAP_OPS.contains(&operation) {
-                    Some(self.create_shader_module(
-                        operation,
-                        &Self::MAP_SHADER.replace(Self::REPLACE_OP_NAME, operation),
-                        &workgroup_info,
-                    ))
-                } else {
-                    None
-                };
+        pipeline_opt.or_else(|| {
+            let module = if Self::MAP_OPS.contains(&operation) {
+                Some(self.create_shader_module(
+                    operation,
+                    &Self::MAP_SHADER.replace(Self::REPLACE_OP_NAME, operation),
+                    &workgroup_info,
+                ))
+            } else {
+                None
+            };
 
-                module.and_then(|m| {
-                    let mut pipelines = self.pipelines.write().unwrap();
-                    self.insert_pipeline(operation, &m, &mut pipelines);
-                    pipelines.get(&operation).map(Arc::clone)
-                })
+            module.and_then(|m| {
+                let mut pipelines = self.pipelines.write().unwrap();
+                self.insert_pipeline(operation, &m, &mut pipelines);
+                pipelines.get(&operation).map(Arc::clone)
             })
+        })
     }
 
     pub fn create_output_buffer(&self, size: u64, operation: &str, usage: BufferUsages) -> Buffer {
@@ -187,11 +187,49 @@ impl WgpuContext {
         })
     }
 
+    // TODO: change based on shader
+    fn create_bind_group_layout(device: &Device) -> BindGroupLayout {
+        device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("bind group layout"),
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::COMPUTE,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(NonZeroU64::new(4).unwrap()),
+                    },
+                    count: None,
+                },
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStages::COMPUTE,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(NonZeroU64::new(4).unwrap()),
+                    },
+                    count: None,
+                },
+                BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: ShaderStages::COMPUTE,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(NonZeroU64::new(4).unwrap()),
+                    },
+                    count: None,
+                },
+            ],
+        })
+    }
+
     fn insert_pipeline(
         &self,
         operation: &'static str,
         module: &ShaderModule,
-        //pipeline_layout: &PipelineLayout,
         pipelines: &mut RwLockWriteGuard<HashMap<&'static str, Arc<ComputePipeline>>>,
     ) {
         let compute_pipeline = Arc::new(self.device.create_compute_pipeline(
