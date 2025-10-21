@@ -1,10 +1,4 @@
-use std::num::NonZeroU64;
-
-use wgpu::{
-    BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
-    BindGroupLayoutEntry, BindingType, BufferBindingType, BufferUsages, ComputePipeline, Device,
-    ShaderStages,
-};
+use wgpu::{BindGroup, BindGroupDescriptor, BindGroupEntry, BufferUsages, ComputePipeline};
 
 use crate::{
     backend::{backend::TensorBackend, backend_type::Gpu},
@@ -58,10 +52,6 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             tag,
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-
-        // TODO: move layouts creation to get_or_create_pipeline
-        //let bind_group_layout = create_bind_group_layout(self.device());
-        //let pipeline_layout = self.context.create_pipeline_layout(&bind_group_layout);
 
         let pipeline = self.context.get_or_create_pipeline(tag, &workgroup_info)?;
         let bind_group = create_bind_group(self, out, tag, &pipeline);
