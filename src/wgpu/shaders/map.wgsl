@@ -80,7 +80,7 @@ fn to_index(
         let index = remaining / divisor;
         remaining -= index * divisor;
 
-        metadata[i + preamble + metadata[0] * 5u] = index;
+        metadata[i + preamble + metadata[0] * 3u + metadata[1] * 2u] = index;
         //out_index[i] = index;
     }
 }

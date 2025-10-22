@@ -145,7 +145,6 @@ impl WgpuContext {
             "Using {:#?} {} with {:#?} backend",
             info.device_type, info.name, info.backend
         );
-        println!("GPU limits: {:#?}", adapter.limits());
         let downlevel_capabilities = adapter.get_downlevel_capabilities();
         if !downlevel_capabilities
             .flags

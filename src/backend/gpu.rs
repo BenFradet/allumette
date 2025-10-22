@@ -1,7 +1,4 @@
-use wgpu::{
-    util::{BufferInitDescriptor, DeviceExt},
-    BindGroup, BindGroupDescriptor, BindGroupEntry, Buffer, BufferUsages, ComputePipeline,
-};
+use wgpu::{util::{BufferInitDescriptor, DeviceExt}, BindGroup, BindGroupDescriptor, BindGroupEntry, Buffer, BufferUsages, ComputePipeline};
 
 use crate::{
     backend::{backend::TensorBackend, backend_type::Gpu},
@@ -89,7 +86,10 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     }
 }
 
-fn create_metadata_buffer(a: &GpuTensorData<'_>, b: &GpuTensorData<'_>) -> Buffer {
+fn create_metadata_buffer(
+    a: &GpuTensorData<'_>,
+    b: &GpuTensorData<'_>,
+) -> Buffer {
     let mut contents = Vec::with_capacity(2 + 3 * a.shape.len() + 3 * b.shape.len());
     contents.push(a.shape.len());
     contents.push(b.shape.len());
@@ -100,14 +100,16 @@ fn create_metadata_buffer(a: &GpuTensorData<'_>, b: &GpuTensorData<'_>) -> Buffe
     contents.extend(b.strides.data());
     contents.extend(b.shape.idx(0).data());
 
-    let contents_cast: Vec<u32> = contents
+    let metadata: Vec<u32> = contents
         .iter()
         .map(|u| u32::try_from(*u).unwrap())
         .collect();
 
+    println!("metadata: {metadata:?}");
+
     a.device().create_buffer_init(&BufferInitDescriptor {
         label: Some("meta"),
-        contents: bytemuck::cast_slice(&contents_cast),
+        contents: bytemuck::cast_slice(&metadata),
         usage: BufferUsages::STORAGE,
     })
 }
@@ -142,27 +144,7 @@ fn create_bind_group(
             },
             BindGroupEntry {
                 binding: 2,
-                resource: a.create_shape_buffer().as_entire_binding(),
-            },
-            BindGroupEntry {
-                binding: 3,
-                resource: b.create_shape_buffer().as_entire_binding(),
-            },
-            BindGroupEntry {
-                binding: 4,
-                resource: a.create_strides_buffer().as_entire_binding(),
-            },
-            BindGroupEntry {
-                binding: 5,
-                resource: b.create_strides_buffer().as_entire_binding(),
-            },
-            BindGroupEntry {
-                binding: 6,
-                resource: a.create_index_buffer().as_entire_binding(),
-            },
-            BindGroupEntry {
-                binding: 7,
-                resource: b.create_index_buffer().as_entire_binding(),
+                resource: create_metadata_buffer(a, b).as_entire_binding(),
             },
         ],
     })
@@ -176,9 +158,9 @@ mod tests {
 
     #[test]
     fn gpu_map_broadcast_test() {
-        let shape = Shape::new(vec![3]);
+        let shape = Shape::new(vec![2, 3]);
         let strides = (&shape).into();
-        let td = GpuTensorData::new(&[1., 2., 3.], shape, strides, get_wgpu_context());
+        let td = GpuTensorData::new(&[1.; 6], shape, strides, get_wgpu_context());
         let res = td.map_broadcast(&td, |f| -f, "neg");
         let cpu_data = res.unwrap().to_cpu();
         println!("{:?}", cpu_data);
