@@ -12,6 +12,10 @@ impl Strides {
         Self { data }
     }
 
+    pub fn data(&self) -> &[usize] {
+        &self.data
+    }
+
     #[allow(clippy::needless_range_loop)]
     #[inline(always)]
     pub fn idx(&self, pos: usize) -> Idx {

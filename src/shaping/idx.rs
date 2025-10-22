@@ -15,6 +15,10 @@ impl Idx {
         Self { data }
     }
 
+    pub fn data(&self) -> &[usize] {
+        &self.data
+    }
+
     pub fn iter(&self) -> Iter<'_> {
         Iter::new(&self.data)
     }

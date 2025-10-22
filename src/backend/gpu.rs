@@ -1,4 +1,7 @@
-use wgpu::{BindGroup, BindGroupDescriptor, BindGroupEntry, BufferUsages, ComputePipeline};
+use wgpu::{
+    util::{BufferInitDescriptor, DeviceExt},
+    BindGroup, BindGroupDescriptor, BindGroupEntry, Buffer, BufferUsages, ComputePipeline,
+};
 
 use crate::{
     backend::{backend::TensorBackend, backend_type::Gpu},
@@ -84,6 +87,29 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     fn matmul(&self, _other: &Self) -> Self {
         todo!()
     }
+}
+
+fn create_metadata_buffer(a: &GpuTensorData<'_>, b: &GpuTensorData<'_>) -> Buffer {
+    let mut contents = Vec::with_capacity(2 + 3 * a.shape.len() + 3 * b.shape.len());
+    contents.push(a.shape.len());
+    contents.push(b.shape.len());
+    contents.extend(a.shape.data());
+    contents.extend(a.strides.data());
+    contents.extend(a.shape.idx(0).data());
+    contents.extend(b.shape.data());
+    contents.extend(b.strides.data());
+    contents.extend(b.shape.idx(0).data());
+
+    let contents_cast: Vec<u32> = contents
+        .iter()
+        .map(|u| u32::try_from(*u).unwrap())
+        .collect();
+
+    a.device().create_buffer_init(&BufferInitDescriptor {
+        label: Some("meta"),
+        contents: bytemuck::cast_slice(&contents_cast),
+        usage: BufferUsages::STORAGE,
+    })
 }
 
 fn create_bind_group(
