@@ -1,4 +1,8 @@
-use wgpu::{util::{BufferInitDescriptor, DeviceExt}, BindGroup, BindGroupDescriptor, BindGroupEntry, Buffer, BufferUsages, ComputePipeline};
+use wgpu::{
+    util::{BufferInitDescriptor, DeviceExt},
+    BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, Buffer, BufferUsages,
+    ComputePipeline,
+};
 
 use crate::{
     backend::{backend::TensorBackend, backend_type::Gpu},
@@ -8,31 +12,32 @@ use crate::{
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     // TODO: rm unwrap
     fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
-        let shape = self.shape.clone();
-        let gpu_size = shape.gpu_byte_size();
-        // make contiguous
-        let strides = (&shape).into();
+        todo!();
+        //let shape = self.shape.clone();
+        //let gpu_size = shape.gpu_byte_size();
+        //// make contiguous
+        //let strides = (&shape).into();
 
-        let buffer = self.context.create_output_buffer(
-            gpu_size,
-            tag,
-            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-        );
-        let td = GpuTensorData::from_buffer(shape, strides, buffer, self.context);
+        //let buffer = self.context.create_output_buffer(
+        //    gpu_size,
+        //    tag,
+        //    BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        //);
+        //let td = GpuTensorData::from_buffer(shape, strides, buffer, self.context);
 
-        let workgroup_info = (&td.shape).into();
-        let pipeline = td
-            .context
-            .get_or_create_pipeline(tag, &workgroup_info)
-            .unwrap();
+        //let workgroup_info = (&td.shape).into();
+        //let pipeline = td
+        //    .context
+        //    .get_or_create_pipeline(tag, &workgroup_info)
+        //    .unwrap();
 
-        let bind_group = create_bind_group(self, &td, tag, &pipeline);
-        let command = self
-            .context
-            .encode_command(&workgroup_info, &pipeline, &bind_group);
-        self.context.submit_command(command).ok().unwrap();
+        //let bind_group = create_bind_group(self, &td, tag, &pipeline);
+        //let command = self
+        //    .context
+        //    .encode_command(&workgroup_info, &pipeline, &bind_group);
+        //self.context.submit_command(command).ok().unwrap();
 
-        td
+        //td
     }
 
     fn map_broadcast<F: Fn(f32) -> f32 + Sync>(
@@ -54,7 +59,14 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         );
 
         let pipeline = self.context.get_or_create_pipeline(tag, &workgroup_info)?;
-        let bind_group = create_bind_group(self, out, tag, &pipeline);
+        let bind_group_layout = pipeline.get_bind_group_layout(0);
+        let metadata_buffer = create_metadata_buffer(self, out);
+        let bind_group = self.context.create_bind_group(
+            &self.buffer,
+            &output_buffer,
+            &metadata_buffer,
+            &bind_group_layout,
+        );
         let command = self
             .context
             .encode_command(&workgroup_info, &pipeline, &bind_group);
@@ -86,10 +98,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     }
 }
 
-fn create_metadata_buffer(
-    a: &GpuTensorData<'_>,
-    b: &GpuTensorData<'_>,
-) -> Buffer {
+fn create_metadata_buffer(a: &GpuTensorData<'_>, b: &GpuTensorData<'_>) -> Buffer {
     let mut contents = Vec::with_capacity(2 + 3 * a.shape.len() + 3 * b.shape.len());
     contents.push(a.shape.len());
     contents.push(b.shape.len());
@@ -111,42 +120,6 @@ fn create_metadata_buffer(
         label: Some("meta"),
         contents: bytemuck::cast_slice(&metadata),
         usage: BufferUsages::STORAGE,
-    })
-}
-
-fn create_bind_group(
-    a: &GpuTensorData<'_>,
-    b: &GpuTensorData<'_>,
-    operation: &str,
-    pipeline: &ComputePipeline,
-) -> BindGroup {
-    // TODO: create layout manually before pipeline?
-    let bind_group_layout = pipeline.get_bind_group_layout(0);
-    let b_gpu_size = b.shape.gpu_byte_size();
-    a.device().create_bind_group(&BindGroupDescriptor {
-        label: Some("map bind group"),
-        layout: &bind_group_layout,
-        entries: &[
-            BindGroupEntry {
-                binding: 0,
-                resource: a.buffer.as_entire_binding(),
-            },
-            BindGroupEntry {
-                binding: 1,
-                resource: b
-                    .context
-                    .create_output_buffer(
-                        b_gpu_size,
-                        operation,
-                        BufferUsages::STORAGE | BufferUsages::COPY_DST,
-                    )
-                    .as_entire_binding(),
-            },
-            BindGroupEntry {
-                binding: 2,
-                resource: create_metadata_buffer(a, b).as_entire_binding(),
-            },
-        ],
     })
 }
 
