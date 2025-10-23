@@ -7,12 +7,12 @@ use std::{
 
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    BindGroup, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType,
-    Buffer, BufferBindingType, BufferDescriptor, BufferUsages, CommandBuffer,
-    CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline, ComputePipelineDescriptor,
-    Device, DeviceDescriptor, ExperimentalFeatures, Features, Instance, Limits, MemoryHints,
-    PipelineLayout, PipelineLayoutDescriptor, PollError, PollStatus, PollType, Queue, ShaderModule,
-    ShaderModuleDescriptor, ShaderSource, ShaderStages, Trace,
+    BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
+    BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType, BufferDescriptor, BufferUsages,
+    CommandBuffer, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline,
+    ComputePipelineDescriptor, Device, DeviceDescriptor, ExperimentalFeatures, Features, Instance,
+    Limits, MemoryHints, PipelineLayout, PipelineLayoutDescriptor, PollError, PollStatus, PollType,
+    Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource, ShaderStages, Trace,
 };
 
 use crate::{shaping::iter::Iter, wgpu::workgroup_info::WorkgroupInfo};
@@ -133,6 +133,33 @@ impl WgpuContext {
             label: Some(label),
             contents: bytemuck::cast_slice(&data),
             usage: BufferUsages::STORAGE,
+        })
+    }
+
+    pub fn create_bind_group(
+        &self,
+        input_buffer: &Buffer,
+        output_buffer: &Buffer,
+        metadata_buffer: &Buffer,
+        bind_group_layout: &BindGroupLayout,
+    ) -> BindGroup {
+        self.device.create_bind_group(&BindGroupDescriptor {
+            label: Some("map bind group"),
+            layout: &bind_group_layout,
+            entries: &[
+                BindGroupEntry {
+                    binding: 0,
+                    resource: input_buffer.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: output_buffer.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 2,
+                    resource: metadata_buffer.as_entire_binding(),
+                },
+            ],
         })
     }
 
