@@ -13,30 +13,30 @@ var<storage, read_write> output: array<f32>;
 var<storage, read_write> metadata: array<u32>;
 
 // ndims
-const preamble: u32 = 2u;
+const PREAMBLE: u32 = 2u;
 
 fn in_shape(i: u32) -> u32 {
-    return metadata[i + preamble];
+    return metadata[i + PREAMBLE];
 }
 
 fn in_strides(i: u32) -> u32 {
-    return metadata[i + preamble + metadata[0]];
+    return metadata[i + PREAMBLE + metadata[0]];
 }
 
 fn in_index(i: u32) -> u32 {
-    return metadata[i + preamble + metadata[0] * 2u];
+    return metadata[i + PREAMBLE + metadata[0] * 2u];
 }
 
 fn out_shape(i: u32) -> u32 {
-    return metadata[i + preamble + metadata[0] * 3u];
+    return metadata[i + PREAMBLE + metadata[0] * 3u];
 }
 
 fn out_strides(i: u32) -> u32 {
-    return metadata[i + preamble + metadata[0] * 3u + metadata[1]];
+    return metadata[i + PREAMBLE + metadata[0] * 3u + metadata[1]];
 }
 
 fn out_index(i: u32) -> u32 {
-    return metadata[i + preamble + metadata[0] * 3u + metadata[1] * 2u];
+    return metadata[i + PREAMBLE + metadata[0] * 3u + metadata[1] * 2u];
 }
 
 fn id(in: f32) -> f32 {
@@ -80,7 +80,7 @@ fn to_index(
         let index = remaining / divisor;
         remaining -= index * divisor;
 
-        metadata[i + preamble + metadata[0] * 3u + metadata[1] * 2u] = index;
+        metadata[i + PREAMBLE + metadata[0] * 3u + metadata[1] * 2u] = index;
         //out_index[i] = index;
     }
 }
@@ -93,10 +93,10 @@ fn broadcast_index(
         if (in_shape(i) > 1u) {
             let idx = out_shape_len - in_shape_len - i;
             //in_index[i] = out_index[idx];
-            metadata[i + preamble + metadata[0] * 2u] = out_index(idx);
+            metadata[i + PREAMBLE + metadata[0] * 2u] = out_index(idx);
         } else {
             //in_index[i] = 0u;
-            metadata[i + preamble + metadata[0] * 2u] = 0u;
+            metadata[i + PREAMBLE + metadata[0] * 2u] = 0u;
         }
     }
 }
@@ -138,4 +138,5 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let in_pos = index_to_position_in(in_shape_len);
     let out_pos = index_to_position_out(out_shape_len);
     output[out_pos] = replace_with_actual_operation(input[in_pos]);
+    output[i] = replace_with_actual_operation(input[i]);
 }
