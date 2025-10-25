@@ -139,4 +139,51 @@ mod tests {
         println!("{:?}", cpu_data);
         assert!(true);
     }
+
+    const PREAMBLE: usize = 2;
+    
+    fn out_shape(metadata: &[usize], i: usize) -> usize {
+        return metadata[i + PREAMBLE + metadata[0] * 3];
+    }
+
+    fn prod(
+        metadata: &[usize],
+        start: usize,
+        shape_len: usize,
+    ) -> usize {
+        let mut result = 1;
+        for i in start..shape_len {
+            result *= out_shape(metadata, i);
+        }
+        return result;
+    }
+
+    fn to_index(
+        metadata: &mut Vec<usize>,
+        ordinal: usize,
+        shape_len: usize,
+    ) {
+        let mut remaining = ordinal;
+        for i in 0..shape_len {
+            let product = prod(metadata, i, shape_len);
+            let divisor = product / out_shape(metadata, i);
+            let index = remaining / divisor;
+            remaining -= index * divisor;
+
+            let idx = i + PREAMBLE + metadata[0] * 3 + metadata[1] * 2;
+            metadata[idx] = index;
+        }
+    }
+
+    #[test]
+    fn cpu_map_broadcast_test() {
+        let mut metadata = vec![2, 2, 2, 3, 3, 1, 0, 0, 2, 3, 3, 1, 0, 0];
+        let in_shape_len = metadata[0];
+        let out_shape_len = metadata[1];
+        let data = [1.; 6];
+        for i in 0..data.len() {
+            to_index(&mut metadata, i, out_shape_len);
+        }
+        assert!(true);
+    }
 }
