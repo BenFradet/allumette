@@ -1,7 +1,6 @@
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, Buffer, BufferUsages,
-    ComputePipeline,
+    Buffer, BufferUsages,
 };
 
 use crate::{
@@ -11,7 +10,7 @@ use crate::{
 
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     // TODO: rm unwrap
-    fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
+    fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, _tag: &'static str) -> Self {
         todo!();
         //let shape = self.shape.clone();
         //let gpu_size = shape.gpu_byte_size();
@@ -146,8 +145,20 @@ mod tests {
         return metadata[i + PREAMBLE];
     }
 
+    fn in_strides(metadata: &[usize], i: usize) -> usize {
+        return metadata[i + PREAMBLE + metadata[0]];
+    }
+
+    fn in_index(metadata: &[usize], i: usize) -> usize {
+        return metadata[i + PREAMBLE + metadata[0] * 2];
+    }
+
     fn out_shape(metadata: &[usize], i: usize) -> usize {
         return metadata[i + PREAMBLE + metadata[0] * 3];
+    }
+
+    fn out_strides(metadata: &[usize], i: usize) -> usize {
+        return metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1]];
     }
 
     fn out_index(metadata: &[usize], i: usize) -> usize {
@@ -179,7 +190,7 @@ mod tests {
         for i in 0..in_shape_len {
             let ii = i + PREAMBLE + metadata[0] * 2;
             if in_shape(metadata, i) > 1 {
-                let idx = out_shape_len - in_shape_len - i;
+                let idx = out_shape_len - in_shape_len + i;
                 metadata[ii] = out_index(metadata, idx);
             } else {
                 metadata[ii] = 0;
@@ -187,16 +198,37 @@ mod tests {
         }
     }
 
+    fn index_to_position_in(metadata: &[usize], len: usize) -> usize {
+        let mut result = 0;
+        for i in 0..len {
+            result += in_index(metadata, i) * in_strides(metadata, i);
+        }
+        return result;
+    }
+
+    fn index_to_position_out(metadata: &[usize], len: usize) -> usize {
+        let mut result = 0;
+        for i in 0..len {
+            result += out_index(metadata, i) * out_strides(metadata, i);
+        }
+        return result;
+    }
+
     #[test]
     fn cpu_map_broadcast_test() {
         let mut metadata = vec![2, 2, 2, 3, 3, 1, 0, 0, 2, 3, 3, 1, 0, 0];
         let in_shape_len = metadata[0];
         let out_shape_len = metadata[1];
-        let data: Vec<usize> = (1..7).into_iter().collect();
-        for i in 0..data.len() {
+        let input: Vec<isize> = (1..7).into_iter().collect();
+        let mut output: Vec<isize> = vec![0; 6];
+        for i in 0..input.len() {
             to_index(&mut metadata, i, out_shape_len);
             broadcast_index(&mut metadata, in_shape_len, out_shape_len);
+            let in_pos = index_to_position_in(&metadata, in_shape_len);
+            let out_pos = index_to_position_out(&metadata, out_shape_len);
+            output[out_pos] = -input[in_pos];
         }
+        println!("output: {output:?}");
         assert!(true);
     }
 }

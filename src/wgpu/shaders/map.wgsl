@@ -90,13 +90,14 @@ fn broadcast_index(
     out_shape_len: u32,
 ) {
     for (var i = 0u; i < in_shape_len; i = i + 1u) {
+        let ii = i + PREAMBLE + metadata[0] * 2u;
         if (in_shape(i) > 1u) {
-            let idx = out_shape_len - in_shape_len - i;
+            let idx = out_shape_len - in_shape_len + i;
             //in_index[i] = out_index[idx];
-            metadata[i + PREAMBLE + metadata[0] * 2u] = out_index(idx);
+            metadata[ii] = out_index(idx);
         } else {
             //in_index[i] = 0u;
-            metadata[i + PREAMBLE + metadata[0] * 2u] = 0u;
+            metadata[ii] = 0u;
         }
     }
 }
@@ -138,5 +139,5 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let in_pos = index_to_position_in(in_shape_len);
     let out_pos = index_to_position_out(out_shape_len);
     output[out_pos] = replace_with_actual_operation(input[in_pos]);
-    output[i] = replace_with_actual_operation(input[i]);
+    //output[i] = replace_with_actual_operation(input[i]);
 }
