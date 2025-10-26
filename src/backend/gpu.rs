@@ -141,16 +141,20 @@ mod tests {
     }
 
     const PREAMBLE: usize = 2;
-    
+
+    fn in_shape(metadata: &[usize], i: usize) -> usize {
+        return metadata[i + PREAMBLE];
+    }
+
     fn out_shape(metadata: &[usize], i: usize) -> usize {
         return metadata[i + PREAMBLE + metadata[0] * 3];
     }
 
-    fn prod(
-        metadata: &[usize],
-        start: usize,
-        shape_len: usize,
-    ) -> usize {
+    fn out_index(metadata: &[usize], i: usize) -> usize {
+        return metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1] * 2];
+    }
+
+    fn prod(metadata: &[usize], start: usize, shape_len: usize) -> usize {
         let mut result = 1;
         for i in start..shape_len {
             result *= out_shape(metadata, i);
@@ -158,11 +162,7 @@ mod tests {
         return result;
     }
 
-    fn to_index(
-        metadata: &mut Vec<usize>,
-        ordinal: usize,
-        shape_len: usize,
-    ) {
+    fn to_index(metadata: &mut Vec<usize>, ordinal: usize, shape_len: usize) {
         let mut remaining = ordinal;
         for i in 0..shape_len {
             let product = prod(metadata, i, shape_len);
@@ -175,14 +175,27 @@ mod tests {
         }
     }
 
+    fn broadcast_index(metadata: &mut Vec<usize>, in_shape_len: usize, out_shape_len: usize) {
+        for i in 0..in_shape_len {
+            let ii = i + PREAMBLE + metadata[0] * 2;
+            if in_shape(metadata, i) > 1 {
+                let idx = out_shape_len - in_shape_len - i;
+                metadata[ii] = out_index(metadata, idx);
+            } else {
+                metadata[ii] = 0;
+            }
+        }
+    }
+
     #[test]
     fn cpu_map_broadcast_test() {
         let mut metadata = vec![2, 2, 2, 3, 3, 1, 0, 0, 2, 3, 3, 1, 0, 0];
         let in_shape_len = metadata[0];
         let out_shape_len = metadata[1];
-        let data = [1.; 6];
+        let data: Vec<usize> = (1..7).into_iter().collect();
         for i in 0..data.len() {
             to_index(&mut metadata, i, out_shape_len);
+            broadcast_index(&mut metadata, in_shape_len, out_shape_len);
         }
         assert!(true);
     }
