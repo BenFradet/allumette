@@ -66,9 +66,7 @@ impl WgpuContext {
             });
             compute_pass.set_pipeline(pipeline);
             compute_pass.set_bind_group(0, Some(bind_group), &[]);
-            let x = workgroup_info.count.try_into().unwrap();
-            println!("x {x:?}");
-            compute_pass.dispatch_workgroups(x, 1, 1);
+            compute_pass.dispatch_workgroups(workgroup_info.count.try_into().unwrap(), 1, 1);
         }
         encoder.finish()
     }
@@ -106,7 +104,7 @@ impl WgpuContext {
                 Some(self.create_shader_module(
                     operation,
                     &Self::MAP_SHADER.replace(Self::REPLACE_OP_NAME, operation),
-                    &workgroup_info,
+                    workgroup_info,
                 ))
             } else {
                 None
@@ -147,7 +145,7 @@ impl WgpuContext {
     ) -> BindGroup {
         self.device.create_bind_group(&BindGroupDescriptor {
             label: Some("map bind group"),
-            layout: &bind_group_layout,
+            layout: bind_group_layout,
             entries: &[
                 BindGroupEntry {
                     binding: 0,
@@ -277,7 +275,7 @@ impl WgpuContext {
     }
 }
 
-static WGPU_CONTEXT: LazyLock<WgpuContext> = LazyLock::new(|| WgpuContext::new());
+static WGPU_CONTEXT: LazyLock<WgpuContext> = LazyLock::new(WgpuContext::new);
 
 pub fn get_wgpu_context() -> &'static WgpuContext {
     &WGPU_CONTEXT

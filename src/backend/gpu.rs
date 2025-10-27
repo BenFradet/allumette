@@ -111,8 +111,6 @@ fn create_metadata_buffer(a: &GpuTensorData<'_>, b: &GpuTensorData<'_>) -> Buffe
         .map(|u| u32::try_from(*u).unwrap())
         .collect();
 
-    println!("metadata: {metadata:?}");
-
     a.device().create_buffer_init(&BufferInitDescriptor {
         label: Some("meta"),
         contents: bytemuck::cast_slice(&metadata),
@@ -128,40 +126,39 @@ mod tests {
 
     #[test]
     fn gpu_map_broadcast_test() {
-        let shape = Shape::new(vec![2, 16]);
+        let shape = Shape::new(vec![2, 4]);
         let strides = (&shape).into();
-        let input: Vec<_> = (1..33).into_iter().map(|u| u as f32).collect();
+        let input: Vec<_> = (1..9).map(|u| u as f32).collect();
         let td = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
         let res = td.map_broadcast(&td, |f| -f, "neg");
         let cpu_data = res.unwrap().to_cpu();
-        println!("{:?}", cpu_data);
-        assert!(true);
+        assert_eq!(vec![-1., -2., -3., -4., -5., -6., -7., -8.], cpu_data);
     }
 
     const PREAMBLE: usize = 2;
 
     fn in_shape(metadata: &[usize], i: usize) -> usize {
-        return metadata[i + PREAMBLE];
+        metadata[i + PREAMBLE]
     }
 
     fn in_strides(metadata: &[usize], i: usize) -> usize {
-        return metadata[i + PREAMBLE + metadata[0]];
+        metadata[i + PREAMBLE + metadata[0]]
     }
 
     fn in_index(metadata: &[usize], i: usize) -> usize {
-        return metadata[i + PREAMBLE + metadata[0] * 2];
+        metadata[i + PREAMBLE + metadata[0] * 2]
     }
 
     fn out_shape(metadata: &[usize], i: usize) -> usize {
-        return metadata[i + PREAMBLE + metadata[0] * 3];
+        metadata[i + PREAMBLE + metadata[0] * 3]
     }
 
     fn out_strides(metadata: &[usize], i: usize) -> usize {
-        return metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1]];
+        metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1]]
     }
 
     fn out_index(metadata: &[usize], i: usize) -> usize {
-        return metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1] * 2];
+        metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1] * 2]
     }
 
     fn prod(metadata: &[usize], start: usize, shape_len: usize) -> usize {
@@ -169,10 +166,10 @@ mod tests {
         for i in start..shape_len {
             result *= out_shape(metadata, i);
         }
-        return result;
+        result
     }
 
-    fn to_index(metadata: &mut Vec<usize>, ordinal: usize, shape_len: usize) {
+    fn to_index(metadata: &mut [usize], ordinal: usize, shape_len: usize) {
         let mut remaining = ordinal;
         for i in 0..shape_len {
             let product = prod(metadata, i, shape_len);
@@ -185,7 +182,7 @@ mod tests {
         }
     }
 
-    fn broadcast_index(metadata: &mut Vec<usize>, in_shape_len: usize, out_shape_len: usize) {
+    fn broadcast_index(metadata: &mut [usize], in_shape_len: usize, out_shape_len: usize) {
         for i in 0..in_shape_len {
             let ii = i + PREAMBLE + metadata[0] * 2;
             if in_shape(metadata, i) > 1 {
@@ -202,7 +199,7 @@ mod tests {
         for i in 0..len {
             result += in_index(metadata, i) * in_strides(metadata, i);
         }
-        return result;
+        result
     }
 
     fn index_to_position_out(metadata: &[usize], len: usize) -> usize {
@@ -210,7 +207,7 @@ mod tests {
         for i in 0..len {
             result += out_index(metadata, i) * out_strides(metadata, i);
         }
-        return result;
+        result
     }
 
     #[test]
@@ -218,7 +215,7 @@ mod tests {
         let mut metadata = vec![2, 2, 2, 3, 3, 1, 0, 0, 2, 3, 3, 1, 0, 0];
         let in_shape_len = metadata[0];
         let out_shape_len = metadata[1];
-        let input: Vec<isize> = (1..7).into_iter().collect();
+        let input: Vec<isize> = (1..7).collect();
         let mut output: Vec<isize> = vec![0; 6];
         for i in 0..input.len() {
             to_index(&mut metadata, i, out_shape_len);
@@ -227,7 +224,6 @@ mod tests {
             let out_pos = index_to_position_out(&metadata, out_shape_len);
             output[out_pos] = -input[in_pos];
         }
-        println!("output: {output:?}");
-        assert!(true);
+        assert_eq!(vec![-1, -2, -3, -4, -5, -6], output);
     }
 }
