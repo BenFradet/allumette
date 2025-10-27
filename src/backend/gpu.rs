@@ -103,10 +103,8 @@ fn create_metadata_buffer(a: &GpuTensorData<'_>, b: &GpuTensorData<'_>) -> Buffe
     contents.push(b.shape.len());
     contents.extend(a.shape.data());
     contents.extend(a.strides.data());
-    contents.extend(a.shape.idx(0).data());
     contents.extend(b.shape.data());
     contents.extend(b.strides.data());
-    contents.extend(b.shape.idx(0).data());
 
     let metadata: Vec<u32> = contents
         .iter()
@@ -130,9 +128,10 @@ mod tests {
 
     #[test]
     fn gpu_map_broadcast_test() {
-        let shape = Shape::new(vec![2, 3]);
+        let shape = Shape::new(vec![2, 16]);
         let strides = (&shape).into();
-        let td = GpuTensorData::new(&[1.; 6], shape, strides, get_wgpu_context());
+        let input: Vec<_> = (1..33).into_iter().map(|u| u as f32).collect();
+        let td = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
         let res = td.map_broadcast(&td, |f| -f, "neg");
         let cpu_data = res.unwrap().to_cpu();
         println!("{:?}", cpu_data);

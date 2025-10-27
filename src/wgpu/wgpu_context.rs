@@ -66,7 +66,9 @@ impl WgpuContext {
             });
             compute_pass.set_pipeline(pipeline);
             compute_pass.set_bind_group(0, Some(bind_group), &[]);
-            compute_pass.dispatch_workgroups(workgroup_info.count.try_into().unwrap(), 1, 1);
+            let x = workgroup_info.count.try_into().unwrap();
+            println!("x {x:?}");
+            compute_pass.dispatch_workgroups(x, 1, 1);
         }
         encoder.finish()
     }
@@ -243,7 +245,7 @@ impl WgpuContext {
                         binding: 2,
                         visibility: ShaderStages::COMPUTE,
                         ty: BindingType::Buffer {
-                            ty: BufferBindingType::Storage { read_only: false },
+                            ty: BufferBindingType::Storage { read_only: true },
                             has_dynamic_offset: false,
                             min_binding_size: Some(NonZeroU64::new(4).unwrap()),
                         },

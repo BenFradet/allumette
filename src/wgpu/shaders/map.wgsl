@@ -7,10 +7,13 @@ var<storage, read_write> output: array<f32>;
 // structure:
 // in shape len
 // out shape len
-// in shape / in strides / in index
-// out shape / out strides / out index
+// in shape / in strides
+// out shape / out strides
 @group(0) @binding(2)
-var<storage, read_write> metadata: array<u32>;
+var<storage, read> metadata: array<u32>;
+
+// used to create local arrays
+const MAX_DIMS: u32 = 32;
 
 // ndims
 const PREAMBLE: u32 = 2u;
@@ -23,20 +26,12 @@ fn in_strides(i: u32) -> u32 {
     return metadata[i + PREAMBLE + metadata[0]];
 }
 
-fn in_index(i: u32) -> u32 {
+fn out_shape(i: u32) -> u32 {
     return metadata[i + PREAMBLE + metadata[0] * 2u];
 }
 
-fn out_shape(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 3u];
-}
-
 fn out_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 3u + metadata[1]];
-}
-
-fn out_index(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 3u + metadata[1] * 2u];
+    return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1]];
 }
 
 fn id(in: f32) -> f32 {
@@ -72,6 +67,7 @@ fn prod(
 fn to_index(
     ordinal: u32,
     shape_len: u32,
+    out_index: ptr<function, array<u32, MAX_DIMS>>,
 ) {
     var remaining = ordinal;
     for (var i = 0u; i < shape_len; i = i + 1u) {
@@ -80,45 +76,45 @@ fn to_index(
         let index = remaining / divisor;
         remaining -= index * divisor;
 
-        metadata[i + PREAMBLE + metadata[0] * 3u + metadata[1] * 2u] = index;
-        //out_index[i] = index;
+        (*out_index)[i] = index;
     }
 }
 
 fn broadcast_index(
     in_shape_len: u32,
     out_shape_len: u32,
+    in_index: ptr<function, array<u32, MAX_DIMS>>,
+    out_index: array<u32, MAX_DIMS>,
 ) {
     for (var i = 0u; i < in_shape_len; i = i + 1u) {
-        let ii = i + PREAMBLE + metadata[0] * 2u;
         if (in_shape(i) > 1u) {
             let idx = out_shape_len - in_shape_len + i;
-            //in_index[i] = out_index[idx];
-            metadata[ii] = out_index(idx);
+            (*in_index)[i] = out_index[idx];
         } else {
-            //in_index[i] = 0u;
-            metadata[ii] = 0u;
+            (*in_index)[i] = 0u;
         }
     }
 }
 
 // haven't found a way not to copy/paste given array<u32, N> needs constant indexing
 fn index_to_position_in(
-    len: u32
+    len: u32,
+    in_index: array<u32, MAX_DIMS>,
 ) -> u32 {
     var result: u32 = 0u;
     for (var i = 0u; i < len; i = i + 1u) {
-        result += in_index(i) * in_strides(i);
+        result += in_index[i] * in_strides(i);
     }
     return result;
 }
 
 fn index_to_position_out(
-    len: u32
+    len: u32,
+    out_index: array<u32, MAX_DIMS>,
 ) -> u32 {
     var result: u32 = 0u;
     for (var i = 0u; i < len; i = i + 1u) {
-        result += out_index(i) * out_strides(i);
+        result += out_index[i] * out_strides(i);
     }
     return result;
 }
@@ -132,12 +128,16 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
+    var in_index: array<u32, MAX_DIMS>;
+    var out_index: array<u32, MAX_DIMS>;
+
     let in_shape_len = metadata[0];
     let out_shape_len = metadata[1];
-    to_index(i, out_shape_len);
-    broadcast_index(in_shape_len, out_shape_len);
-    let in_pos = index_to_position_in(in_shape_len);
-    let out_pos = index_to_position_out(out_shape_len);
+    to_index(i, out_shape_len, &out_index);
+    broadcast_index(in_shape_len, out_shape_len, &in_index, out_index);
+    let in_pos = index_to_position_in(in_shape_len, in_index);
+    let out_pos = index_to_position_out(out_shape_len, out_index);
+    //output[out_pos] = f32(metadata[i]);
     output[out_pos] = replace_with_actual_operation(input[in_pos]);
     //output[i] = replace_with_actual_operation(input[i]);
 }
