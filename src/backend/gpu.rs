@@ -9,34 +9,35 @@ use crate::{
 };
 
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
-    // TODO: rm unwrap
-    fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, _tag: &'static str) -> Self {
-        todo!();
-        //let shape = self.shape.clone();
-        //let gpu_size = shape.gpu_byte_size();
-        //// make contiguous
-        //let strides = (&shape).into();
+    // TODO: rm unwraps
+    fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
+        let workgroup_info = (&self.shape).into();
+        let gpu_size = self.shape.gpu_byte_size();
 
-        //let buffer = self.context.create_output_buffer(
-        //    gpu_size,
-        //    tag,
-        //    BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-        //);
-        //let td = GpuTensorData::from_buffer(shape, strides, buffer, self.context);
+        let output_buffer = self.context.create_output_buffer(
+            gpu_size,
+            tag,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
 
-        //let workgroup_info = (&td.shape).into();
-        //let pipeline = td
-        //    .context
-        //    .get_or_create_pipeline(tag, &workgroup_info)
-        //    .unwrap();
+        let pipeline = self
+            .context
+            .get_or_create_pipeline(tag, &workgroup_info)
+            .unwrap();
+        let bind_group_layout = pipeline.get_bind_group_layout(0);
+        let metadata_buffer = create_metadata_buffer_single(self);
+        let bind_group = self.context.create_bind_group(
+            &self.buffer,
+            &output_buffer,
+            &metadata_buffer,
+            &bind_group_layout,
+        );
+        let command = self
+            .context
+            .encode_command(&workgroup_info, &pipeline, &bind_group);
+        self.context.submit_command(command).ok().unwrap();
 
-        //let bind_group = create_bind_group(self, &td, tag, &pipeline);
-        //let command = self
-        //    .context
-        //    .encode_command(&workgroup_info, &pipeline, &bind_group);
-        //self.context.submit_command(command).ok().unwrap();
-
-        //td
+        self.with_buffer(output_buffer)
     }
 
     fn map_broadcast<F: Fn(f32) -> f32 + Sync>(
@@ -95,6 +96,10 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     fn matmul(&self, _other: &Self) -> Self {
         todo!()
     }
+}
+
+fn create_metadata_buffer_single(a: &GpuTensorData<'_>) -> Buffer {
+    create_metadata_buffer(a, a)
 }
 
 fn create_metadata_buffer(a: &GpuTensorData<'_>, b: &GpuTensorData<'_>) -> Buffer {
