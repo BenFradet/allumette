@@ -22,6 +22,8 @@ use std::{
     ops,
 };
 
+use rand::Rng;
+
 #[derive(Clone, Debug)]
 pub struct Tensor<E: Element, BT: BackendType, T: Backend<E, BT>> {
     pub data: T,
@@ -471,7 +473,7 @@ mod tests {
         backend::backend_type::{Gpu, Par, Seq},
         data::gpu_tensor_data::GpuTensorData,
         shaping::idx::Idx,
-        wgpu::wgpu_context::{get_wgpu_context, WgpuContext},
+        wgpu::wgpu_context::get_wgpu_context,
     };
 
     use super::*;
@@ -985,6 +987,7 @@ mod tests {
             unary_test(t_par);
         }
 
+        //#![proptest_config(ProptestConfig::with_cases(10))]
         #[test]
         fn unary_tests_gpu(
             t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),

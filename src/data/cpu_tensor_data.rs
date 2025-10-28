@@ -4,6 +4,8 @@ use proptest::{collection, prelude::*};
 
 use crate::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
+use rand::Rng;
+
 use super::tensor_data::TensorData;
 
 #[derive(Clone, Debug)]
