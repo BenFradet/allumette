@@ -20,6 +20,8 @@ pub struct GpuTensorData<'a> {
     pub shape: Shape,
     pub strides: Strides,
     pub context: &'a WgpuContext,
+    // used for debugging
+    //init: Vec<f32>,
 }
 
 impl<'a> GpuTensorData<'a> {
@@ -29,11 +31,13 @@ impl<'a> GpuTensorData<'a> {
             contents: bytemuck::cast_slice(data),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         });
+        //let init = data.to_vec();
         Self {
             buffer: Arc::new(buffer),
             shape,
             strides,
             context,
+            //init,
         }
     }
 
@@ -48,6 +52,7 @@ impl<'a> GpuTensorData<'a> {
             shape,
             strides,
             context,
+            //init: vec![],
         }
     }
 
@@ -57,6 +62,7 @@ impl<'a> GpuTensorData<'a> {
             shape: self.shape.clone(),
             strides: self.strides.clone(),
             context: self.context,
+            //init: self.init.clone(),
         }
     }
 
@@ -164,6 +170,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
             shape,
             strides,
             context: self.context,
+            //init: self.init.clone(),
         }
     }
 
@@ -185,6 +192,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
                 shape: Shape::new(new_shape),
                 strides: Strides::new(new_strides),
                 context: self.context,
+                //init: self.init.clone(),
             })
         } else {
             None
