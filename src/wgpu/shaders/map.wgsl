@@ -13,7 +13,7 @@ var<storage, read_write> output: array<f32>;
 var<storage, read> metadata: array<u32>;
 
 // used to create local arrays
-const MAX_DIMS: u32 = 32;
+const MAX_DIMS: u32 = 32u;
 
 // ndims
 const PREAMBLE: u32 = 2u;
@@ -51,6 +51,15 @@ fn inv(in: f32) -> f32 {
 
 fn relu(in: f32) -> f32 {
     return max(0.0, in);
+}
+
+fn sig(in: f32) -> f32 {
+    if (in >= 0.0) {
+        return 1.0 / (1.0 + exp(-in));
+    } else {
+        let e = exp(in);
+        return e / (1.0 + e);
+    }
 }
 
 fn prod(
