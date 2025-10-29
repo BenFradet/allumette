@@ -473,7 +473,6 @@ mod tests {
         backend::backend_type::{Gpu, Par, Seq},
         data::gpu_tensor_data::GpuTensorData,
         shaping::idx::Idx,
-        wgpu::wgpu_context::get_wgpu_context,
     };
 
     use super::*;
@@ -993,20 +992,20 @@ mod tests {
             t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
         ) {
             unary_assert_gpu(t.clone(), |t| -t, |f| -f);
+            unary_assert_gpu(
+                t.clone(),
+                |t| t.inv(),
+                |f| {
+                    if f != 0. {
+                        1. / f
+                    } else {
+                        0.
+                    }
+                },
+            );
+            unary_assert_gpu(t.clone(), |t| t.sigmoid(), |f| f.sig());
             //unary_assert_gpu(t.clone(), |t| t.clone() * t, |f| f * f);
             //unary_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
-            //unary_assert_gpu(
-            //    t.clone(),
-            //    |t| t.inv(),
-            //    |f| {
-            //        if f != 0. {
-            //            1. / f
-            //        } else {
-            //            0.
-            //        }
-            //    },
-            //);
-            //unary_assert_gpu(t.clone(), |t| t.sigmoid(), |f| f.sig());
             //unary_assert_gpu(
             //    t.clone(),
             //    |t| t.ln(),
