@@ -1009,10 +1009,10 @@ mod tests {
                 |t| t.log(),
                 |f| if f > 0. { f.ln() } else { 0. },
             );
+            unary_assert_gpu(t.clone(), |t| t.exp(), |f| f.exp());
+            unary_assert_gpu(t.clone(), |t| t.relu(), |f| f.relu());
             //unary_assert_gpu(t.clone(), |t| t.clone() * t, |f| f * f);
             //unary_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
-            //unary_assert_gpu(t.clone(), |t| t.relu(), |f| f.relu());
-            //unary_assert_gpu(t.clone(), |t| t.exp(), |f| f.exp());
         }
     }
 
