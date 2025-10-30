@@ -11,7 +11,7 @@ use crate::{
     ops::{
         binary_ops::{Add, All, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
         function::Function,
-        unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
+        unary_ops::{Copy, Exp, Inv, Log, Neg, Relu, Sig},
     },
     shaping::{order::Order, shape::Shape, strides::Strides},
     util::unsafe_usize_convert::UnsafeUsizeConvert,
@@ -353,8 +353,8 @@ where
         Forward::unary(Relu {}, self)
     }
 
-    pub fn ln(self) -> Self {
-        Forward::unary(Ln {}, self)
+    pub fn log(self) -> Self {
+        Forward::unary(Log {}, self)
     }
 
     pub fn exp(self) -> Self {
@@ -724,7 +724,7 @@ mod tests {
         t: Tensor<f64, BT, T>,
     ) {
         let ft_seq = |t: Tensor<f64, BT, T>| {
-            (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
+            (t.clone() + Tensor::from_scalar(100000.)).log() + (t - Tensor::from_scalar(200.)).exp()
         };
         unary_grad_assert(t.clone(), ft_seq);
     }
@@ -742,7 +742,7 @@ mod tests {
             .relu()
                 * Tensor::from_scalar(10.))
             .sigmoid())
-            .ln()
+            .log()
                 / Tensor::from_scalar(50.)
         };
         unary_grad_assert(t.clone(), ft);
@@ -756,7 +756,7 @@ mod tests {
         unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
         unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
         unary_grad_assert(t.clone(), |t| t.sigmoid());
-        unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
+        unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(100000.)).log());
         unary_grad_assert(t.clone(), |t| t.relu());
         unary_grad_assert(t.clone(), |t| t.exp());
     }
@@ -785,7 +785,7 @@ mod tests {
         unary_assert(t.clone(), |t| t.sigmoid(), |f| f.sig());
         unary_assert(
             t.clone(),
-            |t| t.ln(),
+            |t| t.log(),
             |f| if f > E::zero() { f.ln() } else { E::zero() },
         );
         unary_assert(t.clone(), |t| t.relu(), |f| f.relu());
@@ -799,7 +799,7 @@ mod tests {
         t: Tensor<f64, BT, T>,
     ) {
         let ft = |t: Tensor<f64, BT, T>| {
-            (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
+            (t.clone() + Tensor::from_scalar(100000.)).log() + (t - Tensor::from_scalar(200.)).exp()
         };
         let ff = |f: f64| (f + 100000.).ln() + (f - 200.).exp();
         unary_assert(t.clone(), ft, ff);
@@ -818,7 +818,7 @@ mod tests {
             .relu()
                 * Tensor::from_scalar(10.))
             .sigmoid())
-            .ln()
+            .log()
                 / Tensor::from_scalar(50.)
         };
         let ff = |f: f64| ((((f * 10. + 7.).relu() * 6. + 5.).relu() * 10.).sig()).ln() / 50.;
@@ -1004,13 +1004,13 @@ mod tests {
                 },
             );
             unary_assert_gpu(t.clone(), |t| t.sigmoid(), |f| f.sig());
+            unary_assert_gpu(
+                t.clone(),
+                |t| t.log(),
+                |f| if f > 0. { f.ln() } else { 0. },
+            );
             //unary_assert_gpu(t.clone(), |t| t.clone() * t, |f| f * f);
             //unary_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
-            //unary_assert_gpu(
-            //    t.clone(),
-            //    |t| t.ln(),
-            //    |f| if f > 0. { f.ln() } else { 0. },
-            //);
             //unary_assert_gpu(t.clone(), |t| t.relu(), |f| f.relu());
             //unary_assert_gpu(t.clone(), |t| t.exp(), |f| f.exp());
         }

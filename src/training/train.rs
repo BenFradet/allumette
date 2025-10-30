@@ -34,7 +34,7 @@ pub fn train<BT: BackendType, T: Backend<f64, BT>>(
         let prob = (out.clone() * y.clone())
             + (out.clone() - Tensor::from_scalar(1.)) * (y.clone() - Tensor::from_scalar(1.));
 
-        let loss = -prob.clone().ln();
+        let loss = -prob.clone().log();
 
         let res = (loss.clone() / Tensor::from_scalar(data.n as f64))
             .sum(None)

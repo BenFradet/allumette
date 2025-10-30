@@ -54,12 +54,12 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Inv {
     }
 }
 
-pub struct Ln;
-impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Ln {
+pub struct Log;
+impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Log {
     fn forward(&self, a: &T) -> T {
         a.map(
             |e| if e > E::zero() { e.ln() } else { E::zero() },
-            <Ln as Unary<E, BT, T>>::tag(self),
+            <Log as Unary<E, BT, T>>::tag(self),
         )
     }
 
@@ -77,7 +77,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Ln {
     }
 
     fn tag(&self) -> &'static str {
-        "ln"
+        "log"
     }
 }
 
