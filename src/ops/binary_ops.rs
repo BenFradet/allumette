@@ -220,8 +220,9 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
         )
     }
 
+    // TODO: id tag for gpu, improve
     fn tag(&self) -> &'static str {
-        "view"
+        "id"
     }
 }
 

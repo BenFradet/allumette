@@ -146,7 +146,5 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     broadcast_index(in_shape_len, out_shape_len, &in_index, out_index);
     let in_pos = index_to_position_in(in_shape_len, in_index);
     let out_pos = index_to_position_out(out_shape_len, out_index);
-    //output[out_pos] = f32(metadata[i]);
     output[out_pos] = replace_with_actual_operation(input[in_pos]);
-    //output[i] = replace_with_actual_operation(input[i]);
 }
