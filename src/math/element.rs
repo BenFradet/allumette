@@ -68,8 +68,9 @@ impl Element for f32 {
         f as f32
     }
 
+    // gpu is less precise
     fn is_close(self, rhs: Self) -> bool {
-        (self - rhs).abs() < 1e-4
+        (self - rhs).abs() < 1e-3
     }
 
     fn exp(self) -> Self {

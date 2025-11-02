@@ -47,7 +47,7 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Networ
     pub fn forward(&self, x: Tensor<E, BT, T>) -> Tensor<E, BT, T> {
         let l1 = self.layer1.forward(x).relu();
         let l2 = self.layer2.forward(l1).relu();
-        self.layer3.forward(l2).sigmoid()
+        self.layer3.forward(l2).sig()
     }
 }
 

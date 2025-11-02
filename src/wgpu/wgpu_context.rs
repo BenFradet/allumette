@@ -34,7 +34,7 @@ impl WgpuContext {
     const REPLACE_WORKGROUP_SIZE: &'static str = "@workgroup_size(1)";
 
     // id, neg, inv and relu are not supported out of the box
-    const MAP_OPS: [&'static str; 7] = ["log", "exp", "sig", "id", "neg", "inv", "relu"];
+    const MAP_OPS: [&'static str; 7] = ["ln", "exp", "sig", "id", "neg", "inv", "relu"];
 
     const ENTRY_POINT: &'static str = "call";
 

@@ -62,6 +62,14 @@ fn sig(in: f32) -> f32 {
     }
 }
 
+fn ln(in: f32) -> f32 {
+    if (in > 0.) {
+        return log(in);
+    } else {
+        return 0.0;
+    }
+}
+
 fn prod(
     start: u32,
     shape_len: u32,
