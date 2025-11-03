@@ -6,7 +6,7 @@ use crate::shaping::shape::Shape;
 ///
 /// count: total number of workgroups
 /// size: number of threads per workgroup
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub struct WorkgroupInfo {
     pub count: usize,
     pub size: usize,
@@ -34,7 +34,7 @@ impl From<&Shape> for WorkgroupInfo {
         } else {
             let count = (tensor_size + MAX_WORKGROUP_SIZE - 1) / MAX_WORKGROUP_SIZE;
             WorkgroupInfo {
-                count: count,
+                count,
                 size: MAX_WORKGROUP_SIZE,
             }
         }

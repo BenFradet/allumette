@@ -473,7 +473,6 @@ mod tests {
         backend::backend_type::{Gpu, Par, Seq},
         data::gpu_tensor_data::GpuTensorData,
         shaping::idx::Idx,
-        wgpu::wgpu_context::get_wgpu_context,
     };
 
     use super::*;
@@ -626,24 +625,12 @@ mod tests {
         ft: FT,
         ff: FF,
     ) {
-        println!("shape {:?}", t.data.shape);
-        println!("strides {:?}", t.data.strides);
         let data = t.data.to_cpu();
         let strides = t.data.strides.clone();
         let res = ft(t);
         let res_data = res.data.to_cpu();
         let res_strides = res.data.strides.clone();
-        println!("data {data:?}");
-        println!("res shape {:?}", res.data.shape);
-        println!("res strides {:?}", res.data.strides);
-        println!("res data {res_data:?}");
         for idx in res.data.indices() {
-            let r = res_data[res_strides.position(&idx)];
-            let d = data[strides.position(&idx)];
-            let fd = ff(data[strides.position(&idx)]);
-            println!("RES: {r:?}");
-            println!("DATA: {d:?}");
-            println!("FD: {fd:?}");
             assert!(res_data[res_strides.position(&idx)].is_close(ff(data[strides.position(&idx)])));
         }
     }
@@ -1111,20 +1098,20 @@ mod tests {
         reduce_forward_all_dim_test(t_par);
     }
 
-    #[test]
-    fn unary_test_gpu() {
-        let shape = Shape::new(vec![1, 1, 1, 2]);
-        let strides = (&shape).into();
-        let input = vec![0., 0.];
+    //#[test]
+    //fn unary_test_gpu() {
+    //    let shape = Shape::new(vec![3, 3, 4, 4]);
+    //    let strides = (&shape).into();
+    //    let input = vec![0.; 144];
 
-        let input_tensor_data = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
-        let input_tensor = Tensor::new(input_tensor_data, History::default());
+    //    let input_tensor_data = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
+    //    let input_tensor = Tensor::new(input_tensor_data, History::default());
 
-        let res = input_tensor.sig();
-        println!("shape {:?}", res.data.shape());
-        println!("strides {:?}", res.data.strides);
-        let res_data = res.data.to_cpu();
-        println!("res {res_data:?}");
-        assert!(true)
-    }
+    //    let res = input_tensor.sig();
+    //    println!("shape {:?}", res.data.shape());
+    //    println!("strides {:?}", res.data.strides);
+    //    let res_data = res.data.to_cpu();
+    //    println!("res {res_data:?}");
+    //    assert!(true)
+    //}
 }

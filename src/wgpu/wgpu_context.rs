@@ -24,7 +24,7 @@ pub const WGPU_ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
 pub struct WgpuContext {
     pub device: Device,
     pub queue: Queue,
-    pipelines: RwLock<HashMap<&'static str, Arc<ComputePipeline>>>,
+    pipelines: RwLock<HashMap<(&'static str, WorkgroupInfo), Arc<ComputePipeline>>>,
 }
 
 impl WgpuContext {
@@ -92,11 +92,11 @@ impl WgpuContext {
     pub fn get_or_create_pipeline(
         &self,
         operation: &'static str,
-        workgroup_info: &WorkgroupInfo,
+        workgroup_info: WorkgroupInfo,
     ) -> Option<Arc<ComputePipeline>> {
         let pipeline_opt = {
             let pipelines = self.pipelines.read().unwrap();
-            pipelines.get(operation).map(Arc::clone)
+            pipelines.get(&(operation, workgroup_info)).map(Arc::clone)
         };
 
         pipeline_opt.or_else(|| {
@@ -112,8 +112,8 @@ impl WgpuContext {
 
             module.and_then(|m| {
                 let mut pipelines = self.pipelines.write().unwrap();
-                self.insert_pipeline(operation, &m, &mut pipelines);
-                pipelines.get(&operation).map(Arc::clone)
+                self.insert_pipeline(operation, workgroup_info, &m, &mut pipelines);
+                pipelines.get(&(operation, workgroup_info)).map(Arc::clone)
             })
         })
     }
@@ -201,7 +201,7 @@ impl WgpuContext {
         &self,
         operation: &str,
         shader_source: &str,
-        workgroup_info: &WorkgroupInfo,
+        workgroup_info: WorkgroupInfo,
     ) -> ShaderModule {
         let source = shader_source.replace(
             Self::REPLACE_WORKGROUP_SIZE,
@@ -256,8 +256,11 @@ impl WgpuContext {
     fn insert_pipeline(
         &self,
         operation: &'static str,
+        workgroup_info: WorkgroupInfo,
         module: &ShaderModule,
-        pipelines: &mut RwLockWriteGuard<HashMap<&'static str, Arc<ComputePipeline>>>,
+        pipelines: &mut RwLockWriteGuard<
+            HashMap<(&'static str, WorkgroupInfo), Arc<ComputePipeline>>,
+        >,
     ) {
         let bind_group_layout = self.create_bind_group_layout();
         let pipeline_layout = self.create_pipeline_layout(&bind_group_layout);
@@ -271,7 +274,7 @@ impl WgpuContext {
                 compilation_options: Default::default(),
             },
         ));
-        pipelines.insert(operation, compute_pipeline);
+        pipelines.insert((operation, workgroup_info), compute_pipeline);
     }
 }
 
