@@ -1,6 +1,6 @@
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    Buffer, BufferUsages,
+    Buffer, BufferUsages, Device,
 };
 
 use crate::{
@@ -25,7 +25,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .get_or_create_pipeline(tag, workgroup_info)
             .unwrap();
         let bind_group_layout = pipeline.get_bind_group_layout(0);
-        let metadata_buffer = create_metadata_buffer_single(self);
+        let metadata_buffer = create_metadata_buffer(&[self, self], self.device());
         let bind_group = self.context.create_bind_group(
             &self.buffer,
             &output_buffer,
@@ -60,7 +60,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 
         let pipeline = self.context.get_or_create_pipeline(tag, workgroup_info)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
-        let metadata_buffer = create_metadata_buffer(self, out);
+        let metadata_buffer = create_metadata_buffer(&[self, out], self.device());
         let bind_group = self.context.create_bind_group(
             &self.buffer,
             &output_buffer,
@@ -98,25 +98,23 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     }
 }
 
-fn create_metadata_buffer_single(a: &GpuTensorData<'_>) -> Buffer {
-    create_metadata_buffer(a, a)
-}
-
-fn create_metadata_buffer(a: &GpuTensorData<'_>, b: &GpuTensorData<'_>) -> Buffer {
-    let mut contents = Vec::with_capacity(2 + 3 * a.shape.len() + 3 * b.shape.len());
-    contents.push(a.shape.len());
-    contents.push(b.shape.len());
-    contents.extend(a.shape.data());
-    contents.extend(a.strides.data());
-    contents.extend(b.shape.data());
-    contents.extend(b.strides.data());
+fn create_metadata_buffer(tds: &[&GpuTensorData<'_>], device: &Device) -> Buffer {
+    let mut contents =
+        Vec::with_capacity(tds.len() + 2 * tds.iter().map(|td| td.shape.len()).sum::<usize>());
+    for td in tds {
+        contents.push(td.shape.len());
+    }
+    for td in tds {
+        contents.extend(td.shape.data());
+        contents.extend(td.strides.data());
+    }
 
     let metadata: Vec<u32> = contents
         .iter()
         .map(|u| u32::try_from(*u).unwrap())
         .collect();
 
-    a.device().create_buffer_init(&BufferInitDescriptor {
+    device.create_buffer_init(&BufferInitDescriptor {
         label: Some("meta"),
         contents: bytemuck::cast_slice(&metadata),
         usage: BufferUsages::STORAGE,
