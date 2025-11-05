@@ -76,14 +76,29 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 
     fn zip<F: Fn(f32, f32) -> f32 + Sync>(
         &self,
-        _other: &Self,
-        _f: F,
-        _tag: &'static str,
+        other: &Self,
+        f: F,
+        tag: &'static str,
     ) -> Option<Self>
     where
         Self: Sized,
     {
-        todo!()
+        let shape = if self.shape == other.shape {
+            self.shape.clone()
+        } else {
+            self.shape.broadcast(&other.shape)?
+        };
+        let workgroup_info = (&shape).into();
+        let gpu_size = shape.gpu_byte_size();
+        let output_buffer = self.context.create_output_buffer(
+            gpu_size,
+            tag,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
+
+        let pipeline = self.context.get_or_create_pipeline(tag, workgroup_info)?;
+        let bind_group_layout = pipeline.get_bind_group_layout(0);
+        todo!();
     }
 
     fn reduce<F: Fn(f32, f32) -> f32 + Sync>(&self, _f: F, _dim: usize, _init: f64) -> Option<Self>
