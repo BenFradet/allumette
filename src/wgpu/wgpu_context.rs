@@ -141,28 +141,21 @@ impl WgpuContext {
 
     pub fn create_bind_group(
         &self,
-        input_buffer: &Buffer,
-        output_buffer: &Buffer,
-        metadata_buffer: &Buffer,
+        buffers: &[&Buffer],
         bind_group_layout: &BindGroupLayout,
     ) -> BindGroup {
+        let bind_group_entries: Vec<_> = buffers
+            .iter()
+            .enumerate()
+            .map(|(i, b)| BindGroupEntry {
+                binding: i as u32,
+                resource: b.as_entire_binding(),
+            })
+            .collect();
         self.device.create_bind_group(&BindGroupDescriptor {
-            label: Some("map bind group"),
+            label: Some("bind group"),
             layout: bind_group_layout,
-            entries: &[
-                BindGroupEntry {
-                    binding: 0,
-                    resource: input_buffer.as_entire_binding(),
-                },
-                BindGroupEntry {
-                    binding: 1,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                BindGroupEntry {
-                    binding: 2,
-                    resource: metadata_buffer.as_entire_binding(),
-                },
-            ],
+            entries: &bind_group_entries,
         })
     }
 

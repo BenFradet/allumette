@@ -26,9 +26,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .context
             .create_metadata_buffer(&[&self.shape, &self.shape]);
         let bind_group = self.context.create_bind_group(
-            &self.buffer,
-            &output_buffer,
-            &metadata_buffer,
+            &[&self.buffer, &output_buffer, &metadata_buffer],
             &bind_group_layout,
         );
         let command = self
@@ -63,9 +61,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .context
             .create_metadata_buffer(&[&self.shape, &out.shape]);
         let bind_group = self.context.create_bind_group(
-            &self.buffer,
-            &output_buffer,
-            &metadata_buffer,
+            &[&self.buffer, &output_buffer, &metadata_buffer],
             &bind_group_layout,
         );
         let command = self
