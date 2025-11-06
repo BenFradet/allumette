@@ -1,11 +1,8 @@
-use wgpu::{
-    util::{BufferInitDescriptor, DeviceExt},
-    Buffer, BufferUsages, Device,
-};
+use wgpu::BufferUsages;
 
 use crate::{
     backend::{backend::TensorBackend, backend_type::Gpu},
-    data::gpu_tensor_data::GpuTensorData, shaping::{shape::Shape, strides::Strides},
+    data::gpu_tensor_data::GpuTensorData,
 };
 
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
@@ -25,7 +22,9 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .get_or_create_pipeline(tag, workgroup_info)
             .unwrap();
         let bind_group_layout = pipeline.get_bind_group_layout(0);
-        let metadata_buffer = create_metadata_buffer(&[&self.shape, &self.shape], self.device());
+        let metadata_buffer = self
+            .context
+            .create_metadata_buffer(&[&self.shape, &self.shape]);
         let bind_group = self.context.create_bind_group(
             &self.buffer,
             &output_buffer,
@@ -60,7 +59,9 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 
         let pipeline = self.context.get_or_create_pipeline(tag, workgroup_info)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
-        let metadata_buffer = create_metadata_buffer(&[&self.shape, &out.shape], self.device());
+        let metadata_buffer = self
+            .context
+            .create_metadata_buffer(&[&self.shape, &out.shape]);
         let bind_group = self.context.create_bind_group(
             &self.buffer,
             &output_buffer,
@@ -98,6 +99,9 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 
         let pipeline = self.context.get_or_create_pipeline(tag, workgroup_info)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
+        let metadata_buffer =
+            self.context
+                .create_metadata_buffer(&[&self.shape, &other.shape, &shape]);
         todo!();
     }
 
@@ -111,30 +115,6 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     fn matmul(&self, _other: &Self) -> Self {
         todo!()
     }
-}
-
-fn create_metadata_buffer(shapes: &[&Shape], device: &Device) -> Buffer {
-    let mut contents =
-        Vec::with_capacity(shapes.len() + 2 * shapes.iter().map(|s| s.len()).sum::<usize>());
-    for shape in shapes {
-        contents.push(shape.len());
-    }
-    for shape in shapes {
-        contents.extend(shape.data());
-        let strides: Strides = (*shape).into();
-        contents.extend(strides.data());
-    }
-
-    let metadata: Vec<u32> = contents
-        .iter()
-        .map(|u| u32::try_from(*u).unwrap())
-        .collect();
-
-    device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("meta"),
-        contents: bytemuck::cast_slice(&metadata),
-        usage: BufferUsages::STORAGE,
-    })
 }
 
 #[cfg(test)]

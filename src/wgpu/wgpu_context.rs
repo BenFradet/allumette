@@ -15,7 +15,10 @@ use wgpu::{
     Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource, ShaderStages, Trace,
 };
 
-use crate::{shaping::iter::Iter, wgpu::workgroup_info::WorkgroupInfo};
+use crate::{
+    shaping::{iter::Iter, shape::Shape, strides::Strides},
+    wgpu::workgroup_info::WorkgroupInfo,
+};
 
 pub const WGPU_ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
 
@@ -160,6 +163,30 @@ impl WgpuContext {
                     resource: metadata_buffer.as_entire_binding(),
                 },
             ],
+        })
+    }
+
+    pub fn create_metadata_buffer(&self, shapes: &[&Shape]) -> Buffer {
+        let mut contents =
+            Vec::with_capacity(shapes.len() + 2 * shapes.iter().map(|s| s.len()).sum::<usize>());
+        for shape in shapes {
+            contents.push(shape.len());
+        }
+        for shape in shapes {
+            contents.extend(shape.data());
+            let strides: Strides = (*shape).into();
+            contents.extend(strides.data());
+        }
+
+        let metadata: Vec<u32> = contents
+            .iter()
+            .map(|u| u32::try_from(*u).unwrap())
+            .collect();
+
+        self.device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("meta"),
+            contents: bytemuck::cast_slice(&metadata),
+            usage: BufferUsages::STORAGE,
         })
     }
 
