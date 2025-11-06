@@ -74,7 +74,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     fn zip<F: Fn(f32, f32) -> f32 + Sync>(
         &self,
         other: &Self,
-        f: F,
+        _f: F,
         tag: &'static str,
     ) -> Option<Self>
     where
@@ -98,6 +98,15 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let metadata_buffer =
             self.context
                 .create_metadata_buffer(&[&self.shape, &other.shape, &shape]);
+        let bind_group = self.context.create_bind_group(
+            &[
+                &self.buffer,
+                &other.buffer,
+                &output_buffer,
+                &metadata_buffer,
+            ],
+            &bind_group_layout,
+        );
         todo!();
     }
 
