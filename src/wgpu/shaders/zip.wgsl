@@ -46,6 +46,38 @@ fn out_strides(i: u32) -> u32 {
     return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1] * 2u + metadata[2]];
 }
 
+fn add(a: f32, b: f32) -> f32 {
+  return a + b;
+}
+
+fn mul(a: f32, b: f32) -> f32 {
+  return a * b;
+}
+
+fn lt(a: f32, b: f32) -> f32 {
+  if (a < b) {
+    return 1.0;
+  } else {
+    return 0.0;
+  }
+}
+
+fn eq(a: f32, b: f32) -> f32 {
+  if (a == b) {
+    return 1.0;
+  } else {
+    return 0.0;
+  }
+}
+
+fn is_close(a: f32, b: f32) -> f32 {
+  if (abs(a - b) < 0.001) {
+    return 1.0;
+  } else {
+    return 0.0;
+  }
+}
+
 fn prod(
     start: u32,
     shape_len: u32,
