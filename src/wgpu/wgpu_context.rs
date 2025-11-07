@@ -32,12 +32,14 @@ pub struct WgpuContext {
 
 impl WgpuContext {
     const MAP_SHADER: &'static str = include_str!("shaders/map.wgsl");
+    const ZIP_SHADER: &'static str = include_str!("shaders/zip.wgsl");
 
     const REPLACE_OP_NAME: &'static str = "replace_with_actual_operation";
     const REPLACE_WORKGROUP_SIZE: &'static str = "@workgroup_size(1)";
 
     // id, neg, inv and relu are not supported out of the box
     const MAP_OPS: [&'static str; 7] = ["ln", "exp", "sig", "id", "neg", "inv", "relu"];
+    const ZIP_OPS: [&'static str; 5] = ["add", "mul", "lt", "eq", "is_close"];
 
     const ENTRY_POINT: &'static str = "call";
 
@@ -107,6 +109,12 @@ impl WgpuContext {
                 Some(self.create_shader_module(
                     operation,
                     &Self::MAP_SHADER.replace(Self::REPLACE_OP_NAME, operation),
+                    workgroup_info,
+                ))
+            } else if Self::ZIP_OPS.contains(&operation) {
+                Some(self.create_shader_module(
+                    operation,
+                    &Self::ZIP_SHADER.replace(Self::REPLACE_OP_NAME, operation),
                     workgroup_info,
                 ))
             } else {
