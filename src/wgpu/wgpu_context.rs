@@ -98,6 +98,7 @@ impl WgpuContext {
         &self,
         operation: &'static str,
         workgroup_info: WorkgroupInfo,
+        buffer_count: usize,
     ) -> Option<Arc<ComputePipeline>> {
         let pipeline_opt = {
             let pipelines = self.pipelines.read().unwrap();
@@ -123,7 +124,7 @@ impl WgpuContext {
 
             module.and_then(|m| {
                 let mut pipelines = self.pipelines.write().unwrap();
-                self.insert_pipeline(operation, workgroup_info, &m, &mut pipelines);
+                self.insert_pipeline(operation, workgroup_info, buffer_count, &m, &mut pipelines);
                 pipelines.get(&(operation, workgroup_info)).map(Arc::clone)
             })
         })
@@ -242,42 +243,23 @@ impl WgpuContext {
     }
 
     // TODO: change based on shader
-    fn create_bind_group_layout(&self) -> BindGroupLayout {
+    fn create_bind_group_layout(&self, buffer_count: usize) -> BindGroupLayout {
+        let bind_group_layout_entries: Vec<_> = (0..buffer_count)
+            .map(|i| BindGroupLayoutEntry {
+                binding: i as u32,
+                visibility: ShaderStages::COMPUTE,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Storage { read_only: i != buffer_count - 1  },
+                    has_dynamic_offset: false,
+                    min_binding_size: Some(NonZeroU64::new(4).unwrap()),
+                },
+                count: None,
+            })
+            .collect();
         self.device
             .create_bind_group_layout(&BindGroupLayoutDescriptor {
                 label: Some("bind group layout"),
-                entries: &[
-                    BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: ShaderStages::COMPUTE,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: Some(NonZeroU64::new(4).unwrap()),
-                        },
-                        count: None,
-                    },
-                    BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: ShaderStages::COMPUTE,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: Some(NonZeroU64::new(4).unwrap()),
-                        },
-                        count: None,
-                    },
-                    BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: ShaderStages::COMPUTE,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: Some(NonZeroU64::new(4).unwrap()),
-                        },
-                        count: None,
-                    },
-                ],
+                entries: &bind_group_layout_entries,
             })
     }
 
@@ -285,12 +267,13 @@ impl WgpuContext {
         &self,
         operation: &'static str,
         workgroup_info: WorkgroupInfo,
+        buffer_count: usize,
         module: &ShaderModule,
         pipelines: &mut RwLockWriteGuard<
             HashMap<(&'static str, WorkgroupInfo), Arc<ComputePipeline>>,
         >,
     ) {
-        let bind_group_layout = self.create_bind_group_layout();
+        let bind_group_layout = self.create_bind_group_layout(buffer_count);
         let pipeline_layout = self.create_pipeline_layout(&bind_group_layout);
         let compute_pipeline = Arc::new(self.device.create_compute_pipeline(
             &ComputePipelineDescriptor {

@@ -1,7 +1,5 @@
 @group(0) @binding(0)
 var<storage, read> input: array<f32>;
-@group(0) @binding(1)
-var<storage, read_write> output: array<f32>;
 
 // only 4 storage buffers allowed
 // structure:
@@ -9,8 +7,11 @@ var<storage, read_write> output: array<f32>;
 // out shape len
 // in shape / in strides
 // out shape / out strides
-@group(0) @binding(2)
+@group(0) @binding(1)
 var<storage, read> metadata: array<u32>;
+
+@group(0) @binding(2)
+var<storage, read_write> output: array<f32>;
 
 // used to create local arrays
 const MAX_DIMS: u32 = 32u;
