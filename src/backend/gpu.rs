@@ -5,6 +5,7 @@ use crate::{
     data::gpu_tensor_data::GpuTensorData,
 };
 
+// TODO: abstract fn, they're all doing mostly the same
 impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     // TODO: rm unwraps
     fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
@@ -55,7 +56,9 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
 
-        let pipeline = self.context.get_or_create_pipeline(tag, workgroup_info, 3)?;
+        let pipeline = self
+            .context
+            .get_or_create_pipeline(tag, workgroup_info, 3)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let metadata_buffer = self
             .context
@@ -64,6 +67,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             &[&self.buffer, &metadata_buffer, &output_buffer],
             &bind_group_layout,
         );
+
         let command = self
             .context
             .encode_command(&workgroup_info, &pipeline, &bind_group);
@@ -93,7 +97,9 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
 
-        let pipeline = self.context.get_or_create_pipeline(tag, workgroup_info, 4)?;
+        let pipeline = self
+            .context
+            .get_or_create_pipeline(tag, workgroup_info, 4)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let metadata_buffer =
             self.context
@@ -107,7 +113,19 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             ],
             &bind_group_layout,
         );
-        todo!();
+
+        let command = self
+            .context
+            .encode_command(&workgroup_info, &pipeline, &bind_group);
+        self.context.submit_command(command).ok()?;
+
+        let strides = (&shape).into();
+        Some(Self::from_buffer(
+            shape,
+            strides,
+            output_buffer,
+            self.context,
+        ))
     }
 
     fn reduce<F: Fn(f32, f32) -> f32 + Sync>(&self, _f: F, _dim: usize, _init: f64) -> Option<Self>
