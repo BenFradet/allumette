@@ -471,8 +471,7 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> ops::N
 mod tests {
     use crate::{
         backend::backend_type::{Gpu, Par, Seq},
-        data::gpu_tensor_data::GpuTensorData,
-        shaping::idx::Idx,
+        data::gpu_tensor_data::GpuTensorData, shaping::idx::Idx,
     };
 
     use super::*;
@@ -631,6 +630,8 @@ mod tests {
         let res_data = res.data.to_cpu();
         let res_strides = res.data.strides.clone();
         for idx in res.data.indices() {
+            println!("actual: {:?}", res_data[res_strides.position(&idx)]);
+            println!("expectged: {:?}", ff(data[strides.position(&idx)]));
             assert!(res_data[res_strides.position(&idx)].is_close(ff(data[strides.position(&idx)])));
         }
     }
@@ -966,6 +967,16 @@ mod tests {
         }
 
         #[test]
+        fn unary_complex_test1_gpu(
+            t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+        ) {
+            let ff = |f: f32| (f + 100000.).ln() + (f - 200.).exp();
+            unary_assert_gpu(t.clone(), |t| {
+                (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
+            }, ff);
+        }
+
+        #[test]
         fn unary_complex_test2(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
@@ -1025,7 +1036,7 @@ mod tests {
         assert_eq!(&Shape::new(vec![6, 1]), t4.data.shape());
         let t5 = t4.view(&Shape::new(vec![2, 3]));
         assert_eq!(&Shape::new(vec![2, 3]), t5.data.shape());
-        // TODO: re-establish once gpu has zip
+        // TODO: re-establish once gpu has reduce
         //assert_eq!(Some(E::one()), t.is_close(t5).all(None).item());
     }
 
@@ -1098,20 +1109,30 @@ mod tests {
         reduce_forward_all_dim_test(t_par);
     }
 
-    //#[test]
-    //fn unary_test_gpu() {
-    //    let shape = Shape::new(vec![3, 3, 4, 4]);
-    //    let strides = (&shape).into();
-    //    let input = vec![0.; 144];
+    #[test]
+    fn unary_test_gpu() {
+        use crate::wgpu::wgpu_context::get_wgpu_context;
 
-    //    let input_tensor_data = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
-    //    let input_tensor = Tensor::new(input_tensor_data, History::default());
+        let shape = Shape::new(vec![2, 2, 1, 2]);
+        let strides = (&shape).into();
+        let input = vec![0., 1., 2., 3., 4., 5., 6., 7.];
 
-    //    let res = input_tensor.sig();
-    //    println!("shape {:?}", res.data.shape());
-    //    println!("strides {:?}", res.data.strides);
-    //    let res_data = res.data.to_cpu();
-    //    println!("res {res_data:?}");
-    //    assert!(true)
-    //}
+        let input_tensor_data = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
+        let t = Tensor::new(input_tensor_data, History::default());
+
+        let ff = |f: f32| (f + 100.).ln() + (f - 200.).exp();
+        let res = (t.clone() + Tensor::from_scalar(100.)).ln() + (t.clone() - Tensor::from_scalar(200.)).exp();
+        println!("shape {:?}", res.data.shape());
+        println!("strides {:?}", res.data.strides);
+        let res_data = res.data.to_cpu();
+        println!("actual {res_data:?}");
+        let expected: Vec<_> = input.iter().map(|f| ff(*f)).collect();
+        println!("expected {expected:?}");
+
+        unary_assert_gpu(t.clone(), |t| {
+            (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
+        }, ff);
+
+        assert!(true)
+    }
 }
