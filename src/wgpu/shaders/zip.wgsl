@@ -20,7 +20,7 @@ var<storage, read_write> output: array<f32>;
 // used to create local arrays
 const MAX_DIMS: u32 = 32u;
 
-// shape lens
+// shape lengths
 const PREAMBLE: u32 = 3u;
 
 fn a_shape(i: u32) -> u32 {

@@ -157,83 +157,239 @@ mod tests {
         assert_eq!(vec![-1., -2., -3., -4., -5., -6., -7., -8.], cpu_data);
     }
 
-    const PREAMBLE: usize = 2;
+    #[test]
+    fn cpu_zip_test() {
+        // shape lengths
+        const PREAMBLE: usize = 3;
 
-    fn in_shape(metadata: &[usize], i: usize) -> usize {
-        metadata[i + PREAMBLE]
-    }
-
-    fn in_strides(metadata: &[usize], i: usize) -> usize {
-        metadata[i + PREAMBLE + metadata[0]]
-    }
-
-    fn in_index(metadata: &[usize], i: usize) -> usize {
-        metadata[i + PREAMBLE + metadata[0] * 2]
-    }
-
-    fn out_shape(metadata: &[usize], i: usize) -> usize {
-        metadata[i + PREAMBLE + metadata[0] * 3]
-    }
-
-    fn out_strides(metadata: &[usize], i: usize) -> usize {
-        metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1]]
-    }
-
-    fn out_index(metadata: &[usize], i: usize) -> usize {
-        metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1] * 2]
-    }
-
-    fn prod(metadata: &[usize], start: usize, shape_len: usize) -> usize {
-        let mut result = 1;
-        for i in start..shape_len {
-            result *= out_shape(metadata, i);
+        fn a_shape(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE]
         }
-        result
-    }
 
-    fn to_index(metadata: &mut [usize], ordinal: usize, shape_len: usize) {
-        let mut remaining = ordinal;
-        for i in 0..shape_len {
-            let product = prod(metadata, i, shape_len);
-            let divisor = product / out_shape(metadata, i);
-            let index = remaining / divisor;
-            remaining -= index * divisor;
-
-            let idx = i + PREAMBLE + metadata[0] * 3 + metadata[1] * 2;
-            metadata[idx] = index;
+        fn a_strides(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0]]
         }
-    }
 
-    fn broadcast_index(metadata: &mut [usize], in_shape_len: usize, out_shape_len: usize) {
-        for i in 0..in_shape_len {
-            let ii = i + PREAMBLE + metadata[0] * 2;
-            if in_shape(metadata, i) > 1 {
-                let idx = out_shape_len - in_shape_len + i;
-                metadata[ii] = out_index(metadata, idx);
-            } else {
-                metadata[ii] = 0;
+        fn b_shape(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0] * 2]
+        }
+
+        fn b_strides(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0] * 2 + metadata[1]]
+        }
+
+        fn out_shape(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0] * 2 + metadata[1] * 2]
+        }
+
+        fn out_strides(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0] * 2 + metadata[1] * 2 + metadata[2]]
+        }
+
+        fn add(a: f32, b: f32) -> f32 {
+            a + b
+        }
+
+        fn prod(metadata: &[usize], start: usize, shape_len: usize) -> usize {
+            let mut result: usize = 1;
+            for i in start..shape_len {
+                result *= out_shape(metadata, i);
+            }
+            result
+        }
+
+        fn to_index(metadata: &[usize], ordinal: usize, shape_len: usize, out_index: &mut [usize]) {
+            let mut remaining = ordinal;
+            #[allow(clippy::needless_range_loop)]
+            for i in 0..shape_len {
+                let product = prod(metadata, i, shape_len);
+                let divisor = product / out_shape(metadata, i);
+                let index = remaining / divisor;
+                remaining -= index * divisor;
+
+                out_index[i] = index;
             }
         }
-    }
 
-    fn index_to_position_in(metadata: &[usize], len: usize) -> usize {
-        let mut result = 0;
-        for i in 0..len {
-            result += in_index(metadata, i) * in_strides(metadata, i);
+        fn broadcast_index_a(
+            metadata: &[usize],
+            a_shape_len: usize,
+            out_shape_len: usize,
+            a_index: &mut [usize],
+            out_index: &[usize],
+        ) {
+            #[allow(clippy::needless_range_loop)]
+            for i in 0..a_shape_len {
+                if a_shape(metadata, i) > 1 {
+                    let idx = out_shape_len - a_shape_len + i;
+                    a_index[i] = out_index[idx];
+                } else {
+                    a_index[i] = 0;
+                }
+            }
         }
-        result
-    }
 
-    fn index_to_position_out(metadata: &[usize], len: usize) -> usize {
-        let mut result = 0;
-        for i in 0..len {
-            result += out_index(metadata, i) * out_strides(metadata, i);
+        fn broadcast_index_b(
+            metadata: &[usize],
+            b_shape_len: usize,
+            out_shape_len: usize,
+            b_index: &mut [usize],
+            out_index: &[usize],
+        ) {
+            #[allow(clippy::needless_range_loop)]
+            for i in 0..b_shape_len {
+                if a_shape(metadata, i) > 1 {
+                    let idx = out_shape_len - b_shape_len + i;
+                    b_index[i] = out_index[idx];
+                } else {
+                    b_index[i] = 0;
+                }
+            }
         }
-        result
+
+        fn index_to_position_a(metadata: &[usize], len: usize, a_index: &[usize]) -> usize {
+            let mut result: usize = 0;
+            #[allow(clippy::needless_range_loop)]
+            for i in 0..len {
+                result += a_index[i] * a_strides(metadata, i);
+            }
+            result
+        }
+
+        fn index_to_position_b(metadata: &[usize], len: usize, b_index: &[usize]) -> usize {
+            let mut result: usize = 0;
+            #[allow(clippy::needless_range_loop)]
+            for i in 0..len {
+                result += b_index[i] * b_strides(metadata, i);
+            }
+            result
+        }
+
+        fn index_to_position_out(metadata: &[usize], len: usize, out_index: &[usize]) -> usize {
+            let mut result: usize = 0;
+            #[allow(clippy::needless_range_loop)]
+            for i in 0..len {
+                result += out_index[i] * out_strides(metadata, i);
+            }
+            result
+        }
+
+        let metadata = [1, 2, 3, 4];
+
+        let input_a = [1., 2., 3., 4., 5., 6., 7., 8.];
+        let input_b = [100.];
+        let mut output = [0.; 8];
+
+        let mut a_index = [0; 32];
+        let mut b_index = [0; 32];
+        let mut out_index = [0; 32];
+
+        let a_shape_len = metadata[0];
+        let b_shape_len = metadata[1];
+        let out_shape_len = metadata[2];
+
+        for i in 0..10 {
+            to_index(&metadata, i, out_shape_len, &mut out_index);
+            broadcast_index_a(
+                &metadata,
+                a_shape_len,
+                out_shape_len,
+                &mut a_index,
+                &out_index,
+            );
+            broadcast_index_b(
+                &metadata,
+                b_shape_len,
+                out_shape_len,
+                &mut b_index,
+                &out_index,
+            );
+
+            let a_pos = index_to_position_a(&metadata, a_shape_len, &a_index);
+            let b_pos = index_to_position_b(&metadata, b_shape_len, &b_index);
+            let out_pos = index_to_position_out(&metadata, out_shape_len, &out_index);
+
+            output[out_pos] = add(input_a[a_pos], input_b[b_pos]);
+        }
     }
 
     #[test]
     fn cpu_map_broadcast_test() {
+        const PREAMBLE: usize = 2;
+
+        fn in_shape(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE]
+        }
+
+        fn in_strides(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0]]
+        }
+
+        fn in_index(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0] * 2]
+        }
+
+        fn out_shape(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0] * 3]
+        }
+
+        fn out_strides(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1]]
+        }
+
+        fn out_index(metadata: &[usize], i: usize) -> usize {
+            metadata[i + PREAMBLE + metadata[0] * 3 + metadata[1] * 2]
+        }
+
+        fn prod(metadata: &[usize], start: usize, shape_len: usize) -> usize {
+            let mut result = 1;
+            for i in start..shape_len {
+                result *= out_shape(metadata, i);
+            }
+            result
+        }
+
+        fn to_index(metadata: &mut [usize], ordinal: usize, shape_len: usize) {
+            let mut remaining = ordinal;
+            for i in 0..shape_len {
+                let product = prod(metadata, i, shape_len);
+                let divisor = product / out_shape(metadata, i);
+                let index = remaining / divisor;
+                remaining -= index * divisor;
+
+                let idx = i + PREAMBLE + metadata[0] * 3 + metadata[1] * 2;
+                metadata[idx] = index;
+            }
+        }
+
+        fn broadcast_index(metadata: &mut [usize], in_shape_len: usize, out_shape_len: usize) {
+            for i in 0..in_shape_len {
+                let ii = i + PREAMBLE + metadata[0] * 2;
+                if in_shape(metadata, i) > 1 {
+                    let idx = out_shape_len - in_shape_len + i;
+                    metadata[ii] = out_index(metadata, idx);
+                } else {
+                    metadata[ii] = 0;
+                }
+            }
+        }
+
+        fn index_to_position_in(metadata: &[usize], len: usize) -> usize {
+            let mut result = 0;
+            for i in 0..len {
+                result += in_index(metadata, i) * in_strides(metadata, i);
+            }
+            result
+        }
+
+        fn index_to_position_out(metadata: &[usize], len: usize) -> usize {
+            let mut result = 0;
+            for i in 0..len {
+                result += out_index(metadata, i) * out_strides(metadata, i);
+            }
+            result
+        }
+
         let mut metadata = vec![2, 2, 2, 3, 3, 1, 0, 0, 2, 3, 3, 1, 0, 0];
         let in_shape_len = metadata[0];
         let out_shape_len = metadata[1];
