@@ -129,7 +129,7 @@ fn broadcast_index_b(
     out_index: array<u32, MAX_DIMS>,
 ) {
     for (var i = 0u; i < b_shape_len; i = i + 1u) {
-        if (a_shape(i) > 1u) {
+        if (b_shape(i) > 1u) {
             let idx = out_shape_len - b_shape_len + i;
             (*b_index)[i] = out_index[idx];
         } else {

@@ -238,7 +238,7 @@ mod tests {
         ) {
             #[allow(clippy::needless_range_loop)]
             for i in 0..b_shape_len {
-                if a_shape(metadata, i) > 1 {
+                if b_shape(metadata, i) > 1 {
                     let idx = out_shape_len - b_shape_len + i;
                     b_index[i] = out_index[idx];
                 } else {
@@ -274,8 +274,6 @@ mod tests {
             result
         }
 
-        let metadata = [1, 2, 3, 4];
-
         let input_a = [1., 2., 3., 4., 5., 6., 7., 8.];
         let input_b = [100.];
         let mut output = [0.; 8];
@@ -284,11 +282,13 @@ mod tests {
         let mut b_index = [0; 32];
         let mut out_index = [0; 32];
 
+        let metadata = [4, 1, 4, 2, 2, 1, 2, 4, 2, 2, 1, 1, 1, 2, 2, 1, 2, 4, 2, 2, 1];
+
         let a_shape_len = metadata[0];
         let b_shape_len = metadata[1];
         let out_shape_len = metadata[2];
 
-        for i in 0..10 {
+        for i in 0..output.len() {
             to_index(&metadata, i, out_shape_len, &mut out_index);
             broadcast_index_a(
                 &metadata,
@@ -311,6 +311,7 @@ mod tests {
 
             output[out_pos] = add(input_a[a_pos], input_b[b_pos]);
         }
+        assert_eq!(vec![101., 102., 103., 104., 105., 106., 107., 108.], output);
     }
 
     #[test]
