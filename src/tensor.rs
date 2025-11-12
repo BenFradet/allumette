@@ -471,7 +471,8 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> ops::N
 mod tests {
     use crate::{
         backend::backend_type::{Gpu, Par, Seq},
-        data::gpu_tensor_data::GpuTensorData, shaping::idx::Idx,
+        data::gpu_tensor_data::GpuTensorData,
+        shaping::idx::Idx,
     };
 
     use super::*;
@@ -984,6 +985,23 @@ mod tests {
         }
 
         #[test]
+        fn unary_complex_test2_gpu(
+            t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+        ) {
+            let ff = |f: f32| ((((f * 10. + 7.).relu() * 6. + 5.).relu() * 10.).sig()).ln() / 50.;
+            unary_assert_gpu(t.clone(), |t| {
+                ((((t * Tensor::from_scalar(10.) + Tensor::from_scalar(7.)).relu()
+                    * Tensor::from_scalar(6.)
+                    + Tensor::from_scalar(5.))
+                .relu()
+                    * Tensor::from_scalar(10.))
+                .sig())
+                .ln()
+                    / Tensor::from_scalar(50.)
+            }, ff);
+        }
+
+        #[test]
         fn unary_tests(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
@@ -1107,31 +1125,26 @@ mod tests {
         reduce_forward_all_dim_test(t_par);
     }
 
-    #[test]
-    fn unary_test_gpu() {
-        use crate::wgpu::wgpu_context::get_wgpu_context;
+    //#[test]
+    //fn unary_test_gpu() {
+    //    use crate::wgpu::wgpu_context::get_wgpu_context;
 
-        let shape = Shape::new(vec![2, 2, 1, 2]);
-        let strides = (&shape).into();
-        let input = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+    //    let shape = Shape::new(vec![2, 2, 1, 2]);
+    //    let strides = (&shape).into();
+    //    let input = vec![1., 2., 3., 4., 5., 6., 7., 8.];
 
-        let input_tensor_data = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
-        let t = Tensor::new(input_tensor_data, History::default());
+    //    let input_tensor_data = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
+    //    let t = Tensor::new(input_tensor_data, History::default());
 
-        //let ff = |f: f32| (f + 100.).ln() + (f - 200.).exp();
-        let ff = |f: f32| f + 100.;
-        let res = t.clone() + Tensor::from_scalar(100.);
-        println!("shape {:?}", res.data.shape());
-        println!("strides {:?}", res.data.strides);
-        let res_data = res.data.to_cpu();
-        println!("actual {res_data:?}");
-        let expected: Vec<_> = input.iter().map(|f| ff(*f)).collect();
-        println!("expected {expected:?}");
+    //    let ff = |f: f32| f + 100.;
+    //    let res = t.clone() + Tensor::from_scalar(100.);
+    //    println!("shape {:?}", res.data.shape());
+    //    println!("strides {:?}", res.data.strides);
+    //    let res_data = res.data.to_cpu();
+    //    println!("actual {res_data:?}");
+    //    let expected: Vec<_> = input.iter().map(|f| ff(*f)).collect();
+    //    println!("expected {expected:?}");
 
-        //unary_assert_gpu(t.clone(), |t| {
-        //    (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
-        //}, ff);
-
-        assert!(true)
-    }
+    //    assert!(true)
+    //}
 }
