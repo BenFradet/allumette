@@ -654,6 +654,33 @@ mod tests {
         }
     }
 
+    fn binary_assert_gpu<
+        'a,
+        FT: Fn(Tensor<f32, Gpu, GpuTensorData<'a>>, Tensor<f32, Gpu, GpuTensorData<'a>>) -> Tensor<f32, Gpu, GpuTensorData<'a>>,
+        FF: Fn(f32, f32) -> f32,
+    >(
+        t1: Tensor<f32, Gpu, GpuTensorData<'a>>,
+        t2: Tensor<f32, Gpu, GpuTensorData<'a>>,
+        ft: FT,
+        ff: FF,
+    ) {
+        let data1 = t1.data.to_cpu();
+        let shape1 = t1.data.shape.clone();
+        let strides1 = t1.data.strides.clone();
+
+        let data2 = t2.data.to_cpu();
+        let shape2 = t2.data.shape.clone();
+        let strides2 = t2.data.strides.clone();
+
+        let res = ft(t1, t2);
+        let res_data = res.data.to_cpu();
+        let res_strides = res.data.strides.clone();
+
+        for idx in res.data.indices() {
+            assert!(res_data[res_strides.position(&idx)].is_close(ff(data1[strides1.position(&idx)], data2[strides2.position(&idx)])));
+        }
+    }
+
     fn permute_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
         t: Tensor<f64, BT, T>,
         o: Order,
@@ -948,12 +975,84 @@ mod tests {
         }
 
         #[test]
-        fn binary_tests(
+        fn binary_tests_cpu(
             (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
             (t1_par, t2_par) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
         ) {
             binary_test(t1_seq, t2_seq);
             binary_test(t1_par, t2_par);
+        }
+
+        #[test]
+        fn binary_tests_gpu(
+            t1 in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+            t2 in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+        ) {
+            binary_assert_gpu(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
+            //binary_assert_gpu(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
+            //binary_assert_gpu(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
+            //binary_assert_gpu(
+            //    t1.clone(),
+            //    t2.clone(),
+            //    |t1, t2| t1 / t2,
+            //    |f1, f2| if f2 == 0. { 0. } else { f1 / f2 },
+            //);
+            //binary_assert_gpu(
+            //    t1.clone(),
+            //    t2.clone(),
+            //    |t1, t2| t1.gt(t2),
+            //    |f1, f2| if f2 < f1 { 1. } else { 0. },
+            //);
+            //binary_assert_gpu(
+            //    t1.clone(),
+            //    t2.clone(),
+            //    |t1, t2| t1.lt(t2),
+            //    |f1, f2| if f1 < f2 { 1. } else { 0. },
+            //);
+            //binary_assert_gpu(
+            //    t1.clone(),
+            //    t2.clone(),
+            //    |t1, t2| t1.eq(t2),
+            //    |f1, f2| if f1 == f2 { 1. } else { 0. },
+            //);
+        }
+
+        #[test]
+        fn unary_tests_cpu(
+            t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
+            t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
+        ) {
+            unary_test(t_seq);
+            unary_test(t_par);
+        }
+
+        #[test]
+        fn unary_tests_gpu(
+            t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+        ) {
+            unary_assert_gpu(t.clone(), |t| -t, |f| -f);
+            unary_assert_gpu(
+                t.clone(),
+                |t| t.inv(),
+                |f| {
+                    if f != 0. {
+                        1. / f
+                    } else {
+                        0.
+                    }
+                },
+            );
+            unary_assert_gpu(t.clone(), |t| t.sig(), |f| f.sig());
+            unary_assert_gpu(
+                t.clone(),
+                |t| t.ln(),
+                |f| if f > 0. { f.ln() } else { 0. },
+            );
+            unary_assert_gpu(t.clone(), |t| t.exp(), |f| f.exp());
+            unary_assert_gpu(t.clone(), |t| t.relu(), |f| f.relu());
+            unary_assert_gpu(t.clone(), |t| t.contiguous(), |f| f);
+            unary_assert_gpu(t.clone(), |t| t.clone() * t, |f| f * f);
+            unary_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
         }
 
         #[test]
@@ -999,44 +1098,6 @@ mod tests {
                 .ln()
                     / Tensor::from_scalar(50.)
             }, ff);
-        }
-
-        #[test]
-        fn unary_tests(
-            t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
-            t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
-        ) {
-            unary_test(t_seq);
-            unary_test(t_par);
-        }
-
-        #[test]
-        fn unary_tests_gpu(
-            t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
-        ) {
-            unary_assert_gpu(t.clone(), |t| -t, |f| -f);
-            unary_assert_gpu(
-                t.clone(),
-                |t| t.inv(),
-                |f| {
-                    if f != 0. {
-                        1. / f
-                    } else {
-                        0.
-                    }
-                },
-            );
-            unary_assert_gpu(t.clone(), |t| t.sig(), |f| f.sig());
-            unary_assert_gpu(
-                t.clone(),
-                |t| t.ln(),
-                |f| if f > 0. { f.ln() } else { 0. },
-            );
-            unary_assert_gpu(t.clone(), |t| t.exp(), |f| f.exp());
-            unary_assert_gpu(t.clone(), |t| t.relu(), |f| f.relu());
-            unary_assert_gpu(t.clone(), |t| t.contiguous(), |f| f);
-            unary_assert_gpu(t.clone(), |t| t.clone() * t, |f| f * f);
-            unary_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
         }
     }
 
@@ -1126,25 +1187,54 @@ mod tests {
     }
 
     //#[test]
-    //fn unary_test_gpu() {
+    //fn repro_test_gpu() {
     //    use crate::wgpu::wgpu_context::get_wgpu_context;
 
-    //    let shape = Shape::new(vec![2, 2, 1, 2]);
-    //    let strides = (&shape).into();
-    //    let input = vec![1., 2., 3., 4., 5., 6., 7., 8.];
+    //    let shape1 = Shape::new(vec![2, 2, 1, 1]);
+    //    let strides1: Strides = (&shape1).into();
+    //    let d1 = vec![1., 2., 3., 4.];
+    //    let shape2 = Shape::new(vec![1, 1, 1, 1]);
+    //    let strides2: Strides = (&shape2).into();
+    //    let d2 = vec![1.];
 
-    //    let input_tensor_data = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
-    //    let t = Tensor::new(input_tensor_data, History::default());
+    //    //let td1 = GpuTensorData::new(&d1, shape1.clone(), strides1.clone(), get_wgpu_context());
+    //    let td1 = CpuTensorData::new(d1, shape1.clone(), strides1.clone());
+    //    let t1: Tensor<_, Seq, _> = Tensor::new(td1.clone(), History::default());
+    //    //let td2 = GpuTensorData::new(&d2, shape2.clone(), strides2.clone(), get_wgpu_context());
+    //    let td2 = CpuTensorData::new(d2, shape2.clone(), strides2.clone());
+    //    let t2 = Tensor::new(td2.clone(), History::default());
 
-    //    let ff = |f: f32| f + 100.;
-    //    let res = t.clone() + Tensor::from_scalar(100.);
-    //    println!("shape {:?}", res.data.shape());
-    //    println!("strides {:?}", res.data.strides);
-    //    let res_data = res.data.to_cpu();
-    //    println!("actual {res_data:?}");
-    //    let expected: Vec<_> = input.iter().map(|f| ff(*f)).collect();
-    //    println!("expected {expected:?}");
+    //    //let data1 = td1.to_cpu();
+    //    //let data2 = td2.to_cpu();
+    //    let res = t1.clone() + t2.clone();
+    //    //let res_data = res.data.to_cpu();
+    //    let res_strides = res.data.strides.clone();
+
+    //    let ff = |a, b| a + b;
+
+    //    println!("res {res:?}");
+    //    //println!("res {res_data:?}");
+
+    //    println!("res shape {:?}", res.data.shape);
+    //    println!("shape 1 {shape1:?}");
+    //    println!("shape 2 {shape2:?}");
+
+    //    println!("res strides {res_strides:?}");
+    //    println!("strides 1 {strides1:?}");
+    //    println!("strides 2 {strides2:?}");
+
+    //    binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, ff);
+
+    //    //for idx in res.data.indices() {
+    //    //    println!("idx {idx:?}");
+    //    //    println!("res pos {}", res_strides.position(&idx));
+    //    //    println!("t1 pos {}", strides1.position(&idx));
+    //    //    println!("t2 pos {}", strides2.position(&idx));
+    //    //    //assert!(res_data[res_strides.position(&idx)].is_close(ff(data1[strides1.position(&idx)], data2[strides2.position(&idx)])));
+    //    //    assert!(res.data[idx.clone()].is_close(ff(t1.data[idx.clone()], t2.data[idx])));
+    //    //}
 
     //    assert!(true)
     //}
 }
+

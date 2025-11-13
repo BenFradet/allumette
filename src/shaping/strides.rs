@@ -78,6 +78,7 @@ mod tests {
         assert_eq!(vec![4, 2, 1], res2.data);
     }
 
+    // TODO: reintroduce
     //proptest! {
     //    #[test]
     //    fn position_test(tensor_data in Tensor::<4>::arbitrary()) {
