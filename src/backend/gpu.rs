@@ -282,7 +282,9 @@ mod tests {
         let mut b_index = [0; 32];
         let mut out_index = [0; 32];
 
-        let metadata = [4, 1, 4, 2, 2, 1, 2, 4, 2, 2, 1, 1, 1, 2, 2, 1, 2, 4, 2, 2, 1];
+        let metadata = [
+            4, 1, 4, 2, 2, 1, 2, 4, 2, 2, 1, 1, 1, 2, 2, 1, 2, 4, 2, 2, 1,
+        ];
 
         let a_shape_len = metadata[0];
         let b_shape_len = metadata[1];

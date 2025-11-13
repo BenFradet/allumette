@@ -656,7 +656,10 @@ mod tests {
 
     fn binary_assert_gpu<
         'a,
-        FT: Fn(Tensor<f32, Gpu, GpuTensorData<'a>>, Tensor<f32, Gpu, GpuTensorData<'a>>) -> Tensor<f32, Gpu, GpuTensorData<'a>>,
+        FT: Fn(
+            Tensor<f32, Gpu, GpuTensorData<'a>>,
+            Tensor<f32, Gpu, GpuTensorData<'a>>,
+        ) -> Tensor<f32, Gpu, GpuTensorData<'a>>,
         FF: Fn(f32, f32) -> f32,
     >(
         t1: Tensor<f32, Gpu, GpuTensorData<'a>>,
@@ -677,7 +680,10 @@ mod tests {
         let res_strides = res.data.strides.clone();
 
         for idx in res.data.indices() {
-            assert!(res_data[res_strides.position(&idx)].is_close(ff(data1[strides1.position(&idx)], data2[strides2.position(&idx)])));
+            assert!(res_data[res_strides.position(&idx)].is_close(ff(
+                data1[strides1.position(&idx)],
+                data2[strides2.position(&idx)]
+            )));
         }
     }
 
@@ -1237,4 +1243,3 @@ mod tests {
     //    assert!(true)
     //}
 }
-

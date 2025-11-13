@@ -249,7 +249,9 @@ impl WgpuContext {
                 binding: i as u32,
                 visibility: ShaderStages::COMPUTE,
                 ty: BindingType::Buffer {
-                    ty: BufferBindingType::Storage { read_only: i != buffer_count - 1  },
+                    ty: BufferBindingType::Storage {
+                        read_only: i != buffer_count - 1,
+                    },
                     has_dynamic_offset: false,
                     min_binding_size: Some(NonZeroU64::new(4).unwrap()),
                 },
