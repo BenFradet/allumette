@@ -136,7 +136,7 @@ impl Shape {
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Shape> {
-        proptest::collection::vec(1_usize..3, 4).prop_map(Shape::new)
+        proptest::collection::vec(1_usize..4, 4).prop_map(Shape::new)
     }
 }
 
