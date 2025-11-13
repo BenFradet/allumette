@@ -317,6 +317,7 @@ mod tests {
             }
         }
 
+        // FIX: broken because of non-static shape
         #[test]
         fn permute_test(tensor_data in GpuTensorData::arbitrary(), idx in Idx::arbitrary()) {
             let reversed_index = idx.clone().reverse();

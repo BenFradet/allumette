@@ -136,6 +136,10 @@ impl Shape {
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Shape> {
+        proptest::collection::vec(1_usize..4, 1..5).prop_map(Shape::new)
+    }
+
+    pub fn arbitrary_static_size() -> impl Strategy<Value = Shape> {
         proptest::collection::vec(1_usize..4, 4).prop_map(Shape::new)
     }
 }
