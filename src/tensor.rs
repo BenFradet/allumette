@@ -15,6 +15,7 @@ use crate::{
     },
     shaping::{order::Order, shape::Shape, strides::Strides},
     util::unsafe_usize_convert::UnsafeUsizeConvert,
+    wgpu::wgpu_context::get_wgpu_context,
 };
 use proptest::{collection, prelude::*};
 use std::{
@@ -413,6 +414,33 @@ where
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         GpuTensorData::arbitrary().prop_map(Self::from_data)
     }
+
+    pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
+        Shape::arbitrary()
+            .prop_flat_map(|shape| {
+                let size = shape.size;
+                let data1 = collection::vec(0.0f32..1., size);
+                let data2 = collection::vec(0.0f32..1., size);
+                (data1, data2, Just(shape))
+            })
+            .prop_map(|(data1, data2, shape)| {
+                let strides: Strides = (&shape).into();
+                (
+                    Self::from_data(GpuTensorData::new(
+                        &data1,
+                        shape.clone(),
+                        strides.clone(),
+                        get_wgpu_context(),
+                    )),
+                    Self::from_data(GpuTensorData::new(
+                        &data2,
+                        shape,
+                        strides,
+                        get_wgpu_context(),
+                    )),
+                )
+            })
+    }
 }
 
 impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> ops::Add<Tensor<E, BT, T>>
@@ -668,11 +696,9 @@ mod tests {
         ff: FF,
     ) {
         let data1 = t1.data.to_cpu();
-        let shape1 = t1.data.shape.clone();
         let strides1 = t1.data.strides.clone();
 
         let data2 = t2.data.to_cpu();
-        let shape2 = t2.data.shape.clone();
         let strides2 = t2.data.strides.clone();
 
         let res = ft(t1, t2);
@@ -991,36 +1017,35 @@ mod tests {
 
         #[test]
         fn binary_tests_gpu(
-            t1 in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
-            t2 in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+            (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_tuple(),
         ) {
             binary_assert_gpu(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
-            //binary_assert_gpu(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
-            //binary_assert_gpu(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
-            //binary_assert_gpu(
-            //    t1.clone(),
-            //    t2.clone(),
-            //    |t1, t2| t1 / t2,
-            //    |f1, f2| if f2 == 0. { 0. } else { f1 / f2 },
-            //);
-            //binary_assert_gpu(
-            //    t1.clone(),
-            //    t2.clone(),
-            //    |t1, t2| t1.gt(t2),
-            //    |f1, f2| if f2 < f1 { 1. } else { 0. },
-            //);
-            //binary_assert_gpu(
-            //    t1.clone(),
-            //    t2.clone(),
-            //    |t1, t2| t1.lt(t2),
-            //    |f1, f2| if f1 < f2 { 1. } else { 0. },
-            //);
-            //binary_assert_gpu(
-            //    t1.clone(),
-            //    t2.clone(),
-            //    |t1, t2| t1.eq(t2),
-            //    |f1, f2| if f1 == f2 { 1. } else { 0. },
-            //);
+            binary_assert_gpu(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
+            binary_assert_gpu(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
+            binary_assert_gpu(
+                t1.clone(),
+                t2.clone(),
+                |t1, t2| t1 / t2,
+                |f1, f2| if f2 == 0. { 0. } else { f1 / f2 },
+            );
+            binary_assert_gpu(
+                t1.clone(),
+                t2.clone(),
+                |t1, t2| t1.gt(t2),
+                |f1, f2| if f2 < f1 { 1. } else { 0. },
+            );
+            binary_assert_gpu(
+                t1.clone(),
+                t2.clone(),
+                |t1, t2| t1.lt(t2),
+                |f1, f2| if f1 < f2 { 1. } else { 0. },
+            );
+            binary_assert_gpu(
+                t1.clone(),
+                t2.clone(),
+                |t1, t2| t1.eq(t2),
+                |f1, f2| if f1 == f2 { 1. } else { 0. },
+            );
         }
 
         #[test]
