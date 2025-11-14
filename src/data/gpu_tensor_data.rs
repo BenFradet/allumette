@@ -317,9 +317,11 @@ mod tests {
             }
         }
 
-        // FIX: broken because of non-static shape
         #[test]
-        fn permute_test(tensor_data in GpuTensorData::arbitrary(), idx in Idx::arbitrary()) {
+        fn permute_test(
+            tensor_data in Shape::arbitrary_static_size().prop_flat_map(GpuTensorData::arbitrary_with_shape),
+            idx in Idx::arbitrary_static_size(),
+        ) {
             let reversed_index = idx.clone().reverse();
             let pos = tensor_data.strides.position(&idx);
             let order = Order::range(tensor_data.shape.data().len()).reverse();

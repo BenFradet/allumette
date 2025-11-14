@@ -55,8 +55,8 @@ impl Idx {
         self.data.is_empty()
     }
 
-    pub fn arbitrary() -> impl Strategy<Value = Idx> {
-        Shape::arbitrary()
+    pub fn arbitrary_static_size() -> impl Strategy<Value = Idx> {
+        Shape::arbitrary_static_size()
             .prop_flat_map(|shape: Shape| {
                 proptest::collection::vec(0usize..shape.size, shape.data().len())
             })
