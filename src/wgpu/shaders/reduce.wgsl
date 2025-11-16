@@ -1,5 +1,5 @@
 @group(0) @binding(0)
-var<storage, read> input_a: array<f32>;
+var<storage, read> input: array<f32>;
 
 // only 4 storage buffers allowed
 // structure:
@@ -15,10 +15,12 @@ var<storage, read> metadata: array<u32>;
 @group(0) @binding(2)
 var<storage, read_write> output: array<f32>;
 
+const BLOCK_SIZE: u32 = 1u;
+// lives in the wg address space, hence shared between invcations of a wg
+var<workgroup> shared_block: array<f32, BLOCK_SIZE>;
+
 // used to create local arrays
 const MAX_DIMS: u32 = 32u;
-
-const BLOCK_DIM: u32 = 1024u;
 
 // shape lengths
 const PREAMBLE: u32 = 4u;
@@ -104,6 +106,10 @@ fn index_to_position_out(
     return result;
 }
 
+fn add(a: f32, b: f32) -> f32 {
+    return a + b;
+}
+
 @compute
 @workgroup_size(1)
 fn call(
@@ -123,5 +129,35 @@ fn call(
     let a_shape_len = metadata[0];
     let out_shape_len = metadata[1];
     let reduce_dim = metadata[2];
+    // TODO: in metadata or replaced?
     let reduce_default = f32(metadata[3]);
+    let reduce_size = a_shape(reduce_dim);
+
+    to_index(workgroup_id.x, out_shape_len, &out_index);
+    let out_pos = index_to_position_out(out_shape_len, out_index);
+
+    if (local_id.x < reduce_size) {
+        out_index[reduce_dim] = local_id.x;
+        // TODO: not sure that's right
+        let pos = index_to_position_out(out_shape_len, out_index);
+        shared_block[local_id.x] = input[pos];
+    } else {
+        shared_block[local_id.x] = reduce_default;
+    }
+
+    var offset = 1u;
+    while (offset < BLOCK_SIZE) {
+        workgroupBarrier();
+        if (local_id.x % (offset * 2u) == 0u) {
+            shared_block[local_id.x] = add(shared_block[local_id.x], shared_block[local_id.x + offset]);
+            //    replace_with_actual_operation(shared_block[local_id.x], shared_block[local_id.x + offset]);
+        }
+        offset *= 2u;
+    }
+
+    workgroupBarrier();
+
+    if (local_id.x == 0u) {
+        output[out_pos] = shared_block[local_id.x];
+    }
 }
