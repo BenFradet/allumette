@@ -6,7 +6,6 @@ var<storage, read> input: array<f32>;
 // a shape len
 // out shape len
 // index of the dimension along which to reduce
-// reduce default value
 // a shape / a strides
 // out shape / out strides
 @group(0) @binding(1)
@@ -15,7 +14,7 @@ var<storage, read> metadata: array<u32>;
 @group(0) @binding(2)
 var<storage, read_write> output: array<f32>;
 
-const BLOCK_SIZE: u32 = 1u;
+const BLOCK_SIZE: u32 = 1024u;
 // lives in the wg address space, hence shared between invcations of a wg
 var<workgroup> shared_block: array<f32, BLOCK_SIZE>;
 
@@ -23,7 +22,7 @@ var<workgroup> shared_block: array<f32, BLOCK_SIZE>;
 const MAX_DIMS: u32 = 32u;
 
 // shape lengths
-const PREAMBLE: u32 = 4u;
+const PREAMBLE: u32 = 3u;
 
 fn a_shape(i: u32) -> u32 {
     return metadata[i + PREAMBLE];
@@ -85,23 +84,23 @@ fn broadcast_index(
 }
 
 fn index_to_position_a(
-    a_shape_len: u32,
-    a_index: array<u32, MAX_DIMS>,
+    shape_len: u32,
+    index: array<u32, MAX_DIMS>,
 ) -> u32 {
     var result: u32 = 0u;
-    for (var i = 0u; i < a_shape_len; i = i + 1u) {
-        result += a_index[i] * a_strides(i);
+    for (var i = 0u; i < shape_len; i = i + 1u) {
+        result += index[i] * a_strides(i);
     }
     return result;
 }
 
 fn index_to_position_out(
-    out_shape_len: u32,
-    out_index: array<u32, MAX_DIMS>,
+    shape_len: u32,
+    index: array<u32, MAX_DIMS>,
 ) -> u32 {
     var result: u32 = 0u;
-    for (var i = 0u; i < out_shape_len; i = i + 1u) {
-        result += out_index[i] * out_strides(i);
+    for (var i = 0u; i < shape_len; i = i + 1u) {
+        result += index[i] * out_strides(i);
     }
     return result;
 }
@@ -129,17 +128,16 @@ fn call(
     let a_shape_len = metadata[0];
     let out_shape_len = metadata[1];
     let reduce_dim = metadata[2];
-    // TODO: in metadata or replaced?
-    let reduce_default = f32(metadata[3]);
+    let reduce_default = 0.0;
+    //let reduce_default = replace_with_default();
     let reduce_size = a_shape(reduce_dim);
 
     to_index(workgroup_id.x, out_shape_len, &out_index);
-    let out_pos = index_to_position_out(out_shape_len, out_index);
+    let out_pos = index_to_position_out(a_shape_len, out_index);
 
     if (local_id.x < reduce_size) {
         out_index[reduce_dim] = local_id.x;
-        // TODO: not sure that's right
-        let pos = index_to_position_out(out_shape_len, out_index);
+        let pos = index_to_position_a(out_shape_len, out_index);
         shared_block[local_id.x] = input[pos];
     } else {
         shared_block[local_id.x] = reduce_default;
@@ -147,10 +145,11 @@ fn call(
 
     var offset = 1u;
     while (offset < BLOCK_SIZE) {
-        workgroupBarrier();
+        // TODO: remove maybe
+        //workgroupBarrier();
         if (local_id.x % (offset * 2u) == 0u) {
             shared_block[local_id.x] = add(shared_block[local_id.x], shared_block[local_id.x + offset]);
-            //    replace_with_actual_operation(shared_block[local_id.x], shared_block[local_id.x + offset]);
+            //    replace_with_operation(shared_block[local_id.x], shared_block[local_id.x + offset]);
         }
         offset *= 2u;
     }
