@@ -15,7 +15,7 @@ pub trait TensorBackend<E: Element, T: BackendType> {
     fn zip<F: Fn(E, E) -> E + Sync>(&self, other: &Self, f: F, tag: &'static str) -> Option<Self>
     where
         Self: Sized;
-    fn reduce<F: Fn(E, E) -> E + Sync>(&self, f: F, dim: usize, init: f64) -> Option<Self>
+    fn reduce<F: Fn(E, E) -> E + Sync>(&self, f: F, dim: usize, init: E, tag: &'static str) -> Option<Self>
     where
         Self: Sized;
     fn matmul(&self, other: &Self) -> Self;
