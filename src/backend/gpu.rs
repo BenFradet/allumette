@@ -21,7 +21,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 
         let pipeline = self
             .context
-            .get_or_create_pipeline(tag, workgroup_info, 3)
+            .get_or_create_pipeline(tag, workgroup_info, 3, None)
             .unwrap();
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let metadata_buffer = self
@@ -59,7 +59,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 
         let pipeline = self
             .context
-            .get_or_create_pipeline(tag, workgroup_info, 3)?;
+            .get_or_create_pipeline(tag, workgroup_info, 3, None)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let metadata_buffer = self
             .context
@@ -100,7 +100,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 
         let pipeline = self
             .context
-            .get_or_create_pipeline(tag, workgroup_info, 4)?;
+            .get_or_create_pipeline(tag, workgroup_info, 4, None)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let metadata_buffer = self
             .context
@@ -152,9 +152,9 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
                 BufferUsages::STORAGE | BufferUsages::COPY_SRC,
             );
 
-            let pipeline = self
-                .context
-                .get_or_create_pipeline(tag, workgroup_info, 3)?;
+            let pipeline =
+                self.context
+                    .get_or_create_pipeline(tag, workgroup_info, 3, Some(init))?;
             let bind_group_layout = pipeline.get_bind_group_layout(0);
             let metadata_buffer = self
                 .context

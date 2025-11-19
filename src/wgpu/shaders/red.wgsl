@@ -128,8 +128,7 @@ fn call(
     let a_shape_len = metadata[0];
     let out_shape_len = metadata[1];
     let reduce_dim = metadata[2];
-    let reduce_default = 0.0;
-    //let reduce_default = replace_with_default();
+    let reduce_default = replace_with_default;
     let reduce_size = a_shape(reduce_dim);
 
     to_index(workgroup_id.x, out_shape_len, &out_index);

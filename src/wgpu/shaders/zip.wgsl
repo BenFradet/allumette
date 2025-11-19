@@ -196,5 +196,5 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let b_pos = index_to_position_b(b_shape_len, b_index);
     let out_pos = index_to_position_out(out_shape_len, out_index);
 
-    output[out_pos] = replace_with_actual_operation(input_a[a_pos], input_b[b_pos]);
+    output[out_pos] = replace_with_operation(input_a[a_pos], input_b[b_pos]);
 }
