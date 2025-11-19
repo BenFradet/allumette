@@ -105,8 +105,12 @@ fn index_to_position_out(
     return result;
 }
 
-fn add(a: f32, b: f32) -> f32 {
+fn sum(a: f32, b: f32) -> f32 {
     return a + b;
+}
+
+fn all(a: f32, b: f32) -> f32 {
+  return a * b;
 }
 
 @compute
@@ -147,8 +151,8 @@ fn call(
         // TODO: remove maybe
         //workgroupBarrier();
         if (local_id.x % (offset * 2u) == 0u) {
-            shared_block[local_id.x] = add(shared_block[local_id.x], shared_block[local_id.x + offset]);
-            //    replace_with_operation(shared_block[local_id.x], shared_block[local_id.x + offset]);
+            shared_block[local_id.x] =
+              replace_with_operation(shared_block[local_id.x], shared_block[local_id.x + offset]);
         }
         offset *= 2u;
     }
