@@ -1181,6 +1181,21 @@ mod tests {
         reduce_forward_one_dim_test(t_par);
     }
 
+    #[test]
+    fn test_reduce_forward_one_dim_gpu() {
+        let shape = Shape::new(vec![3, 2]);
+        let strides = (&shape).into();
+        let td = GpuTensorData::new(&[2., 3., 4., 6., 5., 7.], shape, strides, get_wgpu_context());
+
+        let t = Tensor::from_data(td);
+        let summed = t.sum(Some(0));
+
+        let exp = Tensor::from_1d(&[11., 16.]);
+        let is_close = summed.is_close(exp);
+        let shape = Shape::scalar(is_close.size());
+        assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
+    }
+
     fn reduce_forward_one_dim_2_test<BT: BackendType, T: Backend<f64, BT>>(t: Tensor<f64, BT, T>) {
         let summed = t.sum(Some(1));
         let exp = Tensor::from_data(TensorData::from_2d(&[&[5.], &[10.], &[12.]]).unwrap());
