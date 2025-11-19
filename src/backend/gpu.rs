@@ -2,7 +2,7 @@ use wgpu::BufferUsages;
 
 use crate::{
     backend::{backend::TensorBackend, backend_type::Gpu},
-    data::gpu_tensor_data::GpuTensorData,
+    data::gpu_tensor_data::GpuTensorData, shaping::shape::Shape,
 };
 
 // TODO: abstract fn, they're all doing mostly the same
@@ -25,7 +25,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let metadata_buffer = self
             .context
-            .create_metadata_buffer(&[&self.shape, &self.shape]);
+            .create_metadata_buffer(&[&self.shape, &self.shape], &[]);
         let bind_group = self.context.create_bind_group(
             &[&self.buffer, &metadata_buffer, &output_buffer],
             &bind_group_layout,
@@ -62,7 +62,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let metadata_buffer = self
             .context
-            .create_metadata_buffer(&[&self.shape, &out.shape]);
+            .create_metadata_buffer(&[&self.shape, &out.shape], &[]);
         let bind_group = self.context.create_bind_group(
             &[&self.buffer, &metadata_buffer, &output_buffer],
             &bind_group_layout,
@@ -103,7 +103,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let metadata_buffer =
             self.context
-                .create_metadata_buffer(&[&self.shape, &other.shape, &shape]);
+                .create_metadata_buffer(&[&self.shape, &other.shape, &shape], &[]);
         let bind_group = self.context.create_bind_group(
             &[
                 &self.buffer,
@@ -128,11 +128,54 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         ))
     }
 
-    fn reduce<F: Fn(f32, f32) -> f32 + Sync>(&self, _f: F, _dim: usize, _init: f64) -> Option<Self>
+    fn reduce<F: Fn(f32, f32) -> f32 + Sync>(&self, _f: F, dim: usize, init: f32, tag: &'static str) -> Option<Self>
     where
         Self: Sized,
     {
-        todo!()
+        if dim < self.shape.data().len() {
+            let mut shape_data = self.shape.data().to_vec();
+            shape_data[dim] = 1;
+            let shape = Shape::new(shape_data);
+
+            let workgroup_info = (&shape).into();
+            let gpu_size = shape.gpu_byte_size();
+            let output_buffer = self.context.create_output_buffer(
+                gpu_size,
+                tag,
+                BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+            );
+
+            let pipeline = self
+                .context
+                .get_or_create_pipeline(tag, workgroup_info, 3)?;
+            let bind_group_layout = pipeline.get_bind_group_layout(0);
+            let metadata_buffer =
+                self.context
+                    .create_metadata_buffer(&[&self.shape, &shape], &[dim]);
+            let bind_group = self.context.create_bind_group(
+                &[
+                    &self.buffer,
+                    &metadata_buffer,
+                    &output_buffer,
+                ],
+                &bind_group_layout,
+            );
+
+            let command = self
+                .context
+                .encode_command(&workgroup_info, &pipeline, &bind_group);
+            self.context.submit_command(command).ok()?;
+
+            let strides = (&shape).into();
+            Some(Self::from_buffer(
+                shape,
+                strides,
+                output_buffer,
+                self.context,
+            ))
+        } else {
+            None
+        }
     }
 
     fn matmul(&self, _other: &Self) -> Self {
