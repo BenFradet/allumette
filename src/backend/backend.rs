@@ -15,7 +15,13 @@ pub trait TensorBackend<E: Element, T: BackendType> {
     fn zip<F: Fn(E, E) -> E + Sync>(&self, other: &Self, f: F, tag: &'static str) -> Option<Self>
     where
         Self: Sized;
-    fn reduce<F: Fn(E, E) -> E + Sync>(&self, f: F, dim: usize, init: E, tag: &'static str) -> Option<Self>
+    fn reduce<F: Fn(E, E) -> E + Sync>(
+        &self,
+        f: F,
+        dim: usize,
+        init: E,
+        tag: &'static str,
+    ) -> Option<Self>
     where
         Self: Sized;
     fn matmul(&self, other: &Self) -> Self;
@@ -44,7 +50,7 @@ pub trait TensorBackend<E: Element, T: BackendType> {
         );
         for (dim, shape) in out.shape().clone().data().iter().enumerate() {
             if orig_shape.data()[dim] == 1 && *shape != 1 {
-                out = out.reduce(|a, b| a + b, dim, 0.)?;
+                out = out.reduce(|a, b| a + b, dim, E::zero(), "sum")?;
             }
         }
         assert!(

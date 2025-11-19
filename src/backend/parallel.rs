@@ -72,7 +72,13 @@ impl TensorBackend<f64, Par> for CpuTensorData {
         }
     }
 
-    fn reduce<F: Fn(f64, f64) -> f64 + Sync>(&self, f: F, dim: usize, init: f64, _tag: &'static str) -> Option<Self> {
+    fn reduce<F: Fn(f64, f64) -> f64 + Sync>(
+        &self,
+        f: F,
+        dim: usize,
+        init: f64,
+        _tag: &'static str,
+    ) -> Option<Self> {
         if dim < self.shape.data().len() {
             let mut shape_data = self.shape.data().to_vec();
             shape_data[dim] = 1;
@@ -169,7 +175,7 @@ mod tests {
         fn reduce_test_sum(t1 in CpuTensorData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
-                t1p = TensorBackend::<f64, Par>::reduce(&t1p, |a, b| a + b, i, 0.).unwrap();
+                t1p = TensorBackend::<f64, Par>::reduce(&t1p, |a, b| a + b, i, 0., "sum").unwrap();
             }
             let res = t1.data.clone().iter().fold(0., |acc, a| acc + a);
             assert_eq!(1, t1p.data.len());
@@ -180,7 +186,7 @@ mod tests {
         fn reduce_test_mul(t1 in CpuTensorData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
-                t1p = TensorBackend::<f64, Par>::reduce(&t1p, |a, b| a * b, i, 1.).unwrap();
+                t1p = TensorBackend::<f64, Par>::reduce(&t1p, |a, b| a * b, i, 1., "all").unwrap();
             }
             let res = t1.data.clone().iter().fold(1., |acc, a| acc * a);
             assert_eq!(1, t1p.data.len());

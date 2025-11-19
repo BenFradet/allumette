@@ -2,7 +2,8 @@ use wgpu::BufferUsages;
 
 use crate::{
     backend::{backend::TensorBackend, backend_type::Gpu},
-    data::gpu_tensor_data::GpuTensorData, shaping::shape::Shape,
+    data::gpu_tensor_data::GpuTensorData,
+    shaping::shape::Shape,
 };
 
 // TODO: abstract fn, they're all doing mostly the same
@@ -101,9 +102,9 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .context
             .get_or_create_pipeline(tag, workgroup_info, 4)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
-        let metadata_buffer =
-            self.context
-                .create_metadata_buffer(&[&self.shape, &other.shape, &shape], &[]);
+        let metadata_buffer = self
+            .context
+            .create_metadata_buffer(&[&self.shape, &other.shape, &shape], &[]);
         let bind_group = self.context.create_bind_group(
             &[
                 &self.buffer,
@@ -128,7 +129,13 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         ))
     }
 
-    fn reduce<F: Fn(f32, f32) -> f32 + Sync>(&self, _f: F, dim: usize, init: f32, tag: &'static str) -> Option<Self>
+    fn reduce<F: Fn(f32, f32) -> f32 + Sync>(
+        &self,
+        _f: F,
+        dim: usize,
+        init: f32,
+        tag: &'static str,
+    ) -> Option<Self>
     where
         Self: Sized,
     {
@@ -149,15 +156,11 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
                 .context
                 .get_or_create_pipeline(tag, workgroup_info, 3)?;
             let bind_group_layout = pipeline.get_bind_group_layout(0);
-            let metadata_buffer =
-                self.context
-                    .create_metadata_buffer(&[&self.shape, &shape], &[dim]);
+            let metadata_buffer = self
+                .context
+                .create_metadata_buffer(&[&self.shape, &shape], &[dim]);
             let bind_group = self.context.create_bind_group(
-                &[
-                    &self.buffer,
-                    &metadata_buffer,
-                    &output_buffer,
-                ],
+                &[&self.buffer, &metadata_buffer, &output_buffer],
                 &bind_group_layout,
             );
 

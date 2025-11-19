@@ -169,13 +169,16 @@ impl WgpuContext {
     }
 
     pub fn create_metadata_buffer(&self, shapes: &[&Shape], additional_data: &[usize]) -> Buffer {
-        let mut contents =
-            Vec::with_capacity(shapes.len() + additional_data.len() + 2 * shapes.iter().map(|s| s.len()).sum::<usize>());
+        let mut contents = Vec::with_capacity(
+            shapes.len()
+                + additional_data.len()
+                + 2 * shapes.iter().map(|s| s.len()).sum::<usize>(),
+        );
         for shape in shapes {
             contents.push(shape.len());
         }
         for u in additional_data {
-            contents.push(u);
+            contents.push(*u);
         }
         for shape in shapes {
             contents.extend(shape.data());

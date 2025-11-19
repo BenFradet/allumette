@@ -96,13 +96,37 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Eq {
     }
 }
 
+pub struct IsClose;
+impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for IsClose {
+    fn forward(&self, a: &T, b: &T) -> T {
+        a.zip(
+            b,
+            |e1, e2| if e1.is_close(e2) { E::one() } else { E::zero() },
+            <IsClose as Binary<E, BT, T>>::tag(self),
+        )
+        .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
+    }
+
+    fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
+        (
+            <T as TensorData<E>>::from_scalar(E::zero()),
+            <T as TensorData<E>>::from_scalar(E::zero()),
+        )
+    }
+
+    fn tag(&self) -> &'static str {
+        "is_close"
+    }
+}
+
 pub struct Sum;
 impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for Sum {
     fn forward(&self, a: &T, dim: &T) -> T {
         a.reduce(
             |acc, v| acc + v,
             dim.first().unwrap_or(E::one()).unsafe_to(),
-            0.,
+            E::zero(),
+            <Sum as Binary<E, BT, T>>::tag(self),
         )
         .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
     }
@@ -113,6 +137,30 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
 
     fn tag(&self) -> &'static str {
         "sum"
+    }
+}
+
+pub struct All;
+impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for All {
+    fn forward(&self, a: &T, dim: &T) -> T {
+        a.reduce(
+            |acc, v| acc * v,
+            dim.first().unwrap().unsafe_to(),
+            E::one(),
+            <All as Binary<E, BT, T>>::tag(self),
+        )
+        .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
+    }
+
+    fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
+        (
+            <T as TensorData<E>>::from_scalar(E::zero()),
+            <T as TensorData<E>>::from_scalar(E::zero()),
+        )
+    }
+
+    fn tag(&self) -> &'static str {
+        "all"
     }
 }
 
@@ -153,48 +201,6 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary
 
     fn tag(&self) -> &'static str {
         "permute"
-    }
-}
-
-pub struct IsClose;
-impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for IsClose {
-    fn forward(&self, a: &T, b: &T) -> T {
-        a.zip(
-            b,
-            |e1, e2| if e1.is_close(e2) { E::one() } else { E::zero() },
-            <IsClose as Binary<E, BT, T>>::tag(self),
-        )
-        .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
-    }
-
-    fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
-        (
-            <T as TensorData<E>>::from_scalar(E::zero()),
-            <T as TensorData<E>>::from_scalar(E::zero()),
-        )
-    }
-
-    fn tag(&self) -> &'static str {
-        "is_close"
-    }
-}
-
-pub struct All;
-impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for All {
-    fn forward(&self, a: &T, dim: &T) -> T {
-        a.reduce(|acc, v| acc * v, dim.first().unwrap().unsafe_to(), 1.)
-            .unwrap_or(<T as TensorData<E>>::ones(a.shape().clone()))
-    }
-
-    fn backward(&self, _ctx: &Context<T>, _d: &T) -> (T, T) {
-        (
-            <T as TensorData<E>>::from_scalar(E::zero()),
-            <T as TensorData<E>>::from_scalar(E::zero()),
-        )
-    }
-
-    fn tag(&self) -> &'static str {
-        "all"
     }
 }
 
