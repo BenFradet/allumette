@@ -67,22 +67,6 @@ fn to_index(
     }
 }
 
-fn broadcast_index(
-    shape_len: u32,
-    out_shape_len: u32,
-    index: ptr<function, array<u32, MAX_DIMS>>,
-    out_index: array<u32, MAX_DIMS>,
-) {
-    for (var i = 0u; i < shape_len; i = i + 1u) {
-        if (a_shape(i) > 1u) {
-            let idx = out_shape_len - shape_len + i;
-            (*index)[i] = out_index[idx];
-        } else {
-            (*index)[i] = 0u;
-        }
-    }
-}
-
 fn index_to_position_a(
     shape_len: u32,
     index: array<u32, MAX_DIMS>,
@@ -132,15 +116,15 @@ fn call(
     let a_shape_len = metadata[0];
     let out_shape_len = metadata[1];
     let reduce_dim = metadata[2];
-    let reduce_default = replace_with_default;
+    let reduce_default = f32(replace_with_default);
     let reduce_size = a_shape(reduce_dim);
 
     to_index(workgroup_id.x, out_shape_len, &out_index);
-    let out_pos = index_to_position_out(a_shape_len, out_index);
+    let out_pos = index_to_position_out(out_shape_len, out_index);
 
     if (local_id.x < reduce_size) {
         out_index[reduce_dim] = local_id.x;
-        let pos = index_to_position_a(out_shape_len, out_index);
+        let pos = index_to_position_a(a_shape_len, out_index);
         shared_block[local_id.x] = input[pos];
     } else {
         shared_block[local_id.x] = reduce_default;
@@ -149,7 +133,7 @@ fn call(
     var offset = 1u;
     while (offset < BLOCK_SIZE) {
         // TODO: remove maybe
-        //workgroupBarrier();
+        workgroupBarrier();
         if (local_id.x % (offset * 2u) == 0u) {
             shared_block[local_id.x] =
               replace_with_operation(shared_block[local_id.x], shared_block[local_id.x + offset]);
