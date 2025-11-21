@@ -38,6 +38,7 @@ impl WgpuContext {
     const REPLACE_OP_NAME: &'static str = "replace_with_operation";
     const REPLACE_DEFAULT_NAME: &'static str = "replace_with_default";
     const REPLACE_WORKGROUP_SIZE: &'static str = "@workgroup_size(1)";
+    const REPLACE_WORKGROUP_SIZE_CONST: &'static str = "const WG_SIZE: u32 = 1u;";
 
     // id, neg, inv and relu are not supported out of the box
     const MAP_OPS: [&'static str; 7] = ["ln", "exp", "sig", "id", "neg", "inv", "relu"];
@@ -255,10 +256,15 @@ impl WgpuContext {
         shader_source: &str,
         workgroup_info: WorkgroupInfo,
     ) -> ShaderModule {
-        let source = shader_source.replace(
-            Self::REPLACE_WORKGROUP_SIZE,
-            &workgroup_info.workgroup_size(),
-        );
+        let source = shader_source
+            .replace(
+                Self::REPLACE_WORKGROUP_SIZE,
+                &workgroup_info.workgroup_size(),
+            )
+            .replace(
+                Self::REPLACE_WORKGROUP_SIZE_CONST,
+                &workgroup_info.workgroup_size_const(),
+            );
         self.device.create_shader_module(ShaderModuleDescriptor {
             label: Some(operation),
             source: ShaderSource::Wgsl(Cow::Borrowed(&source)),

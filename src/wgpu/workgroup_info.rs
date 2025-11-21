@@ -16,6 +16,10 @@ impl WorkgroupInfo {
     pub fn workgroup_size(&self) -> String {
         format!("@workgroup_size({})", self.size)
     }
+
+    pub fn workgroup_size_const(&self) -> String {
+        format!("const WG_SIZE: u32 = {}u;", self.size)
+    }
 }
 
 const MAX_WORKGROUP_COUNT: usize = 65535;
@@ -32,7 +36,7 @@ impl From<&Shape> for WorkgroupInfo {
                 size: tensor_size.next_power_of_two(),
             }
         } else {
-            let count = (tensor_size + MAX_WORKGROUP_SIZE - 1) / MAX_WORKGROUP_SIZE;
+            let count = tensor_size.div_ceil(MAX_WORKGROUP_SIZE);
             WorkgroupInfo {
                 count,
                 size: MAX_WORKGROUP_SIZE,

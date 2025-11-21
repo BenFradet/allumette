@@ -14,9 +14,9 @@ var<storage, read> metadata: array<u32>;
 @group(0) @binding(2)
 var<storage, read_write> output: array<f32>;
 
-const BLOCK_SIZE: u32 = 1024u;
+const WG_SIZE: u32 = 3u;
 // lives in the wg address space, hence shared between invcations of a wg
-var<workgroup> shared_block: array<f32, BLOCK_SIZE>;
+var<workgroup> shared_block: array<f32, WG_SIZE>;
 
 // used to create local arrays
 const MAX_DIMS: u32 = 32u;
@@ -98,17 +98,17 @@ fn all(a: f32, b: f32) -> f32 {
 }
 
 @compute
-@workgroup_size(1)
+@workgroup_size(WG_SIZE)
 fn call(
     @builtin(global_invocation_id) global_id: vec3<u32>,
     @builtin(local_invocation_id) local_id: vec3<u32>,
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
 ) {
-    let i = global_id.x;
+    //let i = global_id.x;
 
-    if (i > arrayLength(&output)) {
-        return;
-    }
+    //if (i > arrayLength(&output)) {
+    //    return;
+    //}
 
     var a_index: array<u32, MAX_DIMS>;
     var out_index: array<u32, MAX_DIMS>;
@@ -126,24 +126,17 @@ fn call(
         out_index[reduce_dim] = local_id.x;
         let pos = index_to_position_a(a_shape_len, out_index);
         shared_block[local_id.x] = input[pos];
-    } else {
-        shared_block[local_id.x] = reduce_default;
     }
-
-    var offset = 1u;
-    while (offset < BLOCK_SIZE) {
-        // TODO: remove maybe
-        workgroupBarrier();
-        if (local_id.x % (offset * 2u) == 0u) {
-            shared_block[local_id.x] =
-              replace_with_operation(shared_block[local_id.x], shared_block[local_id.x + offset]);
-        }
-        offset *= 2u;
-    }
-
+    // all invocations must reach the barrier
+    // otherwise it is undefined behaviour
+    // no early returns allowed
     workgroupBarrier();
 
-    if (local_id.x == 0u) {
-        output[out_pos] = shared_block[local_id.x];
+    if (local_id.x < reduce_size && local_id.x == 0u) {
+        var acc = reduce_default;
+        for (var i = 0u; i < reduce_size; i++) {
+            acc = replace_with_operation(acc, shared_block[i]);
+        }
+        output[out_pos] = acc;
     }
 }

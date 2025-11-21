@@ -1185,7 +1185,12 @@ mod tests {
     fn test_reduce_forward_one_dim_gpu() {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
-        let td = GpuTensorData::new(&[2., 3., 4., 6., 5., 7.], shape, strides, get_wgpu_context());
+        let td = GpuTensorData::new(
+            &[2., 3., 4., 6., 5., 7.],
+            shape,
+            strides,
+            get_wgpu_context(),
+        );
 
         let t = Tensor::from_data(td);
         let summed = t.sum(Some(0));
