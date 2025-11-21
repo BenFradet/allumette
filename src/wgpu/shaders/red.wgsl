@@ -104,11 +104,9 @@ fn call(
     @builtin(local_invocation_id) local_id: vec3<u32>,
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
 ) {
-    //let i = global_id.x;
-
-    //if (i > arrayLength(&output)) {
-    //    return;
-    //}
+    let output_nb_elems = arrayLength(&output);
+    // active workgroup flag to avoid early returns
+    let wg_active = workgroup_id.x < output_nb_elems;
 
     var a_index: array<u32, MAX_DIMS>;
     var out_index: array<u32, MAX_DIMS>;
@@ -119,22 +117,26 @@ fn call(
     let reduce_default = f32(replace_with_default);
     let reduce_size = a_shape(reduce_dim);
 
-    to_index(workgroup_id.x, out_shape_len, &out_index);
-    let out_pos = index_to_position_out(out_shape_len, out_index);
+    var out_pos: u32 = 0u;
+    if (wg_active) {
+        to_index(workgroup_id.x, out_shape_len, &out_index);
+        out_pos = index_to_position_out(out_shape_len, out_index);
+    }
 
-    if (local_id.x < reduce_size) {
+    if (wg_active && local_id.x < reduce_size) {
         out_index[reduce_dim] = local_id.x;
         let pos = index_to_position_a(a_shape_len, out_index);
         shared_block[local_id.x] = input[pos];
     }
+
     // all invocations must reach the barrier
     // otherwise it is undefined behaviour
     // no early returns allowed
     workgroupBarrier();
 
-    if (local_id.x < reduce_size && local_id.x == 0u) {
+    if (wg_active && local_id.x == 0u) {
         var acc = reduce_default;
-        for (var i = 0u; i < reduce_size; i++) {
+        for (var i = 0u; i < reduce_size; i = i + 1u) {
             acc = replace_with_operation(acc, shared_block[i]);
         }
         output[out_pos] = acc;
