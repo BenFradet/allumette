@@ -12,6 +12,9 @@ pub struct WorkgroupInfo {
     pub size: usize,
 }
 
+const MAX_WORKGROUP_COUNT: usize = 65535;
+const MAX_WORKGROUP_SIZE: usize = 256;
+
 impl WorkgroupInfo {
     pub fn workgroup_size(&self) -> String {
         format!("@workgroup_size({})", self.size)
@@ -21,9 +24,6 @@ impl WorkgroupInfo {
         format!("const WG_SIZE: u32 = {}u;", self.size)
     }
 }
-
-const MAX_WORKGROUP_COUNT: usize = 65535;
-const MAX_WORKGROUP_SIZE: usize = 256;
 
 impl From<&Shape> for WorkgroupInfo {
     fn from(shape: &Shape) -> Self {

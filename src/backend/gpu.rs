@@ -144,7 +144,8 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             shape_data[dim] = 1;
             let shape = Shape::new(shape_data);
 
-            let workgroup_info = (&shape).into();
+            let workgroup_info = crate::wgpu::workgroup_info::WorkgroupInfo { count: 2, size: 8 };
+            //let workgroup_info = (&shape).into();
             let gpu_size = shape.gpu_byte_size();
             let output_buffer = self.context.create_output_buffer(
                 gpu_size,
