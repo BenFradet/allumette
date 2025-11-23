@@ -16,6 +16,15 @@ const MAX_WORKGROUP_COUNT: usize = 65535;
 const MAX_WORKGROUP_SIZE: usize = 256;
 
 impl WorkgroupInfo {
+    pub fn for_reduce(shape: &Shape) -> Self {
+        let tensor_size = shape.size;
+        let wg_size = MAX_WORKGROUP_SIZE.min(tensor_size.next_power_of_two());
+        WorkgroupInfo {
+            count: tensor_size,
+            size: wg_size,
+        }
+    }
+
     pub fn workgroup_size(&self) -> String {
         format!("@workgroup_size({})", self.size)
     }
