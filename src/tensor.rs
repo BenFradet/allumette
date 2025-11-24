@@ -1195,9 +1195,6 @@ mod tests {
         let t = Tensor::from_data(td);
         let summed = t.sum(Some(0));
 
-        let cpu_data = summed.data.to_cpu();
-        println!("cpu_data {cpu_data:?}");
-
         let exp = Tensor::from_1d(&[11., 16.]);
         let is_close = summed.is_close(exp);
         let shape = Shape::scalar(is_close.size());

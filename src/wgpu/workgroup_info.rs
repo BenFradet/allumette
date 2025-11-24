@@ -16,9 +16,11 @@ const MAX_WORKGROUP_COUNT: usize = 65535;
 const MAX_WORKGROUP_SIZE: usize = 256;
 
 impl WorkgroupInfo {
-    pub fn for_reduce(shape: &Shape) -> Self {
+    // TODO: handle tensor size > SIZE * COUNT
+    // TODO: what if reduce dims > MAX_WORKGROUP_SIZE?
+    pub fn for_reduce(reduce_dim: usize, shape: &Shape) -> Self {
         let tensor_size = shape.size;
-        let wg_size = MAX_WORKGROUP_SIZE.min(tensor_size.next_power_of_two());
+        let wg_size = MAX_WORKGROUP_SIZE.min(reduce_dim.next_power_of_two());
         WorkgroupInfo {
             count: tensor_size,
             size: wg_size,
@@ -35,10 +37,10 @@ impl WorkgroupInfo {
 }
 
 impl From<&Shape> for WorkgroupInfo {
+    // TODO: handle tensor size > SIZE * COUNT
     fn from(shape: &Shape) -> Self {
         let tensor_size = shape.size;
 
-        // TODO: None if tensor size > SIZE * COUNT
         if tensor_size <= MAX_WORKGROUP_SIZE {
             WorkgroupInfo {
                 count: 1,
@@ -70,6 +72,15 @@ mod tests {
         assert_eq!(
             WorkgroupInfo { count: 1, size: 32 },
             (&Shape::new(vec![14, 2])).into()
+        );
+    }
+
+    #[test]
+    fn for_reduce_test() {
+        // reduce [3, 2] along 0th
+        assert_eq!(
+            WorkgroupInfo::for_reduce(3, &Shape::new(vec![1, 2])),
+            WorkgroupInfo { count: 2, size: 4 }
         );
     }
 }
