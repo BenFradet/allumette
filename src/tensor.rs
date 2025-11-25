@@ -1144,8 +1144,7 @@ mod tests {
         assert_eq!(&Shape::new(vec![6, 1]), t4.data.shape());
         let t5 = t4.view(&Shape::new(vec![2, 3]));
         assert_eq!(&Shape::new(vec![2, 3]), t5.data.shape());
-        // TODO: re-establish once gpu has reduce
-        //assert_eq!(Some(E::one()), t.is_close(t5).all(None).item());
+        assert_eq!(Some(E::one()), t.is_close(t5).all(None).item());
     }
 
     #[test]
