@@ -14,7 +14,7 @@ var<storage, read> metadata: array<u32>;
 @group(0) @binding(2)
 var<storage, read_write> output: array<f32>;
 
-const WG_SIZE: u32 = 3u;
+const WG_SIZE: u32 = 1u;
 // lives in the wg address space, hence shared between invcations of a wg
 var<workgroup> shared_block: array<f32, WG_SIZE>;
 
