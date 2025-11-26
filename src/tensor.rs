@@ -594,6 +594,23 @@ mod tests {
         delta.item().unwrap_or(0.) / (2. * eps)
     }
 
+    fn unary_grad_central_diff_gpu<
+        F: Fn(Tensor<f32, Gpu, GpuTensorData>) -> Tensor<f32, Gpu, GpuTensorData>,
+    >(
+        tensor: Tensor<f32, Gpu, GpuTensorData>,
+        f: F,
+        index: &Idx,
+    ) -> f32 {
+        let eps = 1e-6;
+        let shape = tensor.data.shape().clone();
+        let up = Tensor::from_data(GpuTensorData::epsilon(shape, index, eps));
+        let add = tensor.clone() + up.clone();
+        let sub = tensor - up;
+        let delta = f(add).sum(None) - f(sub).sum(None);
+
+        delta.item().unwrap_or(0.) / (2. * eps)
+    }
+
     fn binary_grad_central_diff<
         BT: BackendType,
         T: Backend<f64, BT>,
