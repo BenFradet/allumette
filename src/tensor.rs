@@ -913,8 +913,6 @@ mod tests {
     }
 
     proptest! {
-        //#![proptest_config(ProptestConfig::with_cases(20))]
-
         #[test]
         fn matmul_tests(
             a_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
@@ -1254,6 +1252,22 @@ mod tests {
         let t_par =
             Tensor::<f64, Par, CpuTensorData>::from_1d(&[2., 3., 4., 6., 5., 7.]).reshape(shape);
         reduce_forward_all_dim_test(t_par);
+    }
+
+    #[test]
+    fn test_reduce_forward_all_dim_gpu() {
+        let shape = Shape::new(vec![3, 2]);
+        let strides = (&shape).into();
+        let td = GpuTensorData::new(
+            &[2., 3., 4., 6., 5., 7.],
+            shape,
+            strides,
+            get_wgpu_context(),
+        );
+
+        let t = Tensor::from_data(td);
+        let summed = t.sum(None);
+        assert_eq!(Some(27.), summed.item());
     }
 
     //#[test]
