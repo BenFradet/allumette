@@ -530,6 +530,29 @@ mod tests {
         );
     }
 
+    fn unary_grad_assert_gpu<
+        F: Fn(Tensor<f32, Gpu, GpuTensorData>) -> Tensor<f32, Gpu, GpuTensorData>,
+    >(
+        tensor: Tensor<f32, Gpu, GpuTensorData>,
+        f: F,
+    ) {
+        let id = &tensor.id.clone();
+        let reset = tensor.grad(None).history(History::default());
+        let idx = reset.data.shape().sample();
+        let out = f(reset);
+        let mut res = out.sum(None).backward();
+        let tensor_after = res.remove(id);
+        assert!(tensor_after.is_some(), "tensor should be in backprop map");
+        let unwrapped = tensor_after.unwrap();
+        let check = unary_grad_central_diff_gpu(unwrapped.clone(), f, &idx);
+        assert!(unwrapped.grad.is_some(), "tensor should have a grad");
+        let grad = unwrapped.grad.unwrap().data[idx];
+        assert!(
+            grad.is_close(check),
+            "tensor grad ({grad:?}) should be close to central diff ({check:?})",
+        );
+    }
+
     fn binary_grad_assert<
         BT: BackendType,
         T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
