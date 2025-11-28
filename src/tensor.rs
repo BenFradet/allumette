@@ -546,7 +546,11 @@ mod tests {
         let unwrapped = tensor_after.unwrap();
         let check = unary_grad_central_diff_gpu(unwrapped.clone(), f, &idx);
         assert!(unwrapped.grad.is_some(), "tensor should have a grad");
-        let grad = unwrapped.grad.unwrap().data[idx];
+
+        let grad_data = unwrapped.grad.unwrap().data;
+        let grad_data_cpu = grad_data.to_cpu();
+        let grad_strides = grad_data.strides.clone();
+        let grad = grad_data_cpu[grad_strides.position(&idx)];
         assert!(
             grad.is_close(check),
             "tensor grad ({grad:?}) should be close to central diff ({check:?})",
@@ -1036,12 +1040,24 @@ mod tests {
         }
 
         #[test]
-        fn unary_grad_tests(
+        fn unary_grad_tests_cpu(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
         ) {
             unary_grad_test(t_seq);
             unary_grad_test(t_par);
+        }
+
+        #[test]
+        fn unary_grad_tests_gpu(t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary()) {
+            //unary_grad_assert_gpu(t.clone(), |t| -t);
+            unary_grad_assert_gpu(t.clone(), |t| t.clone() * t);
+            //unary_grad_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t);
+            //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
+            //unary_grad_assert_gpu(t.clone(), |t| t.sig());
+            //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
+            //unary_grad_assert_gpu(t.clone(), |t| t.relu());
+            //unary_grad_assert_gpu(t.clone(), |t| t.exp());
         }
 
         #[test]
