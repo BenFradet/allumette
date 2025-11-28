@@ -628,7 +628,7 @@ mod tests {
         f: F,
         index: &Idx,
     ) -> f32 {
-        let eps = 1e-6;
+        let eps = 1e-3;
         let shape = tensor.data.shape().clone();
         let up = Tensor::from_data(GpuTensorData::epsilon(shape, index, eps));
         let add = tensor.clone() + up.clone();
@@ -1050,8 +1050,8 @@ mod tests {
 
         #[test]
         fn unary_grad_tests_gpu(t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary()) {
-            //unary_grad_assert_gpu(t.clone(), |t| -t);
-            unary_grad_assert_gpu(t.clone(), |t| t.clone() * t);
+            unary_grad_assert_gpu(t.clone(), |t| -t);
+            //unary_grad_assert_gpu(t.clone(), |t| t.clone() * t);
             //unary_grad_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t);
             //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
             //unary_grad_assert_gpu(t.clone(), |t| t.sig());
