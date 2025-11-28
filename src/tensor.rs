@@ -1051,13 +1051,13 @@ mod tests {
         #[test]
         fn unary_grad_tests_gpu(t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary()) {
             unary_grad_assert_gpu(t.clone(), |t| -t);
-            //unary_grad_assert_gpu(t.clone(), |t| t.clone() * t);
-            //unary_grad_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t);
-            //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
-            //unary_grad_assert_gpu(t.clone(), |t| t.sig());
-            //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
+            unary_grad_assert_gpu(t.clone(), |t| t.clone() * t);
+            unary_grad_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t);
+            unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
+            unary_grad_assert_gpu(t.clone(), |t| t.sig());
+            unary_grad_assert_gpu(t.clone(), |t| t.exp());
             //unary_grad_assert_gpu(t.clone(), |t| t.relu());
-            //unary_grad_assert_gpu(t.clone(), |t| t.exp());
+            //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
         }
 
         #[test]

@@ -70,6 +70,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Ln {
                 a.zip(
                     d,
                     |e1, e2| if e1 == E::zero() { e2 } else { e2 / e1 },
+                    // TODO: decompose inv and mul
                     "inv",
                 )
             })
@@ -110,7 +111,6 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Sig {
     }
 }
 
-// TODO: no out of the box support for relu, create a custom kernel
 pub struct Relu;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Relu {
     fn forward(&self, a: &T) -> T {
@@ -120,6 +120,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Relu {
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
+            // TODO: missing relu_back
             .and_then(|a| a.zip(d, |e1, e2| e1.relu_back(e2), "relu_back"))
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
