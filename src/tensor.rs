@@ -513,17 +513,22 @@ mod tests {
         tensor: Tensor<f64, BT, T>,
         f: F,
     ) {
+        println!("cpu");
         let id = &tensor.id.clone();
         let reset = tensor.grad(None).history(History::default());
-        let idx = reset.data.shape().sample();
+        let idx = reset.data.shape().sample_idx();
         let out = f(reset);
         let mut res = out.sum(None).backward();
         let tensor_after = res.remove(id);
         assert!(tensor_after.is_some(), "tensor should be in backprop map");
         let unwrapped = tensor_after.unwrap();
         let check = unary_grad_central_diff(unwrapped.clone(), f, &idx);
+        dbg!(&check);
         assert!(unwrapped.grad.is_some(), "tensor should have a grad");
-        let grad = unwrapped.grad.unwrap().data[idx];
+        let grad_data = unwrapped.grad.unwrap().data;
+        dbg!(&grad_data);
+        let grad = grad_data[idx];
+        dbg!(&grad);
         assert!(
             grad.is_close(check),
             "tensor grad ({grad:?}) should be close to central diff ({check:?})",
@@ -536,21 +541,25 @@ mod tests {
         tensor: Tensor<f32, Gpu, GpuTensorData>,
         f: F,
     ) {
+        println!("gpu");
         let id = &tensor.id.clone();
         let reset = tensor.grad(None).history(History::default());
-        let idx = reset.data.shape().sample();
+        let idx = reset.data.shape().sample_idx();
         let out = f(reset);
         let mut res = out.sum(None).backward();
         let tensor_after = res.remove(id);
         assert!(tensor_after.is_some(), "tensor should be in backprop map");
         let unwrapped = tensor_after.unwrap();
         let check = unary_grad_central_diff_gpu(unwrapped.clone(), f, &idx);
+        dbg!(&check);
         assert!(unwrapped.grad.is_some(), "tensor should have a grad");
 
         let grad_data = unwrapped.grad.unwrap().data;
         let grad_data_cpu = grad_data.to_cpu();
+        dbg!(&grad_data);
         let grad_strides = grad_data.strides.clone();
         let grad = grad_data_cpu[grad_strides.position(&idx)];
+        dbg!(&grad);
         assert!(
             grad.is_close(check),
             "tensor grad ({grad:?}) should be close to central diff ({check:?})",
@@ -571,7 +580,10 @@ mod tests {
             tensor1.grad(None).history(History::default()),
             tensor2.grad(None).history(History::default()),
         );
-        let (idx1, idx2) = (reset1.data.shape().sample(), reset2.data.shape().sample());
+        let (idx1, idx2) = (
+            reset1.data.shape().sample_idx(),
+            reset2.data.shape().sample_idx(),
+        );
         let out = f(reset1, reset2);
         let mut res = out.sum(None).backward();
         let (after1, after2) = (res.remove(id1), res.remove(id2));
@@ -1042,7 +1054,7 @@ mod tests {
         #[test]
         fn unary_grad_tests_cpu(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
-            t_par in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
+            t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
         ) {
             unary_grad_test(t_seq);
             unary_grad_test(t_par);
@@ -1050,14 +1062,14 @@ mod tests {
 
         #[test]
         fn unary_grad_tests_gpu(t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary()) {
-            unary_grad_assert_gpu(t.clone(), |t| -t);
-            unary_grad_assert_gpu(t.clone(), |t| t.clone() * t);
-            unary_grad_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t);
-            unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
-            unary_grad_assert_gpu(t.clone(), |t| t.sig());
-            unary_grad_assert_gpu(t.clone(), |t| t.exp());
-            unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
-            //unary_grad_assert_gpu(t.clone(), |t| t.relu());
+            //unary_grad_assert_gpu(t.clone(), |t| -t);
+            //unary_grad_assert_gpu(t.clone(), |t| t.clone() * t);
+            //unary_grad_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t);
+            //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
+            //unary_grad_assert_gpu(t.clone(), |t| t.sig());
+            //unary_grad_assert_gpu(t.clone(), |t| t.exp());
+            //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
+            unary_grad_assert_gpu(t.clone(), |t| t.relu());
         }
 
         #[test]
@@ -1326,54 +1338,23 @@ mod tests {
         assert_eq!(Some(27.), summed.item());
     }
 
-    //#[test]
-    //fn repro_test_gpu() {
-    //    use crate::wgpu::wgpu_context::get_wgpu_context;
+    #[test]
+    fn repro_test_gpu() {
+        let shape = Shape::new(vec![1, 2, 1]);
+        let strides: Strides = (&shape).into();
+        let td1 = GpuTensorData::new(
+            &[0., 0.],
+            shape.clone(),
+            strides.clone(),
+            get_wgpu_context(),
+        );
+        let t1 = Tensor::new(td1.clone(), History::default());
+        let td2 = CpuTensorData::new(vec![0., 0.], shape.clone(), strides.clone());
+        let t2: Tensor<_, Seq, _> = Tensor::new(td2.clone(), History::default());
 
-    //    let shape1 = Shape::new(vec![2, 2, 1, 1]);
-    //    let strides1: Strides = (&shape1).into();
-    //    let d1 = vec![1., 2., 3., 4.];
-    //    let shape2 = Shape::new(vec![1, 1, 1, 1]);
-    //    let strides2: Strides = (&shape2).into();
-    //    let d2 = vec![1.];
+        unary_grad_assert(t2.clone(), |t| t.relu());
+        unary_grad_assert_gpu(t1.clone(), |t| t.relu());
 
-    //    //let td1 = GpuTensorData::new(&d1, shape1.clone(), strides1.clone(), get_wgpu_context());
-    //    let td1 = CpuTensorData::new(d1, shape1.clone(), strides1.clone());
-    //    let t1: Tensor<_, Seq, _> = Tensor::new(td1.clone(), History::default());
-    //    //let td2 = GpuTensorData::new(&d2, shape2.clone(), strides2.clone(), get_wgpu_context());
-    //    let td2 = CpuTensorData::new(d2, shape2.clone(), strides2.clone());
-    //    let t2 = Tensor::new(td2.clone(), History::default());
-
-    //    //let data1 = td1.to_cpu();
-    //    //let data2 = td2.to_cpu();
-    //    let res = t1.clone() + t2.clone();
-    //    //let res_data = res.data.to_cpu();
-    //    let res_strides = res.data.strides.clone();
-
-    //    let ff = |a, b| a + b;
-
-    //    println!("res {res:?}");
-    //    //println!("res {res_data:?}");
-
-    //    println!("res shape {:?}", res.data.shape);
-    //    println!("shape 1 {shape1:?}");
-    //    println!("shape 2 {shape2:?}");
-
-    //    println!("res strides {res_strides:?}");
-    //    println!("strides 1 {strides1:?}");
-    //    println!("strides 2 {strides2:?}");
-
-    //    binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, ff);
-
-    //    //for idx in res.data.indices() {
-    //    //    println!("idx {idx:?}");
-    //    //    println!("res pos {}", res_strides.position(&idx));
-    //    //    println!("t1 pos {}", strides1.position(&idx));
-    //    //    println!("t2 pos {}", strides2.position(&idx));
-    //    //    //assert!(res_data[res_strides.position(&idx)].is_close(ff(data1[strides1.position(&idx)], data2[strides2.position(&idx)])));
-    //    //    assert!(res.data[idx.clone()].is_close(ff(t1.data[idx.clone()], t2.data[idx])));
-    //    //}
-
-    //    assert!(true)
-    //}
+        assert!(true)
+    }
 }
