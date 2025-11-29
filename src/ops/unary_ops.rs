@@ -70,8 +70,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Ln {
                 a.zip(
                     d,
                     |e1, e2| if e1 == E::zero() { e2 } else { e2 / e1 },
-                    // TODO: decompose inv and mul
-                    "inv",
+                    "ln_diff",
                 )
             })
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))

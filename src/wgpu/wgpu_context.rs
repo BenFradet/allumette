@@ -42,7 +42,7 @@ impl WgpuContext {
 
     // id, neg, inv and relu are not supported out of the box
     const MAP_OPS: [&'static str; 7] = ["ln", "exp", "sig", "id", "neg", "inv", "relu"];
-    const ZIP_OPS: [&'static str; 5] = ["add", "mul", "lt", "eq", "is_close"];
+    const ZIP_OPS: [&'static str; 6] = ["add", "mul", "lt", "eq", "is_close", "ln_diff"];
     const RED_OPS: [&'static str; 2] = ["sum", "all"];
 
     const ENTRY_POINT: &'static str = "call";

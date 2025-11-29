@@ -48,35 +48,43 @@ fn out_strides(i: u32) -> u32 {
 }
 
 fn add(a: f32, b: f32) -> f32 {
-  return a + b;
+    return a + b;
 }
 
 fn mul(a: f32, b: f32) -> f32 {
-  return a * b;
+    return a * b;
 }
 
 fn lt(a: f32, b: f32) -> f32 {
-  if (a < b) {
-    return 1.0;
-  } else {
-    return 0.0;
-  }
+    if (a < b) {
+        return 1.0;
+    } else {
+        return 0.0;
+    }
 }
 
 fn eq(a: f32, b: f32) -> f32 {
-  if (a == b) {
-    return 1.0;
-  } else {
-    return 0.0;
-  }
+    if (a == b) {
+        return 1.0;
+    } else {
+        return 0.0;
+    }
 }
 
 fn is_close(a: f32, b: f32) -> f32 {
-  if (abs(a - b) < 0.001) {
-    return 1.0;
-  } else {
-    return 0.0;
-  }
+    if (abs(a - b) < 0.001) {
+        return 1.0;
+    } else {
+        return 0.0;
+    }
+}
+
+fn ln_diff(a: f32, b: f32) -> f32 {
+    if (a == 0.) {
+        return b;
+    } else {
+        return b / a;
+    }
 }
 
 fn prod(
@@ -191,7 +199,7 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     to_index(i, out_shape_len, &out_index);
     broadcast_index_a(a_shape_len, out_shape_len, &a_index, out_index);
     broadcast_index_b(b_shape_len, out_shape_len, &b_index, out_index);
-    
+
     let a_pos = index_to_position_a(a_shape_len, a_index);
     let b_pos = index_to_position_b(b_shape_len, b_index);
     let out_pos = index_to_position_out(out_shape_len, out_index);
