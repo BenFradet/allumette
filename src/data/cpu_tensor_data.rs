@@ -31,7 +31,7 @@ impl CpuTensorData {
     pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
         let size = shape.size;
         let strides: Strides = (&shape).into();
-        collection::vec(0.0f64..1., size)
+        collection::vec(-1.0f64..1., size)
             .prop_map(move |data| Self::new(data, shape.clone(), strides.clone()))
     }
 }

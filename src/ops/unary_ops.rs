@@ -119,8 +119,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Unary<E, BT, T> for Relu {
     fn backward(&self, ctx: &Context<T>, d: &T) -> T {
         ctx.fst
             .as_ref()
-            // TODO: missing relu_back
-            .and_then(|a| a.zip(d, |e1, e2| e1.relu_back(e2), "relu_back"))
+            .and_then(|a| a.zip(d, |e1, e2| e1.relu_diff(e2), "relu_diff"))
             .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone()))
     }
 

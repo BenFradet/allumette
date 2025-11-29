@@ -87,6 +87,14 @@ fn ln_diff(a: f32, b: f32) -> f32 {
     }
 }
 
+fn relu_diff(a: f32, b: f32) -> f32 {
+    if (a > 0.) {
+        return b;
+    } else {
+        return 0.;
+    }
+}
+
 fn prod(
     start: u32,
     shape_len: u32,

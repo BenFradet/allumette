@@ -42,7 +42,8 @@ where
             Self::zero()
         }
     }
-    fn relu_back(self, d: Self) -> Self {
+
+    fn relu_diff(self, d: Self) -> Self {
         if self > Self::zero() {
             d
         } else {
@@ -144,7 +145,7 @@ mod tests {
             } else {
                 assert_eq!(0., f);
             }
-            let back = a.relu_back(a);
+            let back = a.relu_diff(a);
             if a > 0. {
                 assert_eq!(a, back);
             } else {

@@ -21,7 +21,7 @@ pub struct GpuTensorData<'a> {
     pub strides: Strides,
     pub context: &'a WgpuContext,
     // used for debugging
-    //init: Vec<f32>,
+    init: Vec<f32>,
 }
 
 impl<'a> GpuTensorData<'a> {
@@ -31,13 +31,13 @@ impl<'a> GpuTensorData<'a> {
             contents: bytemuck::cast_slice(data),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         });
-        //let init = data.to_vec();
+        let init = data.to_vec();
         Self {
             buffer: Arc::new(buffer),
             shape,
             strides,
             context,
-            //init,
+            init,
         }
     }
 
@@ -52,7 +52,7 @@ impl<'a> GpuTensorData<'a> {
             shape,
             strides,
             context,
-            //init: vec![],
+            init: vec![],
         }
     }
 
@@ -62,7 +62,7 @@ impl<'a> GpuTensorData<'a> {
             shape: self.shape.clone(),
             strides: self.strides.clone(),
             context: self.context,
-            //init: self.init.clone(),
+            init: self.init.clone(),
         }
     }
 
@@ -109,7 +109,7 @@ impl<'a> GpuTensorData<'a> {
     pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
         let size = shape.size;
         let strides: Strides = (&shape).into();
-        collection::vec(0.0f32..1., size).prop_map(move |data| {
+        collection::vec(-1.0f32..1., size).prop_map(move |data| {
             Self::new(&data, shape.clone(), strides.clone(), get_wgpu_context())
         })
     }
@@ -170,7 +170,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
             shape,
             strides,
             context: self.context,
-            //init: self.init.clone(),
+            init: self.init.clone(),
         }
     }
 
@@ -192,7 +192,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
                 shape: Shape::new(new_shape),
                 strides: Strides::new(new_strides),
                 context: self.context,
-                //init: self.init.clone(),
+                init: self.init.clone(),
             })
         } else {
             None

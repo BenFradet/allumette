@@ -97,7 +97,7 @@ impl Shape {
         Shape::new(res)
     }
 
-    pub fn sample(&self) -> Idx {
+    pub fn sample_idx(&self) -> Idx {
         let mut idx = vec![];
         for s in &self.data {
             let r = if *s == 1 {
