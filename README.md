@@ -45,3 +45,13 @@ The set of dependencies is otherwise pretty limited:
 - [ ] ergonomics
 - [ ] optimizations
 - [ ] make encoding tensor dimension as a const generic work
+
+### Gotchas
+
+#### proptest
+
+Seems like `proptest` distributions are truly uniform unlike quickcheck or scalacheck which do
+hotspot values.
+`relu'(x)` is undefined when `x = 0` and by convention I had chosen 0. The central diff however
+reports nonsensical values.
+The bug was there for months until I ported the same logic to GPU where I hit on 0 by chance.
