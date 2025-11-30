@@ -37,7 +37,7 @@ impl CpuTensorData {
     pub fn arbitrary_with_shape_no_zero(shape: Shape) -> impl Strategy<Value = Self> {
         Self::arbitrary_with_shape_and_strategy(
             shape,
-            (-1.0f64..1.).prop_filter("discards 0", |&f| f == 0.),
+            (-1.0f64..1.).prop_filter("discards 0", |&f| f != 0.),
         )
     }
 

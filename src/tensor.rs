@@ -375,6 +375,10 @@ where
         CpuTensorData::arbitrary().prop_map(Self::from_data)
     }
 
+    pub fn arbitrary_no_zero() -> impl Strategy<Value = Self> {
+        CpuTensorData::arbitrary_no_zero().prop_map(Self::from_data)
+    }
+
     pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
         CpuTensorData::arbitrary_with_shape(shape).prop_map(Self::from_data)
     }
@@ -413,6 +417,10 @@ where
 {
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         GpuTensorData::arbitrary().prop_map(Self::from_data)
+    }
+
+    pub fn arbitrary_no_zero() -> impl Strategy<Value = Self> {
+        GpuTensorData::arbitrary_no_zero().prop_map(Self::from_data)
     }
 
     pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
@@ -513,7 +521,6 @@ mod tests {
         tensor: Tensor<f64, BT, T>,
         f: F,
     ) {
-        println!("cpu");
         let id = &tensor.id.clone();
         let reset = tensor.grad(None).history(History::default());
         let idx = reset.data.shape().sample_idx();
@@ -523,12 +530,9 @@ mod tests {
         assert!(tensor_after.is_some(), "tensor should be in backprop map");
         let unwrapped = tensor_after.unwrap();
         let check = unary_grad_central_diff(unwrapped.clone(), f, &idx);
-        dbg!(&check);
         assert!(unwrapped.grad.is_some(), "tensor should have a grad");
         let grad_data = unwrapped.grad.unwrap().data;
-        dbg!(&grad_data);
         let grad = grad_data[idx];
-        dbg!(&grad);
         assert!(
             grad.is_close(check),
             "tensor grad ({grad:?}) should be close to central diff ({check:?})",
@@ -541,7 +545,6 @@ mod tests {
         tensor: Tensor<f32, Gpu, GpuTensorData>,
         f: F,
     ) {
-        println!("gpu");
         let id = &tensor.id.clone();
         let reset = tensor.grad(None).history(History::default());
         let idx = reset.data.shape().sample_idx();
@@ -551,15 +554,12 @@ mod tests {
         assert!(tensor_after.is_some(), "tensor should be in backprop map");
         let unwrapped = tensor_after.unwrap();
         let check = unary_grad_central_diff_gpu(unwrapped.clone(), f, &idx);
-        dbg!(&check);
         assert!(unwrapped.grad.is_some(), "tensor should have a grad");
 
         let grad_data = unwrapped.grad.unwrap().data;
         let grad_data_cpu = grad_data.to_cpu();
-        dbg!(&grad_data);
         let grad_strides = grad_data.strides.clone();
         let grad = grad_data_cpu[grad_strides.position(&idx)];
-        dbg!(&grad);
         assert!(
             grad.is_close(check),
             "tensor grad ({grad:?}) should be close to central diff ({check:?})",
@@ -866,7 +866,6 @@ mod tests {
         unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
         unary_grad_assert(t.clone(), |t| t.sig());
         unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
-        unary_grad_assert(t.clone(), |t| t.relu());
         unary_grad_assert(t.clone(), |t| t.exp());
     }
 
@@ -1052,6 +1051,22 @@ mod tests {
         }
 
         #[test]
+        fn unary_grad_relu_test_cpu(
+            t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_no_zero(),
+            t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary_no_zero(),
+        ) {
+            unary_grad_assert(t_seq, |t| t.relu());
+            unary_grad_assert(t_par, |t| t.relu());
+        }
+
+        #[test]
+        fn unary_grad_relu_test_gpu(
+            t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_no_zero(),
+        ) {
+            unary_grad_assert_gpu(t, |t| t.relu());
+        }
+
+        #[test]
         fn unary_grad_tests_cpu(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
@@ -1062,14 +1077,13 @@ mod tests {
 
         #[test]
         fn unary_grad_tests_gpu(t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary()) {
-            //unary_grad_assert_gpu(t.clone(), |t| -t);
-            //unary_grad_assert_gpu(t.clone(), |t| t.clone() * t);
-            //unary_grad_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t);
-            //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
-            //unary_grad_assert_gpu(t.clone(), |t| t.sig());
-            //unary_grad_assert_gpu(t.clone(), |t| t.exp());
-            //unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
-            unary_grad_assert_gpu(t.clone(), |t| t.relu());
+            unary_grad_assert_gpu(t.clone(), |t| -t);
+            unary_grad_assert_gpu(t.clone(), |t| t.clone() * t);
+            unary_grad_assert_gpu(t.clone(), |t| t.clone() * t.clone() * t);
+            unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
+            unary_grad_assert_gpu(t.clone(), |t| t.sig());
+            unary_grad_assert_gpu(t.clone(), |t| t.exp());
+            unary_grad_assert_gpu(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
         }
 
         #[test]
@@ -1153,7 +1167,7 @@ mod tests {
         }
 
         #[test]
-        fn unary_complex_test1(
+        fn unary_complex_test1_cpu(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
         ) {
@@ -1172,7 +1186,7 @@ mod tests {
         }
 
         #[test]
-        fn unary_complex_test2(
+        fn unary_complex_test2_cpu(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
         ) {
@@ -1235,7 +1249,7 @@ mod tests {
     }
 
     #[test]
-    fn test_reduce_forward_one_dim() {
+    fn test_reduce_forward_one_dim_cpu() {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
         let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
@@ -1275,7 +1289,7 @@ mod tests {
     }
 
     #[test]
-    fn test_reduce_forward_one_dim_2() {
+    fn test_reduce_forward_one_dim_2_cpu() {
         let shape = Shape::new(vec![3, 2]);
         let strides = (&shape).into();
         let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
@@ -1312,7 +1326,7 @@ mod tests {
     }
 
     #[test]
-    fn test_reduce_forward_all_dim() {
+    fn test_reduce_forward_all_dim_cpu() {
         let shape = Shape::new(vec![3, 2]);
         let t_seq = Tensor::<f64, Seq, CpuTensorData>::from_1d(&[2., 3., 4., 6., 5., 7.])
             .reshape(shape.clone());
@@ -1338,23 +1352,24 @@ mod tests {
         assert_eq!(Some(27.), summed.item());
     }
 
-    #[test]
-    fn repro_test_gpu() {
-        let shape = Shape::new(vec![1, 2, 1]);
-        let strides: Strides = (&shape).into();
-        let td1 = GpuTensorData::new(
-            &[0., 0.],
-            shape.clone(),
-            strides.clone(),
-            get_wgpu_context(),
-        );
-        let t1 = Tensor::new(td1.clone(), History::default());
-        let td2 = CpuTensorData::new(vec![0., 0.], shape.clone(), strides.clone());
-        let t2: Tensor<_, Seq, _> = Tensor::new(td2.clone(), History::default());
+    //#[test]
+    //fn repro_test_gpu() {
+    //    let shape = Shape::new(vec![2]);
+    //    let strides: Strides = (&shape).into();
+    //    let td1 = GpuTensorData::new(
+    //        &[-0.007579464, -0.9285265],
+    //        shape.clone(),
+    //        strides.clone(),
+    //        get_wgpu_context(),
+    //    );
+    //    let t1 = Tensor::new(td1.clone(), History::default());
+    //    let td2 = CpuTensorData::new(vec![-0.0007579464, -0.9285265], shape.clone(), strides.clone());
+    //    let t2: Tensor<_, Seq, _> = Tensor::new(td2.clone(), History::default());
 
-        unary_grad_assert(t2.clone(), |t| t.relu());
-        unary_grad_assert_gpu(t1.clone(), |t| t.relu());
+    //    unary_grad_assert(t2.clone(), |t| t.relu());
+    //    println!("\ncpu good\n");
+    //    unary_grad_assert_gpu(t1.clone(), |t| t.relu());
 
-        assert!(true)
-    }
+    //    assert!(true)
+    //}
 }
