@@ -24,14 +24,34 @@ impl CpuTensorData {
         }
     }
 
+    // TODO: factor out into a trait between cpu_td and gpu_td
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         Shape::arbitrary().prop_flat_map(Self::arbitrary_with_shape)
     }
 
+    // useful when function is undefined at 0 like derivative of relu
+    pub fn arbitrary_no_zero() -> impl Strategy<Value = Self> {
+        Shape::arbitrary().prop_flat_map(Self::arbitrary_with_shape_no_zero)
+    }
+
+    pub fn arbitrary_with_shape_no_zero(shape: Shape) -> impl Strategy<Value = Self> {
+        Self::arbitrary_with_shape_and_strategy(
+            shape,
+            (-1.0f64..1.).prop_filter("discards 0", |&f| f == 0.),
+        )
+    }
+
     pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
+        Self::arbitrary_with_shape_and_strategy(shape, -1.0f64..1.)
+    }
+
+    fn arbitrary_with_shape_and_strategy<S: Strategy<Value = f64>>(
+        shape: Shape,
+        strategy: S,
+    ) -> impl Strategy<Value = Self> {
         let size = shape.size;
         let strides: Strides = (&shape).into();
-        collection::vec(-1.0f64..1., size)
+        collection::vec(strategy, size)
             .prop_map(move |data| Self::new(data, shape.clone(), strides.clone()))
     }
 }
