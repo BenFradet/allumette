@@ -1042,6 +1042,16 @@ mod tests {
         }
 
         #[test]
+        fn unary_grad_complex_test1_gpu(
+            t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+        ) {
+            unary_grad_assert_gpu(t, |t|
+                (t.clone() + Tensor::from_scalar(100000.)).ln() +
+                    (t - Tensor::from_scalar(200.)).exp()
+            );
+        }
+
+        #[test]
         fn unary_grad_complex_test2(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
