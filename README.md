@@ -42,9 +42,10 @@ The set of dependencies is otherwise pretty limited:
 
 - [x] parallel backend
 - [ ] gpu backend
+- [ ] visualization
 - [ ] ergonomics
 - [ ] optimizations
-- [ ] make encoding tensor dimension as a const generic work
+- [ ] tensor dimension as const generic
 
 ### Gotchas
 
@@ -55,3 +56,4 @@ hotspot values.
 `relu'(x)` is undefined when `x = 0` and by convention I had chosen 0. The central diff however
 reports nonsensical values.
 The bug was there for months until I ported the same logic to GPU where I hit on 0 by chance.
+C.f. https://github.com/proptest-rs/proptest/issues/82
