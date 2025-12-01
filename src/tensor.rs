@@ -1033,7 +1033,7 @@ mod tests {
         }
 
         #[test]
-        fn unary_grad_complex_test1(
+        fn unary_grad_complex_test1_cpu(
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
         ) {
@@ -1051,13 +1051,30 @@ mod tests {
             );
         }
 
+        // no zero since relu
         #[test]
-        fn unary_grad_complex_test2(
-            t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
-            t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
+        fn unary_grad_complex_test2_cpu(
+            t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_no_zero(),
+            t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary_no_zero(),
         ) {
             unary_grad_complex_test2_(t_seq);
             unary_grad_complex_test2_(t_par);
+        }
+
+        #[test]
+        fn unary_grad_complex_test2_gpu(
+            t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_no_zero(),
+        ) {
+            unary_grad_assert_gpu(t, |t| {
+                ((((t * Tensor::from_scalar(10.) + Tensor::from_scalar(7.)).relu()
+                    * Tensor::from_scalar(6.)
+                    + Tensor::from_scalar(5.))
+                .relu()
+                    * Tensor::from_scalar(10.))
+                .sig())
+                .ln()
+                    / Tensor::from_scalar(50.)
+            });
         }
 
         #[test]
