@@ -1028,8 +1028,10 @@ mod tests {
             (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
             (t1_par, t2_par) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
         ) {
-            binary_grad_test(t1_seq, t2_seq);
-            binary_grad_test(t1_par, t2_par);
+            binary_grad_test(t1_seq.clone().sum(Some(0)), t2_seq.clone());
+            binary_grad_test(t1_seq.clone(), t2_seq.clone().sum(Some(0)));
+            binary_grad_test(t1_par.clone().sum(Some(0)), t2_par.clone());
+            binary_grad_test(t1_par.clone(), t2_par.clone().sum(Some(0)));
         }
 
         #[test]
