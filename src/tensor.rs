@@ -513,7 +513,7 @@ mod tests {
 
     use super::*;
 
-    fn unary_grad_assert<
+    fn unary_grad_assert_cpu<
         BT: BackendType,
         T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
         F: Fn(Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
@@ -529,7 +529,7 @@ mod tests {
         let tensor_after = res.remove(id);
         assert!(tensor_after.is_some(), "tensor should be in backprop map");
         let unwrapped = tensor_after.unwrap();
-        let check = unary_grad_central_diff(unwrapped.clone(), f, &idx);
+        let check = unary_grad_central_diff_cpu(unwrapped.clone(), f, &idx);
         assert!(unwrapped.grad.is_some(), "tensor should have a grad");
         let grad_data = unwrapped.grad.unwrap().data;
         let grad = grad_data[idx];
@@ -593,8 +593,8 @@ mod tests {
         );
         let (unwrapped1, unwrapped2) = (after1.unwrap(), after2.unwrap());
         let (check1, check2) = (
-            binary_grad_central_diff(unwrapped1.clone(), unwrapped2.clone(), &f, &idx1, true),
-            binary_grad_central_diff(unwrapped1.clone(), unwrapped2.clone(), f, &idx2, false),
+            binary_grad_central_diff_cpu(unwrapped1.clone(), unwrapped2.clone(), &f, &idx1, true),
+            binary_grad_central_diff_cpu(unwrapped1.clone(), unwrapped2.clone(), f, &idx2, false),
         );
         assert!(
             unwrapped1.grad.is_some() && unwrapped2.grad.is_some(),
@@ -614,7 +614,7 @@ mod tests {
         );
     }
 
-    fn unary_grad_central_diff<
+    fn unary_grad_central_diff_cpu<
         BT: BackendType,
         T: Backend<f64, BT>,
         F: Fn(Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
@@ -650,7 +650,7 @@ mod tests {
         delta.item().unwrap_or(0.) / (2. * eps)
     }
 
-    fn binary_grad_central_diff<
+    fn binary_grad_central_diff_cpu<
         BT: BackendType,
         T: Backend<f64, BT>,
         F: Fn(Tensor<f64, BT, T>, Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
@@ -683,7 +683,7 @@ mod tests {
         delta.item().unwrap_or(0.) / (2. * eps)
     }
 
-    fn unary_assert<
+    fn unary_assert_cpu<
         E: Element,
         BT: BackendType,
         T: Backend<E, BT> + ops::Index<Idx, Output = E>,
@@ -719,7 +719,7 @@ mod tests {
         }
     }
 
-    fn binary_assert<
+    fn binary_assert_cpu<
         BT: BackendType,
         T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
         FT: Fn(Tensor<f64, BT, T>, Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
@@ -773,15 +773,15 @@ mod tests {
         t: Tensor<f64, BT, T>,
         o: Order,
     ) {
-        unary_grad_assert(t, move |t| t.permute(o.clone()));
+        unary_grad_assert_cpu(t, move |t| t.permute(o.clone()));
     }
 
     fn reduce_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
         t: Tensor<f64, BT, T>,
     ) {
-        unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
-        unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
-        unary_grad_assert(t.clone(), |t| t.mean(None));
+        unary_grad_assert_cpu(t.clone(), |t| t.sum(Some(0)));
+        unary_grad_assert_cpu(t.clone(), |t| t.mean(Some(0)));
+        unary_grad_assert_cpu(t.clone(), |t| t.mean(None));
     }
 
     fn binary_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
@@ -835,7 +835,7 @@ mod tests {
         let ft_seq = |t: Tensor<f64, BT, T>| {
             (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
         };
-        unary_grad_assert(t.clone(), ft_seq);
+        unary_grad_assert_cpu(t.clone(), ft_seq);
     }
 
     fn unary_grad_complex_test2_<
@@ -854,19 +854,19 @@ mod tests {
             .ln()
                 / Tensor::from_scalar(50.)
         };
-        unary_grad_assert(t.clone(), ft);
+        unary_grad_assert_cpu(t.clone(), ft);
     }
 
     fn unary_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
         t: Tensor<f64, BT, T>,
     ) {
-        unary_grad_assert(t.clone(), |t| -t);
-        unary_grad_assert(t.clone(), |t| t.clone() * t);
-        unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
-        unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
-        unary_grad_assert(t.clone(), |t| t.sig());
-        unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
-        unary_grad_assert(t.clone(), |t| t.exp());
+        unary_grad_assert_cpu(t.clone(), |t| -t);
+        unary_grad_assert_cpu(t.clone(), |t| t.clone() * t);
+        unary_grad_assert_cpu(t.clone(), |t| t.clone() * t.clone() * t);
+        unary_grad_assert_cpu(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
+        unary_grad_assert_cpu(t.clone(), |t| t.sig());
+        unary_grad_assert_cpu(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
+        unary_grad_assert_cpu(t.clone(), |t| t.exp());
     }
 
     fn unary_test<
@@ -876,10 +876,10 @@ mod tests {
     >(
         t: Tensor<E, BT, T>,
     ) {
-        unary_assert(t.clone(), |t| -t, |f| -f);
-        unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
-        unary_assert(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
-        unary_assert(
+        unary_assert_cpu(t.clone(), |t| -t, |f| -f);
+        unary_assert_cpu(t.clone(), |t| t.clone() * t, |f| f * f);
+        unary_assert_cpu(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
+        unary_assert_cpu(
             t.clone(),
             |t| t.inv(),
             |f| {
@@ -890,15 +890,15 @@ mod tests {
                 }
             },
         );
-        unary_assert(t.clone(), |t| t.sig(), |f| f.sig());
-        unary_assert(
+        unary_assert_cpu(t.clone(), |t| t.sig(), |f| f.sig());
+        unary_assert_cpu(
             t.clone(),
             |t| t.ln(),
             |f| if f > E::zero() { f.ln() } else { E::zero() },
         );
-        unary_assert(t.clone(), |t| t.relu(), |f| f.relu());
-        unary_assert(t.clone(), |t| t.exp(), |f| f.exp());
-        unary_assert(t.clone(), |t| t.contiguous(), |f| f);
+        unary_assert_cpu(t.clone(), |t| t.relu(), |f| f.relu());
+        unary_assert_cpu(t.clone(), |t| t.exp(), |f| f.exp());
+        unary_assert_cpu(t.clone(), |t| t.contiguous(), |f| f);
     }
 
     fn unary_complex_test1_<
@@ -911,7 +911,7 @@ mod tests {
             (t.clone() + Tensor::from_scalar(100000.)).ln() + (t - Tensor::from_scalar(200.)).exp()
         };
         let ff = |f: f64| (f + 100000.).ln() + (f - 200.).exp();
-        unary_assert(t.clone(), ft, ff);
+        unary_assert_cpu(t.clone(), ft, ff);
     }
 
     fn unary_complex_test2_<
@@ -931,35 +931,35 @@ mod tests {
                 / Tensor::from_scalar(50.)
         };
         let ff = |f: f64| ((((f * 10. + 7.).relu() * 6. + 5.).relu() * 10.).sig()).ln() / 50.;
-        unary_assert(t.clone(), ft, ff);
+        unary_assert_cpu(t.clone(), ft, ff);
     }
 
     fn binary_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
         t1: Tensor<f64, BT, T>,
         t2: Tensor<f64, BT, T>,
     ) {
-        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
-        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
-        binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
-        binary_assert(
+        binary_assert_cpu(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
+        binary_assert_cpu(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
+        binary_assert_cpu(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
+        binary_assert_cpu(
             t1.clone(),
             t2.clone(),
             |t1, t2| t1 / t2,
             |f1, f2| if f2 == 0. { 0. } else { f1 / f2 },
         );
-        binary_assert(
+        binary_assert_cpu(
             t1.clone(),
             t2.clone(),
             |t1, t2| t1.gt(t2),
             |f1, f2| if f2 < f1 { 1. } else { 0. },
         );
-        binary_assert(
+        binary_assert_cpu(
             t1.clone(),
             t2.clone(),
             |t1, t2| t1.lt(t2),
             |f1, f2| if f1 < f2 { 1. } else { 0. },
         );
-        binary_assert(
+        binary_assert_cpu(
             t1.clone(),
             t2.clone(),
             |t1, t2| t1.eq(t2),
@@ -1028,10 +1028,8 @@ mod tests {
             (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
             (t1_par, t2_par) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
         ) {
-            binary_grad_test(t1_seq.clone().sum(Some(0)), t2_seq.clone());
-            binary_grad_test(t1_seq.clone(), t2_seq.clone().sum(Some(0)));
-            binary_grad_test(t1_par.clone().sum(Some(0)), t2_par.clone());
-            binary_grad_test(t1_par.clone(), t2_par.clone().sum(Some(0)));
+            binary_grad_broadcast_test(t1_seq, t2_seq);
+            binary_grad_broadcast_test(t1_par, t2_par);
         }
 
         #[test]
@@ -1084,8 +1082,8 @@ mod tests {
             t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_no_zero(),
             t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary_no_zero(),
         ) {
-            unary_grad_assert(t_seq, |t| t.relu());
-            unary_grad_assert(t_par, |t| t.relu());
+            unary_grad_assert_cpu(t_seq, |t| t.relu());
+            unary_grad_assert_cpu(t_par, |t| t.relu());
         }
 
         #[test]
