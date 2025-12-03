@@ -427,8 +427,9 @@ where
         Shape::arbitrary()
             .prop_flat_map(|shape| {
                 let size = shape.size;
-                let data1 = collection::vec(0.0f32..1., size);
-                let data2 = collection::vec(0.0f32..1., size);
+                let strategy = -1.0f32..1.;
+                let data1 = collection::vec(strategy.clone(), size);
+                let data2 = collection::vec(strategy, size);
                 (data1, data2, Just(shape))
             })
             .prop_map(|(data1, data2, shape)| {
@@ -542,7 +543,7 @@ mod tests {
             );
         }
 
-        fn binary_grad_assert<
+        pub fn binary_grad_assert<
             BT: BackendType,
             T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
             F: Fn(Tensor<f64, BT, T>, Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
@@ -1172,7 +1173,7 @@ mod tests {
             delta.item().unwrap_or(0.) / (2. * eps)
         }
 
-        fn binary_grad_assert<
+        pub fn binary_grad_assert<
             'a,
             F: Fn(
                 Tensor<f32, Gpu, GpuTensorData<'a>>,
@@ -1287,13 +1288,13 @@ mod tests {
             fn binary_grad_tests(
                 (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_tuple(),
             ) {
-                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
-                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
-                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
-                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| {
-                    t1 / (t2 + Tensor::from_scalar(5.5))
-                });
-                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
+                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
+                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
+                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
+                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| {
+                //    t1 / (t2 + Tensor::from_scalar(5.5))
+                //});
+                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
                 //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
                 binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
             }
@@ -1519,24 +1520,39 @@ mod tests {
         view_test(t_gpu);
     }
 
-    //#[test]
-    //fn repro_test_gpu() {
-    //    let shape = Shape::new(vec![2]);
-    //    let strides: Strides = (&shape).into();
-    //    let td1 = GpuTensorData::new(
-    //        &[-0.007579464, -0.9285265],
-    //        shape.clone(),
-    //        strides.clone(),
-    //        get_wgpu_context(),
-    //    );
-    //    let t1 = Tensor::new(td1.clone(), History::default());
-    //    let td2 = CpuTensorData::new(vec![-0.0007579464, -0.9285265], shape.clone(), strides.clone());
-    //    let t2: Tensor<_, Seq, _> = Tensor::new(td2.clone(), History::default());
+    #[test]
+    fn repro_test_gpu() {
+        let shape = Shape::new(vec![3]);
+        let strides: Strides = (&shape).into();
 
-    //    unary_grad_assert(t2.clone(), |t| t.relu());
-    //    println!("\ncpu good\n");
-    //    unary_grad_assert_gpu(t1.clone(), |t| t.relu());
+        let d1 = vec![-0.569, -0.06, 0.209];
 
-    //    assert!(true)
-    //}
+        let gtd1 = GpuTensorData::new(&d1, shape.clone(), strides.clone(), get_wgpu_context());
+        let gt1 = Tensor::new(gtd1, History::default());
+
+        let ctd1 = CpuTensorData::new(
+            d1.iter().map(|&f| f as f64).collect(),
+            shape.clone(),
+            strides.clone(),
+        );
+        let ct1: Tensor<_, Seq, _> = Tensor::new(ctd1.clone(), History::default());
+
+        let d2 = [-0.569, 0.172, -0.611];
+
+        let gtd2 = GpuTensorData::new(&d2, shape.clone(), strides.clone(), get_wgpu_context());
+        let gt2 = Tensor::new(gtd2, History::default());
+
+        let ctd2 = CpuTensorData::new(
+            d2.iter().map(|&f| f as f64).collect(),
+            shape.clone(),
+            strides.clone(),
+        );
+        let ct2: Tensor<_, Seq, _> = Tensor::new(ctd2.clone(), History::default());
+
+        cpu::binary_grad_assert(ct1, ct2, |t1, t2| t1.lt(t2));
+        println!("\ncpu good\n");
+        gpu::binary_grad_assert(gt1, gt2, |t1, t2| t1.lt(t2));
+
+        assert!(true)
+    }
 }

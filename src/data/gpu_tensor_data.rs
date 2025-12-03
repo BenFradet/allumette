@@ -20,7 +20,7 @@ pub struct GpuTensorData<'a> {
     pub shape: Shape,
     pub strides: Strides,
     pub context: &'a WgpuContext,
-    // used for debugging
+    // TODO: rm, used for debugging
     init: Vec<f32>,
 }
 
