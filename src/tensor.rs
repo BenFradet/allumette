@@ -1347,6 +1347,26 @@ mod tests {
             }
 
             #[test]
+            fn binary_grad_broadcast_tests(
+                (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_tuple(),
+            ) {
+                binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 + t2);
+                binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 + t2);
+                binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 - t2);
+                binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 - t2);
+                binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 * t2);
+                binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 * t2);
+                binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| {
+                    t1 / (t2 + Tensor::from_scalar(5.5))
+                });
+                binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| {
+                    t1 / (t2 + Tensor::from_scalar(5.5))
+                });
+                binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.eq(t2));
+                binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.eq(t2));
+            }
+
+            #[test]
             fn unary_grad_complex_test1(
                 t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
             ) {
