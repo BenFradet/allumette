@@ -367,6 +367,7 @@ where
     }
 }
 
+// TODO: find a way to make this drier
 impl<E: Element + UnsafeUsizeConvert, BT: BackendType> Tensor<E, BT, CpuTensorData>
 where
     CpuTensorData: Backend<E, BT>,
@@ -384,11 +385,26 @@ where
     }
 
     pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
+        let strategy = -1.0f64..1.;
+        Self::arbitrary_tuple_with_strategy(strategy.clone(), strategy)
+    }
+
+    // useful when central diff doesn't work on x = y, such as lt or gt
+    pub fn arbitrary_disjoint_tuple() -> impl Strategy<Value = (Self, Self)> {
+        let s1 = -1.0f64..0.;
+        let s2 = 0.0f64..1.;
+        Self::arbitrary_tuple_with_strategy(s1, s2)
+    }
+
+    fn arbitrary_tuple_with_strategy<S: Strategy<Value = f64> + Clone>(
+        s1: S,
+        s2: S,
+    ) -> impl Strategy<Value = (Self, Self)> {
         Shape::arbitrary()
-            .prop_flat_map(|shape| {
+            .prop_flat_map(move |shape| {
                 let size = shape.size;
-                let data1 = collection::vec(0.0f64..1., size);
-                let data2 = collection::vec(0.0f64..1., size);
+                let data1 = collection::vec(s1.clone(), size);
+                let data2 = collection::vec(s2.clone(), size);
                 (data1, data2, Just(shape))
             })
             .prop_map(|(data1, data2, shape)| {
@@ -424,12 +440,25 @@ where
     }
 
     pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
+        let strategy = -1.0f32..1.;
+        Self::arbitrary_tuple_with_strategy(strategy.clone(), strategy.clone())
+    }
+
+    pub fn arbitrary_disjoint_tuple() -> impl Strategy<Value = (Self, Self)> {
+        let s1 = -1.0f32..0.;
+        let s2 = 0.0f32..1.;
+        Self::arbitrary_tuple_with_strategy(s1, s2)
+    }
+
+    fn arbitrary_tuple_with_strategy<S: Strategy<Value = f32> + Clone>(
+        s1: S,
+        s2: S,
+    ) -> impl Strategy<Value = (Self, Self)> {
         Shape::arbitrary()
-            .prop_flat_map(|shape| {
+            .prop_flat_map(move |shape| {
                 let size = shape.size;
-                let strategy = -1.0f32..1.;
-                let data1 = collection::vec(strategy.clone(), size);
-                let data2 = collection::vec(strategy, size);
+                let data1 = collection::vec(s1.clone(), size);
+                let data2 = collection::vec(s2.clone(), size);
                 (data1, data2, Just(shape))
             })
             .prop_map(|(data1, data2, shape)| {
