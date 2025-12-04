@@ -389,7 +389,7 @@ where
         Self::arbitrary_tuple_with_strategy(strategy.clone(), strategy)
     }
 
-    // useful when central diff doesn't work on x = y, such as lt or gt
+    // useful when central diff doesn't work lt and gt if x = y
     pub fn arbitrary_disjoint_tuple() -> impl Strategy<Value = (Self, Self)> {
         let s1 = -1.0f64..0.;
         let s2 = 0.0f64..1.;
@@ -444,6 +444,7 @@ where
         Self::arbitrary_tuple_with_strategy(strategy.clone(), strategy.clone())
     }
 
+    // useful when central diff doesn't work lt and gt if x = y
     pub fn arbitrary_disjoint_tuple() -> impl Strategy<Value = (Self, Self)> {
         let s1 = -1.0f32..0.;
         let s2 = 0.0f32..1.;
@@ -743,8 +744,6 @@ mod tests {
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| {
                 t1 / (t2 + Tensor::from_scalar(5.5))
             });
-            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
-            binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
         }
 
@@ -972,6 +971,18 @@ mod tests {
             ) {
                 binary_grad_test(t1_seq, t2_seq);
                 binary_grad_test(t1_par, t2_par);
+            }
+
+            // central diff doesn't work lt and gt if x = y
+            #[test]
+            fn binary_grad_lt_gt_tests(
+                (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_disjoint_tuple(),
+                (t1_par, t2_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_disjoint_tuple(),
+            ) {
+                binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.gt(t2));
+                binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.lt(t2));
+                binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1.gt(t2));
+                binary_grad_assert(t1_par.clone(), t2_par.clone(), |t1, t2| t1.lt(t2));
             }
 
             #[test]
@@ -1317,15 +1328,22 @@ mod tests {
             fn binary_grad_tests(
                 (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_tuple(),
             ) {
-                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
-                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
-                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
-                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| {
-                //    t1 / (t2 + Tensor::from_scalar(5.5))
-                //});
-                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
-                //binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
+                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
+                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
+                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
+                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| {
+                    t1 / (t2 + Tensor::from_scalar(5.5))
+                });
                 binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
+            }
+
+            // central diff doesn't work for lt gt if x == y
+            #[test]
+            fn binary_grad_lt_gt_tests(
+                (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_disjoint_tuple(),
+            ) {
+                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
+                binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
             }
 
             #[test]
@@ -1549,39 +1567,39 @@ mod tests {
         view_test(t_gpu);
     }
 
-    #[test]
-    fn repro_test_gpu() {
-        let shape = Shape::new(vec![3]);
-        let strides: Strides = (&shape).into();
+    //#[test]
+    //fn repro_test_gpu() {
+    //    let shape = Shape::new(vec![3]);
+    //    let strides: Strides = (&shape).into();
 
-        let d1 = vec![-0.569, -0.06, 0.209];
+    //    let d1 = vec![-0.569, -0.06, 0.209];
 
-        let gtd1 = GpuTensorData::new(&d1, shape.clone(), strides.clone(), get_wgpu_context());
-        let gt1 = Tensor::new(gtd1, History::default());
+    //    let gtd1 = GpuTensorData::new(&d1, shape.clone(), strides.clone(), get_wgpu_context());
+    //    let gt1 = Tensor::new(gtd1, History::default());
 
-        let ctd1 = CpuTensorData::new(
-            d1.iter().map(|&f| f as f64).collect(),
-            shape.clone(),
-            strides.clone(),
-        );
-        let ct1: Tensor<_, Seq, _> = Tensor::new(ctd1.clone(), History::default());
+    //    let ctd1 = CpuTensorData::new(
+    //        d1.iter().map(|&f| f as f64).collect(),
+    //        shape.clone(),
+    //        strides.clone(),
+    //    );
+    //    let ct1: Tensor<_, Seq, _> = Tensor::new(ctd1.clone(), History::default());
 
-        let d2 = [-0.569, 0.172, -0.611];
+    //    let d2 = [-0.569, 0.172, -0.611];
 
-        let gtd2 = GpuTensorData::new(&d2, shape.clone(), strides.clone(), get_wgpu_context());
-        let gt2 = Tensor::new(gtd2, History::default());
+    //    let gtd2 = GpuTensorData::new(&d2, shape.clone(), strides.clone(), get_wgpu_context());
+    //    let gt2 = Tensor::new(gtd2, History::default());
 
-        let ctd2 = CpuTensorData::new(
-            d2.iter().map(|&f| f as f64).collect(),
-            shape.clone(),
-            strides.clone(),
-        );
-        let ct2: Tensor<_, Seq, _> = Tensor::new(ctd2.clone(), History::default());
+    //    let ctd2 = CpuTensorData::new(
+    //        d2.iter().map(|&f| f as f64).collect(),
+    //        shape.clone(),
+    //        strides.clone(),
+    //    );
+    //    let ct2: Tensor<_, Seq, _> = Tensor::new(ctd2.clone(), History::default());
 
-        cpu::binary_grad_assert(ct1, ct2, |t1, t2| t1.lt(t2));
-        println!("\ncpu good\n");
-        gpu::binary_grad_assert(gt1, gt2, |t1, t2| t1.lt(t2));
+    //    cpu::binary_grad_assert(ct1, ct2, |t1, t2| t1.lt(t2));
+    //    println!("\ncpu good\n");
+    //    gpu::binary_grad_assert(gt1, gt2, |t1, t2| t1.lt(t2));
 
-        assert!(true)
-    }
+    //    assert!(true)
+    //}
 }
