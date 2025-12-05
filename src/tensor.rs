@@ -1339,6 +1339,15 @@ mod tests {
         proptest! {
 
             #[test]
+            fn reduce_grad_tests(
+                t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+            ) {
+                unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
+                unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
+                unary_grad_assert(t.clone(), |t| t.mean(None));
+            }
+
+            #[test]
             fn binary_grad_tests(
                 (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_tuple(),
             ) {
