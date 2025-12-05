@@ -766,10 +766,6 @@ mod tests {
             binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| {
                 t1 / (t2 + Tensor::from_scalar(5.5))
             });
-            binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.gt(t2));
-            binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.gt(t2));
-            binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.lt(t2));
-            binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.lt(t2));
             binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.eq(t2));
             binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.eq(t2));
         }
@@ -973,7 +969,7 @@ mod tests {
                 binary_grad_test(t1_par, t2_par);
             }
 
-            // central diff doesn't work lt and gt if x = y
+            // central diff doesn't work for lt and gt if x = y
             #[test]
             fn binary_grad_lt_gt_tests(
                 (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_disjoint_tuple(),
@@ -992,6 +988,24 @@ mod tests {
             ) {
                 binary_grad_broadcast_test(t1_seq, t2_seq);
                 binary_grad_broadcast_test(t1_par, t2_par);
+            }
+
+            // central diff doesn't work for lt and gt if x = y
+            #[test]
+            fn binary_grad_broadcast_lt_gt_tests(
+                (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_disjoint_tuple(),
+                (t1_par, t2_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_disjoint_tuple(),
+            ) {
+                binary_grad_assert(t1_seq.clone().sum(Some(0)), t2_seq.clone(), |t1, t2| t1.gt(t2));
+                binary_grad_assert(t1_seq.clone().sum(Some(0)), t2_seq.clone(), |t1, t2| t1.gt(t2));
+                binary_grad_assert(t1_seq.clone(), t2_seq.clone().sum(Some(0)), |t1, t2| t1.gt(t2));
+                binary_grad_assert(t1_seq.clone().sum(Some(0)), t2_seq.clone(), |t1, t2| t1.lt(t2));
+                binary_grad_assert(t1_seq.clone(), t2_seq.clone().sum(Some(0)), |t1, t2| t1.lt(t2));
+                binary_grad_assert(t1_par.clone().sum(Some(0)), t2_par.clone(), |t1, t2| t1.gt(t2));
+                binary_grad_assert(t1_par.clone().sum(Some(0)), t2_par.clone(), |t1, t2| t1.gt(t2));
+                binary_grad_assert(t1_par.clone(), t2_par.clone().sum(Some(0)), |t1, t2| t1.gt(t2));
+                binary_grad_assert(t1_par.clone().sum(Some(0)), t2_par.clone(), |t1, t2| t1.lt(t2));
+                binary_grad_assert(t1_par.clone(), t2_par.clone().sum(Some(0)), |t1, t2| t1.lt(t2));
             }
 
             #[test]
