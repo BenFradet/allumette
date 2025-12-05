@@ -480,6 +480,16 @@ where
                 )
             })
     }
+
+    pub fn arbitrary_with_order() -> impl Strategy<Value = (Self, Order)> {
+        Self::arbitrary().prop_flat_map(|t| {
+            let len = t.data.shape.len();
+            let ord = collection::vec(0..len, len)
+                .prop_shuffle()
+                .prop_filter_map("order does not fit", Order::new);
+            (Just(t), ord)
+        })
+    }
 }
 
 impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> ops::Add<Tensor<E, BT, T>>
@@ -1337,6 +1347,13 @@ mod tests {
         }
 
         proptest! {
+
+            #[test]
+            fn permute_grad_tests(
+                (t, o) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_with_order(),
+            ) {
+                unary_grad_assert(t, move |t| t.permute(o.clone()));
+            }
 
             #[test]
             fn reduce_grad_tests(
