@@ -43,6 +43,7 @@ The set of dependencies is otherwise pretty limited:
 - [x] parallel backend
 - [ ] gpu backend
 - [ ] visualization
+- [ ] convolution
 - [ ] ergonomics
 - [ ] optimizations
 - [ ] tensor dimension as const generic
