@@ -57,4 +57,10 @@ fn call(
     @builtin(local_invocation_id) local_id: vec3<u32>,
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
 ) {
+    let i = global_id.x;
+    let j = global_id.y;
+    let li = local_id.x;
+    let lj = local_id.y;
+
+    let batch = workgroup_id.z;
 }
