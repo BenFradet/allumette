@@ -17,6 +17,9 @@ var<storage, read> metadata: array<u32>;
 @group(0) @binding(3)
 var<storage, read_write> output: array<f32>;
 
+var<workgroup> a_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
+var<workgroup> b_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
+
 // used to create local arrays
 const TILE_SIZE: u32 = 32u;
 
@@ -54,6 +57,4 @@ fn call(
     @builtin(local_invocation_id) local_id: vec3<u32>,
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
 ) {
-    var a_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
-    var b_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
 }
