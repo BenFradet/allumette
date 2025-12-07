@@ -29,15 +29,15 @@ fn a_shape(i: u32) -> u32 {
 }
 
 fn a_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0]];
+    return metadata[i + PREAMBLE + metadata[0u]];
 }
 
 fn out_shape(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u];
 }
 
 fn out_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1]];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u]];
 }
 
 fn prod(
@@ -111,9 +111,9 @@ fn call(
     var a_index: array<u32, MAX_DIMS>;
     var out_index: array<u32, MAX_DIMS>;
 
-    let a_shape_len = metadata[0];
-    let out_shape_len = metadata[1];
-    let reduce_dim = metadata[2];
+    let a_shape_len = metadata[0u];
+    let out_shape_len = metadata[1u];
+    let reduce_dim = metadata[2u];
     let reduce_default = f32(replace_with_default);
     let reduce_size = a_shape(reduce_dim);
 

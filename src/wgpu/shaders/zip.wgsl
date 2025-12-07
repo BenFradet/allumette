@@ -28,23 +28,23 @@ fn a_shape(i: u32) -> u32 {
 }
 
 fn a_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0]];
+    return metadata[i + PREAMBLE + metadata[0u]];
 }
 
 fn b_shape(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u];
 }
 
 fn b_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1]];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u]];
 }
 
 fn out_shape(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1] * 2u];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u] * 2u];
 }
 
 fn out_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1] * 2u + metadata[2]];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u] * 2u + metadata[2u]];
 }
 
 fn add(a: f32, b: f32) -> f32 {
@@ -57,25 +57,25 @@ fn mul(a: f32, b: f32) -> f32 {
 
 fn lt(a: f32, b: f32) -> f32 {
     if (a < b) {
-        return 1.0;
+        return 1.;
     } else {
-        return 0.0;
+        return 0.;
     }
 }
 
 fn eq(a: f32, b: f32) -> f32 {
     if (a == b) {
-        return 1.0;
+        return 1.;
     } else {
-        return 0.0;
+        return 0.;
     }
 }
 
 fn is_close(a: f32, b: f32) -> f32 {
     if (abs(a - b) < 0.001) {
-        return 1.0;
+        return 1.;
     } else {
-        return 0.0;
+        return 0.;
     }
 }
 
@@ -200,9 +200,9 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var b_index: array<u32, MAX_DIMS>;
     var out_index: array<u32, MAX_DIMS>;
 
-    let a_shape_len = metadata[0];
-    let b_shape_len = metadata[1];
-    let out_shape_len = metadata[2];
+    let a_shape_len = metadata[0u];
+    let b_shape_len = metadata[1u];
+    let out_shape_len = metadata[2u];
 
     to_index(i, out_shape_len, &out_index);
     broadcast_index_a(a_shape_len, out_shape_len, &a_index, out_index);

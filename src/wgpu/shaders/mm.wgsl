@@ -31,23 +31,23 @@ fn a_shape(i: u32) -> u32 {
 }
 
 fn a_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0]];
+    return metadata[i + PREAMBLE + metadata[0u]];
 }
 
 fn b_shape(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u];
 }
 
 fn b_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1]];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u]];
 }
 
 fn out_shape(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1] * 2u];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u] * 2u];
 }
 
 fn out_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1] * 2u + metadata[2]];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u] * 2u + metadata[2u]];
 }
 
 @compute
@@ -57,10 +57,29 @@ fn call(
     @builtin(local_invocation_id) local_id: vec3<u32>,
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
 ) {
-    let i = global_id.x;
-    let j = global_id.y;
-    let li = local_id.x;
-    let lj = local_id.y;
+    let lx = local_id.x;
+    let ly = local_id.y;
 
-    let batch = workgroup_id.z;
+    // assume square matrix of size
+    let size = 12u;
+
+    let idx = ly * size + lx;
+
+    if (lx < size && ly < size) {
+        a_tile[ly][lx] = input_a[idx];
+        b_tile[ly][lx] = input_b[idx];
+    } else {
+        a_tile[ly][lx] = 0.;
+        b_tile[ly][lx] = 0.;
+    }
+
+    workgroupBarrier();
+
+    if (ly < size && lx < size) {
+        var acc = 0.;
+        for (var i = 0u; i < size; i = i + 1u) {
+            acc = fma(a_tile[ly][i], b_tile[i][lx], acc);
+        }
+        output[idx] = acc;
+    }
 }

@@ -24,15 +24,15 @@ fn in_shape(i: u32) -> u32 {
 }
 
 fn in_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0]];
+    return metadata[i + PREAMBLE + metadata[0u]];
 }
 
 fn out_shape(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u];
 }
 
 fn out_strides(i: u32) -> u32 {
-    return metadata[i + PREAMBLE + metadata[0] * 2u + metadata[1]];
+    return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u]];
 }
 
 fn id(in: f32) -> f32 {
@@ -44,22 +44,22 @@ fn neg(in: f32) -> f32 {
 }
 
 fn inv(in: f32) -> f32 {
-    if (in == 0.0) {
-        return 0.0;
+    if (in == 0.) {
+        return 0.;
     }
-    return 1.0 / in;
+    return 1. / in;
 }
 
 fn relu(in: f32) -> f32 {
-    return max(0.0, in);
+    return max(0., in);
 }
 
 fn sig(in: f32) -> f32 {
-    if (in >= 0.0) {
-        return 1.0 / (1.0 + exp(-in));
+    if (in >= 0.) {
+        return 1. / (1. + exp(-in));
     } else {
         let e = exp(in);
-        return e / (1.0 + e);
+        return e / (1. + e);
     }
 }
 
@@ -149,8 +149,8 @@ fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var in_index: array<u32, MAX_DIMS>;
     var out_index: array<u32, MAX_DIMS>;
 
-    let in_shape_len = metadata[0];
-    let out_shape_len = metadata[1];
+    let in_shape_len = metadata[0u];
+    let out_shape_len = metadata[1u];
     to_index(i, out_shape_len, &out_index);
     broadcast_index(in_shape_len, out_shape_len, &in_index, out_index);
     let in_pos = index_to_position_in(in_shape_len, in_index);
