@@ -8,8 +8,8 @@ use crate::shaping::shape::Shape;
 /// size: number of threads per workgroup
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub struct WorkgroupInfo {
-    pub count: usize,
-    pub size: usize,
+    pub count: (usize, usize, usize),
+    pub size: (usize, usize, usize),
 }
 
 const MAX_WORKGROUP_COUNT: usize = 65535;
@@ -22,17 +22,20 @@ impl WorkgroupInfo {
         let tensor_size = shape.size;
         let wg_size = MAX_WORKGROUP_SIZE.min(reduce_dim.next_power_of_two());
         WorkgroupInfo {
-            count: tensor_size,
-            size: wg_size,
+            count: (tensor_size, 1, 1),
+            size: (wg_size, 1, 1),
         }
     }
 
     pub fn workgroup_size(&self) -> String {
-        format!("@workgroup_size({})", self.size)
+        format!(
+            "@workgroup_size({}, {}, {})",
+            self.size.0, self.size.1, self.size.2
+        )
     }
 
     pub fn workgroup_size_const(&self) -> String {
-        format!("const WG_SIZE: u32 = {}u;", self.size)
+        format!("const WG_SIZE: u32 = {}u;", self.size.0)
     }
 }
 
@@ -43,14 +46,14 @@ impl From<&Shape> for WorkgroupInfo {
 
         if tensor_size <= MAX_WORKGROUP_SIZE {
             WorkgroupInfo {
-                count: 1,
-                size: tensor_size.next_power_of_two(),
+                count: (1, 1, 1),
+                size: (tensor_size.next_power_of_two(), 1, 1),
             }
         } else {
             let count = tensor_size.div_ceil(MAX_WORKGROUP_SIZE);
             WorkgroupInfo {
-                count,
-                size: MAX_WORKGROUP_SIZE,
+                count: (count, 1, 1),
+                size: (MAX_WORKGROUP_SIZE, 1, 1),
             }
         }
     }
@@ -64,13 +67,16 @@ mod tests {
     fn from_shape_test() {
         assert_eq!(
             WorkgroupInfo {
-                count: 2,
-                size: 256
+                count: (2, 1, 1),
+                size: (256, 1, 1)
             },
             (&Shape::new(vec![257])).into()
         );
         assert_eq!(
-            WorkgroupInfo { count: 1, size: 32 },
+            WorkgroupInfo {
+                count: (1, 1, 1),
+                size: (32, 1, 1)
+            },
             (&Shape::new(vec![14, 2])).into()
         );
     }
@@ -80,7 +86,10 @@ mod tests {
         // reduce [3, 2] along 0th
         assert_eq!(
             WorkgroupInfo::for_reduce(3, &Shape::new(vec![1, 2])),
-            WorkgroupInfo { count: 2, size: 4 }
+            WorkgroupInfo {
+                count: (2, 1, 1),
+                size: (4, 1, 1)
+            }
         );
     }
 }

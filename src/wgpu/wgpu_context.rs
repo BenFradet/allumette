@@ -76,7 +76,11 @@ impl WgpuContext {
             });
             compute_pass.set_pipeline(pipeline);
             compute_pass.set_bind_group(0, Some(bind_group), &[]);
-            compute_pass.dispatch_workgroups(workgroup_info.count.try_into().unwrap(), 1, 1);
+            compute_pass.dispatch_workgroups(
+                workgroup_info.count.0.try_into().unwrap(),
+                workgroup_info.count.1.try_into().unwrap(),
+                workgroup_info.count.2.try_into().unwrap(),
+            );
         }
         encoder.finish()
     }

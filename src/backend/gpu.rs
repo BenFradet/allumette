@@ -146,7 +146,6 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             let shape = Shape::new(shape_data);
 
             let workgroup_info = WorkgroupInfo::for_reduce(self.shape.data()[dim], &shape);
-            //dbg!(workgroup_info);
             let gpu_size = shape.gpu_byte_size();
             let output_buffer = self.context.create_output_buffer(
                 gpu_size,
@@ -184,7 +183,10 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     }
 
     fn matmul(&self, _other: &Self) -> Self {
-        todo!()
+        // assuming 4x4 square matrix for now
+        let output_shape = self.shape.clone();
+        //let workgroup_info = WorkgroupInfo { count: 1, size: 32 }
+        todo!();
     }
 }
 

@@ -61,7 +61,7 @@ fn call(
     let ly = local_id.y;
 
     // assume square matrix of size
-    let size = 12u;
+    let size = 4u;
 
     let idx = ly * size + lx;
 
