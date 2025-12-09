@@ -34,6 +34,7 @@ impl WgpuContext {
     const MAP_SHADER: &'static str = include_str!("shaders/map.wgsl");
     const ZIP_SHADER: &'static str = include_str!("shaders/zip.wgsl");
     const RED_SHADER: &'static str = include_str!("shaders/red.wgsl");
+    const MM_SHADER: &'static str = include_str!("shaders/mm.wgsl");
 
     const REPLACE_OP_NAME: &'static str = "replace_with_operation";
     const REPLACE_DEFAULT_NAME: &'static str = "replace_with_default";
@@ -45,6 +46,7 @@ impl WgpuContext {
     const ZIP_OPS: [&'static str; 7] =
         ["add", "mul", "lt", "eq", "is_close", "ln_diff", "relu_diff"];
     const RED_OPS: [&'static str; 2] = ["sum", "all"];
+    const MM_OP: &'static str = "mm";
 
     const ENTRY_POINT: &'static str = "call";
 
@@ -138,6 +140,14 @@ impl WgpuContext {
                                 Self::REPLACE_DEFAULT_NAME,
                                 &default.unwrap_or(0.).to_string(),
                             ),
+                        workgroup_info,
+                    ),
+                )
+            } else if operation == Self::MM_OP {
+                Some(
+                    self.create_shader_module(
+                        operation,
+                        Self::MM_SHADER,
                         workgroup_info,
                     ),
                 )

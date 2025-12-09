@@ -185,7 +185,13 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     fn matmul(&self, _other: &Self) -> Self {
         // assuming 4x4 square matrix for now
         let output_shape = self.shape.clone();
-        //let workgroup_info = WorkgroupInfo { count: 1, size: 32 }
+        let workgroup_info = WorkgroupInfo { count: (1, 1, 1), size: (4, 4, 1) };
+        let gpu_size = output_shape.gpu_byte_size();
+        let output_buffer = self.context.create_output_buffer(
+            gpu_size,
+            "mm",
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
         todo!();
     }
 }
