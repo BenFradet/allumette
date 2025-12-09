@@ -182,17 +182,43 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         }
     }
 
-    fn matmul(&self, _other: &Self) -> Self {
+    // TODO: move to Option
+    fn matmul(&self, other: &Self) -> Self {
+        let op = "mm";
         // assuming 4x4 square matrix for now
-        let output_shape = self.shape.clone();
-        let workgroup_info = WorkgroupInfo { count: (1, 1, 1), size: (4, 4, 1) };
-        let gpu_size = output_shape.gpu_byte_size();
+        let shape = self.shape.clone();
+        let workgroup_info = WorkgroupInfo {
+            count: (1, 1, 1),
+            size: (4, 4, 1),
+        };
+        let gpu_size = shape.gpu_byte_size();
+
         let output_buffer = self.context.create_output_buffer(
             gpu_size,
-            "mm",
+            op,
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        todo!();
+
+        let pipeline = self
+            .context
+            .get_or_create_pipeline(op, workgroup_info, 4, None)
+            .unwrap();
+        let bind_group_layout = pipeline.get_bind_group_layout(0);
+        let metadata_buffer = self
+            .context
+            .create_metadata_buffer(&[&self.shape, &other.shape, &shape], &[]);
+        let bind_group = self.context.create_bind_group(
+            &[&self.buffer, &metadata_buffer, &output_buffer],
+            &bind_group_layout,
+        );
+
+        let command = self
+            .context
+            .encode_command(&workgroup_info, &pipeline, &bind_group);
+        self.context.submit_command(command).ok().unwrap();
+
+        let strides = (&shape).into();
+        Self::from_buffer(shape, strides, output_buffer, self.context)
     }
 }
 

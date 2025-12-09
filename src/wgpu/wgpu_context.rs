@@ -144,13 +144,7 @@ impl WgpuContext {
                     ),
                 )
             } else if operation == Self::MM_OP {
-                Some(
-                    self.create_shader_module(
-                        operation,
-                        Self::MM_SHADER,
-                        workgroup_info,
-                    ),
-                )
+                Some(self.create_shader_module(operation, Self::MM_SHADER, workgroup_info))
             } else {
                 None
             };
