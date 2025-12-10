@@ -182,7 +182,6 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         }
     }
 
-    // TODO: move to Option
     fn matmul(&self, other: &Self) -> Option<Self> {
         let op = "mm";
         // assuming 4x4 square matrix for now
@@ -207,7 +206,12 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .context
             .create_metadata_buffer(&[&self.shape, &other.shape, &shape], &[]);
         let bind_group = self.context.create_bind_group(
-            &[&self.buffer, &metadata_buffer, &output_buffer],
+            &[
+                &self.buffer,
+                &other.buffer,
+                &metadata_buffer,
+                &output_buffer,
+            ],
             &bind_group_layout,
         );
 
