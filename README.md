@@ -48,7 +48,7 @@ The set of dependencies is otherwise pretty limited:
 - [ ] optimizations
 - [ ] tensor dimension as const generic
 
-### Gotchas
+### Gotchas / learnings
 
 #### proptest
 
@@ -58,3 +58,9 @@ hotspot values.
 reports nonsensical values.
 The bug was there for months until I ported the same logic to GPU where I hit on 0 by chance.
 C.f. https://github.com/proptest-rs/proptest/issues/82
+
+#### proptest & GPU
+
+GPU is fast except going to and from the CPU which happens a lot with prop tests
+
+#### IGPs are slow

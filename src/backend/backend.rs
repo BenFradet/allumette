@@ -24,8 +24,7 @@ pub trait TensorBackend<E: Element, T: BackendType> {
     ) -> Option<Self>
     where
         Self: Sized;
-    // TODO: should return option based on the assert
-    fn matmul(&self, other: &Self) -> Self;
+    fn matmul(&self, other: &Self) -> Option<Self> where Self: Sized;
 
     fn expand(&self, other: Self) -> Option<Self>
     where

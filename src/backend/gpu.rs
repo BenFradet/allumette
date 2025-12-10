@@ -183,7 +183,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     }
 
     // TODO: move to Option
-    fn matmul(&self, other: &Self) -> Self {
+    fn matmul(&self, other: &Self) -> Option<Self> {
         let op = "mm";
         // assuming 4x4 square matrix for now
         let shape = self.shape.clone();
@@ -201,8 +201,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
 
         let pipeline = self
             .context
-            .get_or_create_pipeline(op, workgroup_info, 4, None)
-            .unwrap();
+            .get_or_create_pipeline(op, workgroup_info, 4, None)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
         let metadata_buffer = self
             .context
@@ -215,10 +214,15 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let command = self
             .context
             .encode_command(&workgroup_info, &pipeline, &bind_group);
-        self.context.submit_command(command).ok().unwrap();
+        self.context.submit_command(command).ok()?;
 
         let strides = (&shape).into();
-        Self::from_buffer(shape, strides, output_buffer, self.context)
+        Some(Self::from_buffer(
+            shape,
+            strides,
+            output_buffer,
+            self.context,
+        ))
     }
 }
 

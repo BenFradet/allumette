@@ -107,15 +107,15 @@ impl TensorBackend<f64, Par> for CpuTensorData {
     }
 
     // TODO: look into https://github.com/rayon-rs/rayon/tree/main/rayon-demo/src/matmul
-    fn matmul(&self, other: &Self) -> Self {
+    fn matmul(&self, other: &Self) -> Option<Self> {
         let self_shape_len = self.shape.len();
         let other_shape_len = other.shape.len();
-        assert!(self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]);
+        (self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]).then_some(0)?;
 
         let self_shape = self.shape.clone().drop_right(2);
         let other_shape = other.shape.clone().drop_right(2);
 
-        let mut shape = self_shape.broadcast(&other_shape).unwrap();
+        let mut shape = self_shape.broadcast(&other_shape)?;
         shape.push(self.shape[self_shape_len - 2]);
         shape.push(other.shape[other_shape_len - 1]);
         let len = shape.size;
@@ -142,7 +142,7 @@ impl TensorBackend<f64, Par> for CpuTensorData {
             })
             .collect();
 
-        Self::new(out, shape, strides)
+        Some(Self::new(out, shape, strides))
     }
 }
 

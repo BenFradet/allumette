@@ -97,16 +97,15 @@ impl TensorBackend<f64, Seq> for CpuTensorData {
         }
     }
 
-    // TODO: rename lhs/rhs
-    fn matmul(&self, other: &Self) -> Self {
+    fn matmul(&self, other: &Self) -> Option<Self> {
         let self_shape_len = self.shape.len();
         let other_shape_len = other.shape.len();
-        assert!(self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]);
+        (self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]).then_some(0)?;
 
         let self_shape = self.shape.clone().drop_right(2);
         let other_shape = other.shape.clone().drop_right(2);
 
-        let mut shape = self_shape.broadcast(&other_shape).unwrap();
+        let mut shape = self_shape.broadcast(&other_shape)?;
         shape.push(self.shape[self_shape_len - 2]);
         shape.push(other.shape[other_shape_len - 1]);
         let len = shape.size;
@@ -115,9 +114,9 @@ impl TensorBackend<f64, Seq> for CpuTensorData {
         let mut out = vec![0.; len];
         for (i, out_i) in out.iter_mut().enumerate() {
             let index = shape.idx(i);
-            let mut self_idx = index.broadcast(&self.shape).unwrap();
+            let mut self_idx = index.broadcast(&self.shape)?;
             let self_idx_len = self_idx.len();
-            let mut other_idx = index.broadcast(&other.shape).unwrap();
+            let mut other_idx = index.broadcast(&other.shape)?;
             let other_idx_len = other_idx.len();
 
             let mut tmp = 0.;
@@ -131,7 +130,7 @@ impl TensorBackend<f64, Seq> for CpuTensorData {
             *out_i = tmp;
         }
 
-        Self::new(out, shape, strides)
+        Some(Self::new(out, shape, strides))
     }
 }
 

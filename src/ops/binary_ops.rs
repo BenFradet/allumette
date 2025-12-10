@@ -236,6 +236,7 @@ pub struct MatMul;
 impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for MatMul {
     fn forward(&self, lhs: &T, rhs: &T) -> T {
         lhs.matmul(rhs)
+            .unwrap_or(<T as TensorData<E>>::zeros(lhs.shape().clone()))
     }
 
     fn backward(&self, ctx: &Context<T>, d: &T) -> (T, T) {
@@ -243,17 +244,17 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for MatMul
             ctx.snd
                 .as_ref()
                 .and_then(|b| b.transpose())
-                .map(|b| d.matmul(&b))
+                .and_then(|b| d.matmul(&b))
                 .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone())),
             ctx.fst
                 .as_ref()
                 .and_then(|a| a.transpose())
-                .map(|a| a.matmul(d))
+                .and_then(|a| a.matmul(d))
                 .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone())),
         )
     }
 
     fn tag(&self) -> &'static str {
-        "matmul"
+        "mm"
     }
 }
