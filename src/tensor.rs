@@ -1608,6 +1608,70 @@ mod tests {
             let summed = t.sum(None);
             assert_eq!(Some(27.), summed.item());
         }
+
+        #[test]
+        fn test_matmul_square() {
+            let shape = Shape::new(vec![4, 4]);
+            let strides: Strides = (&shape).into();
+
+            let tda = GpuTensorData::new(
+                &(1..16).map(|i| i as f32).collect::<Vec<_>>(),
+                shape.clone(),
+                strides.clone(),
+                get_wgpu_context(),
+            );
+            let a = Tensor::from_data(tda);
+
+            let tdb = GpuTensorData::new(
+                &[
+                    1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
+                ],
+                shape.clone(),
+                strides.clone(),
+                get_wgpu_context(),
+            );
+            let b = Tensor::from_data(tdb);
+
+            let c = a.mm(b).data.to_cpu();
+            println!("{c:?}");
+            assert!(true);
+        }
+
+        //#[test]
+        //fn repro_test_gpu() {
+        //    let shape = Shape::new(vec![3]);
+        //    let strides: Strides = (&shape).into();
+
+        //    let d1 = vec![-0.569, -0.06, 0.209];
+
+        //    let gtd1 = GpuTensorData::new(&d1, shape.clone(), strides.clone(), get_wgpu_context());
+        //    let gt1 = Tensor::new(gtd1, History::default());
+
+        //    let ctd1 = CpuTensorData::new(
+        //        d1.iter().map(|&f| f as f64).collect(),
+        //        shape.clone(),
+        //        strides.clone(),
+        //    );
+        //    let ct1: Tensor<_, Seq, _> = Tensor::new(ctd1.clone(), History::default());
+
+        //    let d2 = [-0.569, 0.172, -0.611];
+
+        //    let gtd2 = GpuTensorData::new(&d2, shape.clone(), strides.clone(), get_wgpu_context());
+        //    let gt2 = Tensor::new(gtd2, History::default());
+
+        //    let ctd2 = CpuTensorData::new(
+        //        d2.iter().map(|&f| f as f64).collect(),
+        //        shape.clone(),
+        //        strides.clone(),
+        //    );
+        //    let ct2: Tensor<_, Seq, _> = Tensor::new(ctd2.clone(), History::default());
+
+        //    cpu::binary_grad_assert(ct1, ct2, |t1, t2| t1.lt(t2));
+        //    println!("\ncpu good\n");
+        //    gpu::binary_grad_assert(gt1, gt2, |t1, t2| t1.lt(t2));
+
+        //    assert!(true)
+        //}
     }
 
     fn view_test<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
@@ -1637,40 +1701,4 @@ mod tests {
             Tensor::<f32, Gpu, GpuTensorData>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_gpu);
     }
-
-    //#[test]
-    //fn repro_test_gpu() {
-    //    let shape = Shape::new(vec![3]);
-    //    let strides: Strides = (&shape).into();
-
-    //    let d1 = vec![-0.569, -0.06, 0.209];
-
-    //    let gtd1 = GpuTensorData::new(&d1, shape.clone(), strides.clone(), get_wgpu_context());
-    //    let gt1 = Tensor::new(gtd1, History::default());
-
-    //    let ctd1 = CpuTensorData::new(
-    //        d1.iter().map(|&f| f as f64).collect(),
-    //        shape.clone(),
-    //        strides.clone(),
-    //    );
-    //    let ct1: Tensor<_, Seq, _> = Tensor::new(ctd1.clone(), History::default());
-
-    //    let d2 = [-0.569, 0.172, -0.611];
-
-    //    let gtd2 = GpuTensorData::new(&d2, shape.clone(), strides.clone(), get_wgpu_context());
-    //    let gt2 = Tensor::new(gtd2, History::default());
-
-    //    let ctd2 = CpuTensorData::new(
-    //        d2.iter().map(|&f| f as f64).collect(),
-    //        shape.clone(),
-    //        strides.clone(),
-    //    );
-    //    let ct2: Tensor<_, Seq, _> = Tensor::new(ctd2.clone(), History::default());
-
-    //    cpu::binary_grad_assert(ct1, ct2, |t1, t2| t1.lt(t2));
-    //    println!("\ncpu good\n");
-    //    gpu::binary_grad_assert(gt1, gt2, |t1, t2| t1.lt(t2));
-
-    //    assert!(true)
-    //}
 }
