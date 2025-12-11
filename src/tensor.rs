@@ -1615,7 +1615,7 @@ mod tests {
             let strides: Strides = (&shape).into();
 
             let tda = GpuTensorData::new(
-                &(1..16).map(|i| i as f32).collect::<Vec<_>>(),
+                &(1..=16).map(|i| i as f32).collect::<Vec<_>>(),
                 shape.clone(),
                 strides.clone(),
                 get_wgpu_context(),
@@ -1624,7 +1624,7 @@ mod tests {
 
             let tdb = GpuTensorData::new(
                 &[
-                    1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
+                    2., 0., 0., 0., 0., 2., 0., 0., 0., 0., 2., 0., 0., 0., 0., 2.,
                 ],
                 shape.clone(),
                 strides.clone(),

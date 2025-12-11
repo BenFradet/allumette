@@ -50,6 +50,10 @@ fn out_strides(i: u32) -> u32 {
     return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u] * 2u + metadata[2u]];
 }
 
+fn div_ceil(a: u32, b: u32) -> u32 {
+  return (a + b - 1u) / b;
+}
+
 @compute
 @workgroup_size(1)
 fn call(
@@ -59,6 +63,13 @@ fn call(
 ) {
     let lx = local_id.x;
     let ly = local_id.y;
+    let tx = workgroup_id.x * TILE_SIZE;
+    let ty = workgroup_id.y * TILE_SIZE;
+    let tz = workgroup_id.z;
+
+    let a_shape_len = metadata[0];
+    let b_shape_len = metadata[1];
+    let out_shape_len = metadata[2];
 
     // assume square matrix of size
     let size = 4u;
