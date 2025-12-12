@@ -81,7 +81,7 @@ fn call(
     let ly = local_id.y;
     let tx = workgroup_id.x * TILE_SIZE;
     let ty = workgroup_id.y * TILE_SIZE;
-    let tz = workgroup_id.z;
+    let z = workgroup_id.z;
 
     let a_shape_len = metadata[0];
     let b_shape_len = metadata[1];
@@ -89,6 +89,22 @@ fn call(
 
     let a_tile_stride = a_tile_stride();
     let b_tile_stride = b_tile_stride();
+
+    var acc = 0.;
+    let tiles = div_ceil(a_shape(a_shape_len - 1u), TILE_SIZE);
+    for (var tile_index = 0u; tile_index < tiles; tile_index = tile_index + 1u) {
+        let index = tile_index * TILE_SIZE;
+
+        if ((lx + index) < a_shape(a_shape_len - 1u) &&
+            (ly + ty) < a_shape(a_shape_len - 2u)) {
+            let a_idx = z * a_tile_stride +
+                (lx + index) * a_strides(a_shape_len - 1u) +
+                (ly + ty) * a_strides(a_shape_len - 2u);
+            a_tile[ly][lx] = input_a[a_idx];
+        } else {
+            a_tile[ly][lx] = 0.;
+        }
+    }
 
     // assume square matrix of size
     let size = 4u;
