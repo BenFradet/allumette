@@ -50,6 +50,22 @@ fn out_strides(i: u32) -> u32 {
     return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u] * 2u + metadata[2u]];
 }
 
+fn a_tile_stride() -> u32 {
+    if (a_shape(0u) > 1u) {
+        return a_strides(0u);
+    } else {
+        return 0u;
+    }
+}
+
+fn b_tile_stride() -> u32 {
+    if (b_shape(0u) > 1u) {
+        return b_strides(0u);
+    } else {
+        return 0u;
+    }
+}
+
 fn div_ceil(a: u32, b: u32) -> u32 {
   return (a + b - 1u) / b;
 }
@@ -70,6 +86,9 @@ fn call(
     let a_shape_len = metadata[0];
     let b_shape_len = metadata[1];
     let out_shape_len = metadata[2];
+
+    let a_tile_stride = a_tile_stride();
+    let b_tile_stride = b_tile_stride();
 
     // assume square matrix of size
     let size = 4u;
