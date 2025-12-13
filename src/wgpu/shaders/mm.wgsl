@@ -77,10 +77,13 @@ fn call(
     @builtin(local_invocation_id) local_id: vec3<u32>,
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
 ) {
+    // positions of the thread in the tile
     let lx = local_id.x;
     let ly = local_id.y;
+    // positions of the tile in the grid
     let tx = workgroup_id.x * TILE_SIZE;
     let ty = workgroup_id.y * TILE_SIZE;
+    // batch index
     let z = workgroup_id.z;
 
     let a_shape_len = metadata[0];
@@ -90,13 +93,18 @@ fn call(
     let a_tile_stride = a_tile_stride();
     let b_tile_stride = b_tile_stride();
 
-    var acc = 0.;
-    let tiles = div_ceil(a_shape(a_shape_len - 1u), TILE_SIZE);
-    for (var tile_index = 0u; tile_index < tiles; tile_index = tile_index + 1u) {
-        let index = tile_index * TILE_SIZE;
+    let a_col = a_shape(a_shape_len - 1u);
+    let a_row = a_shape(a_shape_len - 2u);
+    let b_col = b_shape(b_shape_len - 1u);
+    let b_row = b_shape(b_shape_len - 2u);
 
-        if ((lx + index) < a_shape(a_shape_len - 1u) &&
-            (ly + ty) < a_shape(a_shape_len - 2u)) {
+    var acc = 0.;
+    let chunks = div_ceil(a_col, TILE_SIZE);
+    for (var chunk = 0u; chunk < chunks; chunk = chunk + 1u) {
+        let index = chunk * TILE_SIZE;
+
+        // each thread loads one element of a_tile
+        if ((lx + index) < a_col && (ly + ty) < a_row) {
             let a_idx = z * a_tile_stride +
                 (lx + index) * a_strides(a_shape_len - 1u) +
                 (ly + ty) * a_strides(a_shape_len - 2u);
@@ -104,6 +112,9 @@ fn call(
         } else {
             a_tile[ly][lx] = 0.;
         }
+
+        // each thread loads one element of a_tile
+        // dot product of a row and b col (look into builtin op for dotp)
     }
 
     // assume square matrix of size
