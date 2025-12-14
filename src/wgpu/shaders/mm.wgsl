@@ -99,21 +99,30 @@ fn call(
     let b_row = b_shape(b_shape_len - 2u);
 
     var acc = 0.;
-    let chunks = div_ceil(a_col, TILE_SIZE);
-    for (var chunk = 0u; chunk < chunks; chunk = chunk + 1u) {
-        let index = chunk * TILE_SIZE;
+    let n_tiles = div_ceil(a_col, TILE_SIZE);
+    for (var tile_idx = 0u; tile_idx < n_tiles; tile_idx = tile_idx + 1u) {
+        let tile_offset = tile_idx * TILE_SIZE;
 
         // each thread loads one element of a_tile
-        if ((lx + index) < a_col && (ly + ty) < a_row) {
+        if ((lx + tile_offset) < a_col && (ly + ty) < a_row) {
             let a_idx = z * a_tile_stride +
-                (lx + index) * a_strides(a_shape_len - 1u) +
+                (lx + tile_offset) * a_strides(a_shape_len - 1u) +
                 (ly + ty) * a_strides(a_shape_len - 2u);
             a_tile[ly][lx] = input_a[a_idx];
         } else {
             a_tile[ly][lx] = 0.;
         }
 
-        // each thread loads one element of a_tile
+        // each thread loads one element of b_tile
+        if ((lx + tx) < b_col && (ly + tile_offset) < b_row) {
+            let b_idx = z * b_tile_stride +
+                (lx + tx) * b_strides(b_shape_len - 1u) +
+                (ly + tile_offset) * b_strides(b_shape_len - 2u);
+            b_tile[ly][lx] = input_b[b_idx];
+        } else {
+            b_tile[ly][lx] = 0.;
+        }
+
         // dot product of a row and b col (look into builtin op for dotp)
     }
 
