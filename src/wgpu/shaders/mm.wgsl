@@ -21,6 +21,7 @@ var<workgroup> a_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
 var<workgroup> b_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
 
 // used to create local arrays
+// might want to dynamically change it
 const TILE_SIZE: u32 = 32u;
 
 // shape lengths
@@ -100,13 +101,14 @@ fn call(
 
     var acc = 0.;
     let n_tiles = div_ceil(a_col, TILE_SIZE);
-    for (var tile_idx = 0u; tile_idx < n_tiles; tile_idx = tile_idx + 1u) {
-        let tile_offset = tile_idx * TILE_SIZE;
+    for (var tile = 0u; tile < n_tiles; tile = tile + 1u) {
+        // starting index of the tile
+        let tile_idx = tile * TILE_SIZE;
 
         // each thread loads one element of a_tile
-        if ((lx + tile_offset) < a_col && (ly + ty) < a_row) {
+        if ((lx + tile_idx) < a_col && (ly + ty) < a_row) {
             let a_idx = z * a_tile_stride +
-                (lx + tile_offset) * a_strides(a_shape_len - 1u) +
+                (lx + tile_idx) * a_strides(a_shape_len - 1u) +
                 (ly + ty) * a_strides(a_shape_len - 2u);
             a_tile[ly][lx] = input_a[a_idx];
         } else {
@@ -114,10 +116,10 @@ fn call(
         }
 
         // each thread loads one element of b_tile
-        if ((lx + tx) < b_col && (ly + tile_offset) < b_row) {
+        if ((lx + tx) < b_col && (ly + tile_idx) < b_row) {
             let b_idx = z * b_tile_stride +
                 (lx + tx) * b_strides(b_shape_len - 1u) +
-                (ly + tile_offset) * b_strides(b_shape_len - 2u);
+                (ly + tile_idx) * b_strides(b_shape_len - 2u);
             b_tile[ly][lx] = input_b[b_idx];
         } else {
             b_tile[ly][lx] = 0.;
