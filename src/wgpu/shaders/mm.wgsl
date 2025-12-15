@@ -51,7 +51,7 @@ fn out_strides(i: u32) -> u32 {
     return metadata[i + PREAMBLE + metadata[0u] * 2u + metadata[1u] * 2u + metadata[2u]];
 }
 
-fn a_tile_stride() -> u32 {
+fn a_fst_s() -> u32 {
     if (a_shape(0u) > 1u) {
         return a_strides(0u);
     } else {
@@ -59,7 +59,7 @@ fn a_tile_stride() -> u32 {
     }
 }
 
-fn b_tile_stride() -> u32 {
+fn b_fst_s() -> u32 {
     if (b_shape(0u) > 1u) {
         return b_strides(0u);
     } else {
@@ -91,13 +91,17 @@ fn call(
     let b_shape_len = metadata[1];
     let out_shape_len = metadata[2];
 
-    let a_tile_stride = a_tile_stride();
-    let b_tile_stride = b_tile_stride();
-
     let a_col = a_shape(a_shape_len - 1u);
     let a_row = a_shape(a_shape_len - 2u);
+    let a_fst_s = a_fst_s();
+    let a_col_s = a_strides(a_shape_len - 1u);
+    let a_row_s = a_strides(a_shape_len - 2u);
+
     let b_col = b_shape(b_shape_len - 1u);
     let b_row = b_shape(b_shape_len - 2u);
+    let b_fst_s = b_fst_s();
+    let b_col_s = b_strides(b_shape_len - 1u);
+    let b_row_s = b_strides(b_shape_len - 2u);
 
     var acc = 0.;
     let n_tiles = div_ceil(a_col, TILE_SIZE);
@@ -107,9 +111,7 @@ fn call(
 
         // each thread loads one element of a_tile
         if ((lx + tile_idx) < a_col && (ly + ty) < a_row) {
-            let a_idx = z * a_tile_stride +
-                (lx + tile_idx) * a_strides(a_shape_len - 1u) +
-                (ly + ty) * a_strides(a_shape_len - 2u);
+            let a_idx = z * a_fst_s + (lx + tile_idx) * a_col_s + (ly + ty) * a_row_s;
             a_tile[ly][lx] = input_a[a_idx];
         } else {
             a_tile[ly][lx] = 0.;
@@ -117,37 +119,27 @@ fn call(
 
         // each thread loads one element of b_tile
         if ((lx + tx) < b_col && (ly + tile_idx) < b_row) {
-            let b_idx = z * b_tile_stride +
-                (lx + tx) * b_strides(b_shape_len - 1u) +
-                (ly + tile_idx) * b_strides(b_shape_len - 2u);
+            let b_idx = z * b_fst_s + (lx + tx) * b_col_s + (ly + tile_idx) * b_row_s;
             b_tile[ly][lx] = input_b[b_idx];
         } else {
             b_tile[ly][lx] = 0.;
         }
 
+        workgroupBarrier();
+
         // dot product of a row and b col (look into builtin op for dotp)
-    }
-
-    // assume square matrix of size
-    let size = 4u;
-
-    let idx = ly * size + lx;
-
-    if (lx < size && ly < size) {
-        a_tile[ly][lx] = input_a[idx];
-        b_tile[ly][lx] = input_b[idx];
-    } else {
-        a_tile[ly][lx] = 0.;
-        b_tile[ly][lx] = 0.;
-    }
-
-    workgroupBarrier();
-
-    if (ly < size && lx < size) {
-        var acc = 0.;
-        for (var i = 0u; i < size; i = i + 1u) {
-            acc = fma(a_tile[ly][i], b_tile[i][lx], acc);
+        for (var inner_idx = 0u; inner_idx < TILE_SIZE; inner_idx = inner_idx + 1u) {
+            acc = fma(a_tile[ly][inner_idx], b_tile[inner_idx][lx], acc);
         }
+    }
+
+    let out_col = out_shape(out_shape_len - 1u);
+    let out_row = out_shape(out_shape_len - 2u);
+    let out_fst_s = out_strides(0u);
+    let out_col_s = out_strides(out_shape_len - 1u);
+    let out_row_s = out_strides(out_shape_len - 2u);
+    if ((lx + tx) < out_col && (ly + ty) < out_row) {
+        let idx = z * out_fst_s + (lx + tx) * out_col_s + (ly + ty) * out_row_s;
         output[idx] = acc;
     }
 }
