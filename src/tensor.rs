@@ -246,18 +246,17 @@ where
     }
 
     pub fn mm(self, other: Tensor<E, BT, T>) -> Self {
-        let mut both_2d = 0;
         let self_shape = self.data.shape().clone();
         let other_shape = other.data.shape().clone();
+        let both_2d = self_shape.len() == 2 && other_shape.len() == 2;
+
         let new_self = if self_shape.len() == 2 {
-            both_2d += 1;
             self.contiguous()
                 .view(&Shape::new(vec![1, self_shape[0], self_shape[1]]))
         } else {
             self
         };
         let new_other = if other_shape.len() == 2 {
-            both_2d += 1;
             other
                 .contiguous()
                 .view(&Shape::new(vec![1, other_shape[0], other_shape[1]]))
@@ -267,7 +266,7 @@ where
 
         let res = Forward::binary(MatMul {}, new_self, new_other);
 
-        if both_2d == 2 {
+        if both_2d {
             let res_shape = res.data.shape().clone();
             res.view(&Shape::new(vec![res_shape[1], res_shape[2]]))
         } else {

@@ -183,12 +183,24 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
     }
 
     fn matmul(&self, other: &Self) -> Option<Self> {
+        let self_shape_len = self.shape.len();
+        let other_shape_len = other.shape.len();
+        (self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]).then_some(0)?;
+
+        let self_shape = self.shape.clone().drop_right(2);
+        let other_shape = other.shape.clone().drop_right(2);
+
+        let mut shape = self_shape.broadcast(&other_shape)?;
+        shape.push(self.shape[self_shape_len - 2]);
+        shape.push(other.shape[other_shape_len - 1]);
+
         let op = "mm";
-        // assuming 4x4 square matrix for now
-        let shape = self.shape.clone();
+        // TODO: make it dynamic
+        // max total invocation is 256 = 16 * 16 * 1
+        let max_wg_size = 16;
         let workgroup_info = WorkgroupInfo {
-            count: (1, 1, 1),
-            size: (4, 4, 1),
+            count: (shape[1].div_ceil(max_wg_size), shape[2].div_ceil(max_wg_size), shape[0]),
+            size: (max_wg_size, max_wg_size, 1),
         };
         let gpu_size = shape.gpu_byte_size();
 
