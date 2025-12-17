@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use proptest::prelude::Strategy;
+use proptest::{prelude::Strategy, sample::SizeRange};
 use rand::Rng;
 
 use crate::wgpu::wgpu_context::WGPU_ELEMENT_SIZE;
@@ -136,11 +136,18 @@ impl Shape {
     }
 
     pub fn arbitrary() -> impl Strategy<Value = Shape> {
-        proptest::collection::vec(1_usize..4, 1..5).prop_map(Shape::new)
+        Self::arbitrary_with_strategy(1_usize..4, 1..5)
     }
 
     pub fn arbitrary_static_size() -> impl Strategy<Value = Shape> {
-        proptest::collection::vec(1_usize..4, 4).prop_map(Shape::new)
+        Self::arbitrary_with_strategy(1_usize..4, 4)
+    }
+
+    fn arbitrary_with_strategy<S: Strategy<Value = usize> + Clone, SR: Into<SizeRange>>(
+        dim: S,
+        size: SR,
+    ) -> impl Strategy<Value = Shape> {
+        proptest::collection::vec(dim, size).prop_map(Shape::new)
     }
 }
 
