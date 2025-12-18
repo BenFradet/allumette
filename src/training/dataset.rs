@@ -1,4 +1,4 @@
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
 
 #[derive(Clone, Debug)]
 pub struct Dataset {
@@ -73,8 +73,8 @@ impl Dataset {
         let mut res = vec![];
         let mut rng = thread_rng();
         for _i in 0..n {
-            let x1 = rng.gen();
-            let x2 = rng.gen();
+            let x1 = rng.r#gen();
+            let x2 = rng.r#gen();
             res.push((x1, x2));
         }
         res
@@ -87,10 +87,10 @@ fn common_test(ds: &Dataset, n: usize) {
     assert_eq!(n, ds.n);
     assert_eq!(n, ds.x.len());
     assert_eq!(n, ds.y.len());
-    assert!(ds
-        .x
-        .iter()
-        .all(|(x1, x2)| *x1 >= 0. && *x1 <= 1. && *x2 >= 0. && *x2 <= 1.));
+    assert!(
+        ds.x.iter()
+            .all(|(x1, x2)| *x1 >= 0. && *x1 <= 1. && *x2 >= 0. && *x2 <= 1.)
+    );
     assert!(ds.y.iter().all(|y| *y == 0 || *y == 1));
 }
 

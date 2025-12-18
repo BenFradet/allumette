@@ -166,7 +166,7 @@ impl TensorData<f64> for CpuTensorData {
 
     fn rand(shape: Shape) -> Self {
         let mut rng = rand::thread_rng();
-        let data: Vec<f64> = (0..shape.size).map(|_| rng.gen()).collect();
+        let data: Vec<f64> = (0..shape.size).map(|_| rng.r#gen()).collect();
         let strides = (&shape).into();
         Self {
             data: Arc::new(data),

@@ -43,7 +43,7 @@ where
     T: TensorData<E> + std::fmt::Debug + Clone,
 {
     pub fn new(data: T, history: History<E, BT, T>) -> Self {
-        let id = rand::thread_rng().gen::<u64>().to_string();
+        let id = rand::thread_rng().r#gen::<u64>().to_string();
         //let id = TENSOR_COUNT.fetch_add(1, Ordering::Relaxed);
         Self {
             data,
@@ -55,7 +55,7 @@ where
     }
 
     pub fn from_data(data: T) -> Self {
-        let id = rand::thread_rng().gen::<u64>().to_string();
+        let id = rand::thread_rng().r#gen::<u64>().to_string();
         Self {
             data,
             grad: None,
@@ -147,7 +147,7 @@ where
         }
     }
 
-    fn chain_rule(&self, d: &T) -> impl Iterator<Item = (&Self, T)> {
+    fn chain_rule(&self, d: &T) -> impl Iterator<Item = (&Self, T)> + use<'_, E, BT, T> {
         let derivatives = self
             .history
             .last_fn
@@ -384,7 +384,10 @@ where
         (dim_s.clone(), dim_s.clone(), dim_s.clone(), dim_s).prop_flat_map(|(a, b, c, d)| {
             let shape1 = Shape::new(vec![d, a, b]);
             let shape2 = Shape::new(vec![1, b, c]);
-            (Self::arbitrary_with_shape(shape1), Self::arbitrary_with_shape(shape2))
+            (
+                Self::arbitrary_with_shape(shape1),
+                Self::arbitrary_with_shape(shape2),
+            )
         })
     }
 

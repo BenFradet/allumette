@@ -27,7 +27,7 @@ impl<'a, A: Clone> Module<'a, A> {
         self.children.into_values()
     }
 
-    pub fn parameters(&self) -> impl Iterator<Item = Parameter<'a, A>> {
+    pub fn parameters(&self) -> impl Iterator<Item = Parameter<'a, A>> + use<'a, A> {
         self.fold_rec(vec![], |acc, module| {
             let params = module.parameters.values().cloned().collect();
             [acc, params].concat()
@@ -35,7 +35,7 @@ impl<'a, A: Clone> Module<'a, A> {
         .into_iter()
     }
 
-    fn named_parameters(&self) -> impl Iterator<Item = (String, Parameter<'a, A>)> {
+    fn named_parameters(&self) -> impl Iterator<Item = (String, Parameter<'a, A>)> + use<'a, A> {
         fn build_prefix(prefix: String, current_mod_name: String, depth: u32) -> String {
             if depth == 1 {
                 current_mod_name

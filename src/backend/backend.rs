@@ -24,7 +24,9 @@ pub trait TensorBackend<E: Element, T: BackendType> {
     ) -> Option<Self>
     where
         Self: Sized;
-    fn matmul(&self, other: &Self) -> Option<Self> where Self: Sized;
+    fn matmul(&self, other: &Self) -> Option<Self>
+    where
+        Self: Sized;
 
     fn expand(&self, other: Self) -> Option<Self>
     where

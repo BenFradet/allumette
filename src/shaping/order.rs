@@ -13,11 +13,7 @@ impl Order {
     pub fn new(data: Vec<usize>) -> Option<Self> {
         let len = data.len();
         let s = Self { data };
-        if s.fits(len) {
-            Some(s)
-        } else {
-            None
-        }
+        if s.fits(len) { Some(s) } else { None }
     }
 
     pub fn range(n: usize) -> Self {

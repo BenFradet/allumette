@@ -3,15 +3,15 @@ use rand::Rng;
 use std::sync::Arc;
 
 use wgpu::{
+    Buffer, BufferUsages, CommandEncoderDescriptor, Device, MapMode,
     util::{BufferInitDescriptor, DeviceExt},
     wgt::PollType,
-    Buffer, BufferUsages, CommandEncoderDescriptor, Device, MapMode,
 };
 
 use crate::{
     data::tensor_data::TensorData,
     shaping::{order::Order, shape::Shape, strides::Strides},
-    wgpu::wgpu_context::{get_wgpu_context, WgpuContext},
+    wgpu::wgpu_context::{WgpuContext, get_wgpu_context},
 };
 
 #[derive(Clone, Debug)]
@@ -252,7 +252,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
 
     fn rand(shape: Shape) -> Self {
         let mut rng = rand::thread_rng();
-        let data: Vec<f32> = (0..shape.size).map(|_| rng.gen()).collect();
+        let data: Vec<f32> = (0..shape.size).map(|_| rng.r#gen()).collect();
         let strides = (&shape).into();
         Self::new(&data, shape, strides, get_wgpu_context())
     }

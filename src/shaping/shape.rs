@@ -74,11 +74,7 @@ impl Shape {
             }
         }
 
-        if flag {
-            None
-        } else {
-            Some(Shape::new(res))
-        }
+        if flag { None } else { Some(Shape::new(res)) }
     }
 
     #[inline(always)]

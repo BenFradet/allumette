@@ -199,7 +199,11 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         // max total invocation is 256 = 16 * 16 * 1
         let max_wg_size = 16;
         let workgroup_info = WorkgroupInfo {
-            count: (shape[1].div_ceil(max_wg_size), shape[2].div_ceil(max_wg_size), shape[0]),
+            count: (
+                shape[1].div_ceil(max_wg_size),
+                shape[2].div_ceil(max_wg_size),
+                shape[0],
+            ),
             size: (max_wg_size, max_wg_size, 1),
         };
         let gpu_size = shape.gpu_byte_size();

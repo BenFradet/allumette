@@ -44,11 +44,7 @@ where
     }
 
     fn relu_diff(self, d: Self) -> Self {
-        if self > Self::zero() {
-            d
-        } else {
-            Self::zero()
-        }
+        if self > Self::zero() { d } else { Self::zero() }
     }
 }
 

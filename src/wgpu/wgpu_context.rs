@@ -6,13 +6,13 @@ use std::{
 };
 
 use wgpu::{
-    util::{BufferInitDescriptor, DeviceExt},
     BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
     BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType, BufferDescriptor, BufferUsages,
     CommandBuffer, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline,
     ComputePipelineDescriptor, Device, DeviceDescriptor, ExperimentalFeatures, Features, Instance,
     Limits, MemoryHints, PipelineLayout, PipelineLayoutDescriptor, PollError, PollStatus, PollType,
     Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource, ShaderStages, Trace,
+    util::{BufferInitDescriptor, DeviceExt},
 };
 
 use crate::{
