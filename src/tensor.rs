@@ -379,6 +379,15 @@ where
         CpuTensorData::arbitrary_no_zero().prop_map(Self::from_data)
     }
 
+    pub fn arbitrary_matmul_tuple() -> impl Strategy<Value = (Self, Self)> {
+        let dim_s = 2_usize..4;
+        (dim_s.clone(), dim_s.clone(), dim_s.clone(), dim_s).prop_flat_map(|(a, b, c, d)| {
+            let shape1 = Shape::new(vec![d, a, b]);
+            let shape2 = Shape::new(vec![1, b, c]);
+            (Self::arbitrary_with_shape(shape1), Self::arbitrary_with_shape(shape2))
+        })
+    }
+
     pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
         CpuTensorData::arbitrary_with_shape(shape).prop_map(Self::from_data)
     }
@@ -924,7 +933,7 @@ mod tests {
 
         proptest! {
             #[test]
-            fn matmul_tests(
+            fn matmul_grad_tests(
                 a_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
                 b_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![3, 4])),
                 a_par in Tensor::<f64, Par, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
