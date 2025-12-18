@@ -933,6 +933,16 @@ mod tests {
 
         proptest! {
             #[test]
+            fn matmul_tests(
+                (a_seq, b_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_matmul_tuple(),
+                (a_par, b_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_matmul_tuple(),
+            ) {
+                //if let [d, a, b] = a_seq.data.shape.data() && let [_, _, c] = b_seq.data.shape.data() {
+
+                //}
+            }
+
+            #[test]
             fn matmul_grad_tests(
                 a_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
                 b_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![3, 4])),
