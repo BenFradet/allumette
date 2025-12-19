@@ -940,9 +940,16 @@ mod tests {
                 (a_seq, b_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_matmul_tuple(),
                 (a_par, b_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_matmul_tuple(),
             ) {
-                //if let [d, a, b] = a_seq.data.shape.data() && let [_, _, c] = b_seq.data.shape.data() {
-
-                //}
+                if let [d, a, b] = a_seq.data.shape.data() && let [_, _, c] = b_seq.data.shape.data() {
+                    let c_mm = a_seq.clone().mm(b_seq.clone());
+                    let c_prime = (
+                        a_seq.clone().contiguous().view(&Shape::new(vec![*d, *a, *b, 1])) *
+                        b_seq.clone().contiguous().view(&Shape::new(vec![1, 1, *b, *c]))
+                    ).sum(Some(2)).view(&Shape::new(vec![*d, *a, *c]));
+                    assert_eq!(Some(1.), c_mm.is_close(c_prime).all(None).item());
+                } else {
+                    panic!("both tensors should be 3d");
+                }
             }
 
             #[test]
