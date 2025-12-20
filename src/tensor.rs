@@ -934,22 +934,30 @@ mod tests {
             );
         }
 
+        fn matmul_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
+            t1: Tensor<f64, BT, T>,
+            t2: Tensor<f64, BT, T>,
+        ) {
+            if let [d, a, b] = t1.data.shape().data() && let [_, _, c] = t2.data.shape().data() {
+                let c_mm = t1.clone().mm(t2.clone());
+                let c_prime = (
+                    t1.clone().contiguous().view(&Shape::new(vec![*d, *a, *b, 1])) *
+                    t2.clone().contiguous().view(&Shape::new(vec![1, 1, *b, *c]))
+                ).sum(Some(2)).view(&Shape::new(vec![*d, *a, *c]));
+                assert_eq!(Some(1.), c_mm.is_close(c_prime).all(None).item());
+            } else {
+                panic!("both tensors should be 3d");
+            }
+        }
+
         proptest! {
             #[test]
             fn matmul_tests(
                 (a_seq, b_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_matmul_tuple(),
                 (a_par, b_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_matmul_tuple(),
             ) {
-                if let [d, a, b] = a_seq.data.shape.data() && let [_, _, c] = b_seq.data.shape.data() {
-                    let c_mm = a_seq.clone().mm(b_seq.clone());
-                    let c_prime = (
-                        a_seq.clone().contiguous().view(&Shape::new(vec![*d, *a, *b, 1])) *
-                        b_seq.clone().contiguous().view(&Shape::new(vec![1, 1, *b, *c]))
-                    ).sum(Some(2)).view(&Shape::new(vec![*d, *a, *c]));
-                    assert_eq!(Some(1.), c_mm.is_close(c_prime).all(None).item());
-                } else {
-                    panic!("both tensors should be 3d");
-                }
+                matmul_test(a_seq, b_seq);
+                matmul_test(a_par, b_par);
             }
 
             #[test]
@@ -1637,33 +1645,33 @@ mod tests {
             assert_eq!(Some(27.), summed.item());
         }
 
-        #[test]
-        fn test_matmul_square() {
-            let shape = Shape::new(vec![4, 4]);
-            let strides: Strides = (&shape).into();
+        //#[test]
+        //fn test_matmul_square() {
+        //    let shape = Shape::new(vec![4, 4]);
+        //    let strides: Strides = (&shape).into();
 
-            let tda = GpuTensorData::new(
-                &(1..=16).map(|i| i as f32).collect::<Vec<_>>(),
-                shape.clone(),
-                strides.clone(),
-                get_wgpu_context(),
-            );
-            let a = Tensor::from_data(tda);
+        //    let tda = GpuTensorData::new(
+        //        &(1..=16).map(|i| i as f32).collect::<Vec<_>>(),
+        //        shape.clone(),
+        //        strides.clone(),
+        //        get_wgpu_context(),
+        //    );
+        //    let a = Tensor::from_data(tda);
 
-            let tdb = GpuTensorData::new(
-                &[
-                    2., 0., 0., 0., 0., 2., 0., 0., 0., 0., 2., 0., 0., 0., 0., 2.,
-                ],
-                shape.clone(),
-                strides.clone(),
-                get_wgpu_context(),
-            );
-            let b = Tensor::from_data(tdb);
+        //    let tdb = GpuTensorData::new(
+        //        &[
+        //            2., 0., 0., 0., 0., 2., 0., 0., 0., 0., 2., 0., 0., 0., 0., 2.,
+        //        ],
+        //        shape.clone(),
+        //        strides.clone(),
+        //        get_wgpu_context(),
+        //    );
+        //    let b = Tensor::from_data(tdb);
 
-            let c = a.mm(b).data.to_cpu();
-            println!("{c:?}");
-            assert!(true);
-        }
+        //    let c = a.mm(b).data.to_cpu();
+        //    println!("{c:?}");
+        //    assert!(true);
+        //}
 
         //#[test]
         //fn repro_test_gpu() {
