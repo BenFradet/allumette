@@ -450,6 +450,22 @@ where
         GpuTensorData::arbitrary_no_zero().prop_map(Self::from_data)
     }
 
+    pub fn arbitrary_matmul_tuple() -> impl Strategy<Value = (Self, Self)> {
+        let dim_s = 2_usize..4;
+        (dim_s.clone(), dim_s.clone(), dim_s.clone(), dim_s).prop_flat_map(|(a, b, c, d)| {
+            let shape1 = Shape::new(vec![d, a, b]);
+            let shape2 = Shape::new(vec![1, b, c]);
+            (
+                Self::arbitrary_with_shape(shape1),
+                Self::arbitrary_with_shape(shape2),
+            )
+        })
+    }
+
+    pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
+        GpuTensorData::arbitrary_with_shape(shape).prop_map(Self::from_data)
+    }
+
     pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
         let strategy = -1.0f32..1.;
         Self::arbitrary_tuple_with_strategy(strategy.clone(), strategy.clone())
@@ -1383,7 +1399,6 @@ mod tests {
         }
 
         proptest! {
-
             #[test]
             fn permute_grad_tests(
                 (t, o) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_with_order(),
