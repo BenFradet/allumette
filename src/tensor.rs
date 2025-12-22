@@ -954,12 +954,19 @@ mod tests {
             t1: Tensor<f64, BT, T>,
             t2: Tensor<f64, BT, T>,
         ) {
-            if let [d, a, b] = t1.data.shape().data() && let [_, _, c] = t2.data.shape().data() {
+            if let [d, a, b] = t1.data.shape().data()
+                && let [_, _, c] = t2.data.shape().data()
+            {
                 let c_mm = t1.clone().mm(t2.clone());
-                let c_prime = (
-                    t1.clone().contiguous().view(&Shape::new(vec![*d, *a, *b, 1])) *
-                    t2.clone().contiguous().view(&Shape::new(vec![1, 1, *b, *c]))
-                ).sum(Some(2)).view(&Shape::new(vec![*d, *a, *c]));
+                let c_prime = (t1
+                    .clone()
+                    .contiguous()
+                    .view(&Shape::new(vec![*d, *a, *b, 1]))
+                    * t2.clone()
+                        .contiguous()
+                        .view(&Shape::new(vec![1, 1, *b, *c])))
+                .sum(Some(2))
+                .view(&Shape::new(vec![*d, *a, *c]));
                 assert_eq!(Some(1.), c_mm.is_close(c_prime).all(None).item());
             } else {
                 panic!("both tensors should be 3d");
@@ -1399,6 +1406,22 @@ mod tests {
         }
 
         proptest! {
+            #[test]
+            fn matmul_tests(
+                (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_matmul_tuple(),
+            ) {
+                if let [d, a, b] = t1.data.shape().data() && let [_, _, c] = t2.data.shape().data() {
+                    let c_mm = t1.clone().mm(t2.clone());
+                    let c_prime = (
+                        t1.clone().contiguous().view(&Shape::new(vec![*d, *a, *b, 1])) *
+                        t2.clone().contiguous().view(&Shape::new(vec![1, 1, *b, *c]))
+                    ).sum(Some(2)).view(&Shape::new(vec![*d, *a, *c]));
+                    assert_eq!(Some(1.), c_mm.is_close(c_prime).all(None).item());
+                } else {
+                    panic!("both tensors should be 3d");
+                }
+            }
+
             #[test]
             fn permute_grad_tests(
                 (t, o) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_with_order(),
