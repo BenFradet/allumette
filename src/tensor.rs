@@ -1423,6 +1423,30 @@ mod tests {
             }
 
             #[test]
+            fn matmul_grad_tests(
+                a in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
+                b in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_with_shape(Shape::new(vec![3, 4])),
+            ) {
+                let c = a.clone().mm(b.clone());
+                let c_data = c.data.to_cpu();
+                let c_strides = c.data.strides.clone();
+
+                let cprime = (
+                    a.clone().view(&Shape::new(vec![2, 3, 1])) *
+                    b.clone().view(&Shape::new(vec![1, 3, 4]))
+                ).sum(Some(1)).view(&Shape::new(vec![2, 4]));
+                let cprime_data = cprime.data.to_cpu();
+                let cprime_strides = cprime.data.strides;
+
+                for idx in c.data.indices() {
+                    assert!(c_data[c_strides.position(&idx)]
+                        .is_close(cprime_data[cprime_strides.position(&idx)]));
+                }
+                // FIXME: failing
+                binary_grad_assert(a.clone(), b.clone(), |t1, t2| t1.mm(t2));
+            }
+
+            #[test]
             fn permute_grad_tests(
                 (t, o) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_with_order(),
             ) {
