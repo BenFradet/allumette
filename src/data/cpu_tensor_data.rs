@@ -69,6 +69,10 @@ impl TensorData<f64> for CpuTensorData {
         &self.shape
     }
 
+    fn strides(&self) -> &Strides {
+        &self.strides
+    }
+
     fn size(&self) -> usize {
         self.shape.size
     }

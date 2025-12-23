@@ -5,6 +5,7 @@ use crate::{
 
 pub trait TensorData<E: Element> {
     fn shape(&self) -> &Shape;
+    fn strides(&self) -> &Strides;
     fn size(&self) -> usize;
 
     // expensive, use with parsimony (cpu: allocate, gpu: retrieve to cpu)

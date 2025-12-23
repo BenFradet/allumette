@@ -155,6 +155,10 @@ impl TensorData<f32> for GpuTensorData<'_> {
         &self.shape
     }
 
+    fn strides(&self) -> &Strides {
+        &self.strides
+    }
+
     fn size(&self) -> usize {
         self.shape.size
     }
