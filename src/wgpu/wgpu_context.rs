@@ -195,7 +195,12 @@ impl WgpuContext {
         })
     }
 
-    pub fn create_metadata_buffer(&self, shapes: &[&Shape], additional_data: &[usize]) -> Buffer {
+    pub fn create_metadata_buffer(
+        &self,
+        shapes: &[&Shape],
+        strides: &[&Strides],
+        additional_data: &[usize],
+    ) -> Buffer {
         let mut contents = Vec::with_capacity(
             shapes.len()
                 + additional_data.len()
@@ -207,16 +212,26 @@ impl WgpuContext {
         for u in additional_data {
             contents.push(*u);
         }
-        for shape in shapes {
-            contents.extend(shape.data());
-            let strides: Strides = (*shape).into();
-            contents.extend(strides.data());
+        if strides.is_empty() {
+            for shape in shapes {
+                contents.extend(shape.data());
+                let strides: Strides = (*shape).into();
+                contents.extend(strides.data());
+            }
+        } else {
+            // to use in case the layout is not contiguous
+            for (shape, stride) in shapes.iter().zip(strides) {
+                contents.extend(shape.data());
+                contents.extend(stride.data());
+            }
         }
 
         let metadata: Vec<u32> = contents
             .iter()
             .map(|u| u32::try_from(*u).unwrap())
             .collect();
+
+        println!("METADATA {:?}", metadata);
 
         self.device.create_buffer_init(&BufferInitDescriptor {
             label: Some("meta"),

@@ -214,6 +214,7 @@ impl TensorData<f32> for GpuTensorData<'_> {
             Some(Self {
                 buffer: Arc::clone(&self.buffer),
                 shape: Shape::new(new_shape),
+                // != (&Shape).into()
                 strides: Strides::new(new_strides),
                 context: self.context,
                 init: self.init.clone(),

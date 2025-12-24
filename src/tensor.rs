@@ -645,9 +645,12 @@ mod tests {
                 "tensors should have grads"
             );
             let (grad1, grad2) = (
-                unwrapped1.grad.clone().unwrap().data[idx1],
-                unwrapped2.grad.clone().unwrap().data[idx2],
+                unwrapped1.grad.clone().unwrap().data[idx1.clone()],
+                unwrapped2.grad.clone().unwrap().data[idx2.clone()],
             );
+            println!("CPU");
+            println!("grad1_data {:?} grad1 {grad1} check1 {check1} idx1 {idx1:?}", unwrapped1.grad.clone().unwrap().data);
+            println!("grad2_data {:?} grad2 {grad2} check2 {check2} idx2 {idx2:?}", unwrapped2.grad.clone().unwrap().data);
             assert!(
                 grad1.is_close(check1),
                 "tensor 1 grad ({grad1:?}) should be close to central diff ({check1:?})",
@@ -1344,6 +1347,9 @@ mod tests {
                 grad1_data_cpu[grad1_strides.position(&idx1)],
                 grad2_data_cpu[grad2_strides.position(&idx2)],
             );
+            println!("GPU");
+            println!("grad1_data {grad1_data_cpu:?} grad1_shape {:?} grad1 {grad1} check1 {check1} idx1 {idx1:?}", grad1_data.shape());
+            println!("grad2_data {grad2_data_cpu:?} grad2 {grad2} check2 {check2} idx2 {idx2:?}");
             assert!(
                 grad1.is_close(check1),
                 "tensor 1 grad ({grad1:?}) should be close to central diff ({check1:?})",
@@ -1744,7 +1750,7 @@ mod tests {
             let bshape = Shape::new(vec![3, 4]);
             let bstrides: Strides = (&bshape).into();
             let bd = vec![
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.4992304, 0.0, 0.1533718,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.9966465, 0.1533718,
             ];
 
             let agtd =
@@ -1769,6 +1775,7 @@ mod tests {
             );
             let bct: Tensor<_, Seq, _> = Tensor::new(bctd.clone(), History::default());
 
+            // try printing central diff for cpu and gpu
             cpu::binary_grad_assert(act, bct, |t1, t2| t1.mm(t2));
             println!("\ncpu good\n");
             gpu::binary_grad_assert(agt, bgt, |t1, t2| t1.mm(t2));
