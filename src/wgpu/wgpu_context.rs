@@ -231,8 +231,6 @@ impl WgpuContext {
             .map(|u| u32::try_from(*u).unwrap())
             .collect();
 
-        println!("METADATA {:?}", metadata);
-
         self.device.create_buffer_init(&BufferInitDescriptor {
             label: Some("meta"),
             contents: bytemuck::cast_slice(&metadata),
@@ -256,7 +254,7 @@ impl WgpuContext {
         {
             panic!("Adapter does not support compute shaders");
         }
-        let device_and_queue = adapter
+        adapter
             .request_device(&DeviceDescriptor {
                 label: None,
                 required_features: Features::empty(),
@@ -266,8 +264,7 @@ impl WgpuContext {
                 experimental_features: ExperimentalFeatures::disabled(),
             })
             .await
-            .unwrap();
-        device_and_queue
+            .unwrap()
     }
 
     fn get_device_and_queue() -> (Device, Queue) {

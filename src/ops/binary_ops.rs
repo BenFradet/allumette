@@ -243,16 +243,7 @@ impl<E: Element, BT: BackendType, T: Backend<E, BT>> Binary<E, BT, T> for MatMul
         (
             ctx.snd
                 .as_ref()
-                // check transpose is happening
-                .map(|b| {
-                    println!("BEFORE SHAPE {:?}", b.shape());
-                    println!("BEFORE STRIDES {:?}", b.strides());
-                    let res = b.transpose().unwrap();
-                    println!("AFTER SHAPE {:?}", res.shape());
-                    println!("AFTER STRIDES {:?}", res.strides());
-                    res
-                })
-                //.and_then(|b| b.transpose())
+                .and_then(|b| b.transpose())
                 .and_then(|b| d.matmul(&b))
                 .unwrap_or(<T as TensorData<E>>::ones(d.shape().clone())),
             ctx.fst
