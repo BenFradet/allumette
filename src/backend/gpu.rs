@@ -25,9 +25,11 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .get_or_create_pipeline(tag, workgroup_info, 3, None)
             .unwrap();
         let bind_group_layout = pipeline.get_bind_group_layout(0);
-        let metadata_buffer =
-            self.context
-                .create_metadata_buffer(&[&self.shape, &self.shape], &[], &[]);
+        let metadata_buffer = self.context.create_metadata_buffer(
+            &[&self.shape, &self.shape],
+            &[&self.strides, &self.strides],
+            &[],
+        );
         let bind_group = self.context.create_bind_group(
             &[&self.buffer, &metadata_buffer, &output_buffer],
             &bind_group_layout,
@@ -62,9 +64,11 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .context
             .get_or_create_pipeline(tag, workgroup_info, 3, None)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
-        let metadata_buffer =
-            self.context
-                .create_metadata_buffer(&[&self.shape, &out.shape], &[], &[]);
+        let metadata_buffer = self.context.create_metadata_buffer(
+            &[&self.shape, &out.shape],
+            &[&self.strides, &out.strides],
+            &[],
+        );
         let bind_group = self.context.create_bind_group(
             &[&self.buffer, &metadata_buffer, &output_buffer],
             &bind_group_layout,
@@ -91,6 +95,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         } else {
             self.shape.broadcast(&other.shape)?
         };
+        let strides = (&shape).into();
         let workgroup_info = (&shape).into();
         let gpu_size = shape.gpu_byte_size();
         let output_buffer = self.context.create_output_buffer(
@@ -103,9 +108,11 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .context
             .get_or_create_pipeline(tag, workgroup_info, 4, None)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
-        let metadata_buffer =
-            self.context
-                .create_metadata_buffer(&[&self.shape, &other.shape, &shape], &[], &[]);
+        let metadata_buffer = self.context.create_metadata_buffer(
+            &[&self.shape, &other.shape, &shape],
+            &[&self.strides, &other.strides, &strides],
+            &[],
+        );
         let bind_group = self.context.create_bind_group(
             &[
                 &self.buffer,
@@ -121,7 +128,6 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             .encode_command(&workgroup_info, &pipeline, &bind_group);
         self.context.submit_command(command).ok()?;
 
-        let strides = (&shape).into();
         Some(Self::from_buffer(
             shape,
             strides,
@@ -144,7 +150,7 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
             let mut shape_data = self.shape.data().to_vec();
             shape_data[dim] = 1;
             let shape = Shape::new(shape_data);
-
+            let strides = (&shape).into();
             let workgroup_info = WorkgroupInfo::for_reduce(self.shape.data()[dim], &shape);
             let gpu_size = shape.gpu_byte_size();
             let output_buffer = self.context.create_output_buffer(
@@ -157,9 +163,11 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
                 self.context
                     .get_or_create_pipeline(tag, workgroup_info, 3, Some(init))?;
             let bind_group_layout = pipeline.get_bind_group_layout(0);
-            let metadata_buffer =
-                self.context
-                    .create_metadata_buffer(&[&self.shape, &shape], &[], &[dim]);
+            let metadata_buffer = self.context.create_metadata_buffer(
+                &[&self.shape, &shape],
+                &[&self.strides, &strides],
+                &[dim],
+            );
             let bind_group = self.context.create_bind_group(
                 &[&self.buffer, &metadata_buffer, &output_buffer],
                 &bind_group_layout,
@@ -170,7 +178,6 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
                 .encode_command(&workgroup_info, &pipeline, &bind_group);
             self.context.submit_command(command).ok()?;
 
-            let strides = (&shape).into();
             Some(Self::from_buffer(
                 shape,
                 strides,

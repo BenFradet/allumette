@@ -212,18 +212,9 @@ impl WgpuContext {
         for u in additional_data {
             contents.push(*u);
         }
-        if strides.is_empty() {
-            for shape in shapes {
-                contents.extend(shape.data());
-                let strides: Strides = (*shape).into();
-                contents.extend(strides.data());
-            }
-        } else {
-            // to use in case the layout is not contiguous
-            for (shape, stride) in shapes.iter().zip(strides) {
-                contents.extend(shape.data());
-                contents.extend(stride.data());
-            }
+        for (shape, stride) in shapes.iter().zip(strides) {
+            contents.extend(shape.data());
+            contents.extend(stride.data());
         }
 
         let metadata: Vec<u32> = contents
