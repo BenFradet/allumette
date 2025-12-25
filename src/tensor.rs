@@ -380,7 +380,7 @@ where
     }
 
     pub fn arbitrary_matmul_tuple() -> impl Strategy<Value = (Self, Self)> {
-        let dim_s = 2_usize..4;
+        let dim_s = 2_usize..=4;
         (dim_s.clone(), dim_s.clone(), dim_s.clone(), dim_s).prop_flat_map(|(a, b, c, d)| {
             let shape1 = Shape::new(vec![d, a, b]);
             let shape2 = Shape::new(vec![1, b, c]);
@@ -985,10 +985,8 @@ mod tests {
 
             #[test]
             fn matmul_grad_tests(
-                a_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
-                b_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![3, 4])),
-                a_par in Tensor::<f64, Par, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
-                b_par in Tensor::<f64, Par, CpuTensorData>::arbitrary_with_shape(Shape::new(vec![3, 4])),
+                (a_seq, b_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_matmul_tuple(),
+                (a_par, b_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_matmul_tuple(),
             ) {
                 binary_grad_assert(a_seq, b_seq, |t1, t2| t1.mm(t2));
                 binary_grad_assert(a_par, b_par, |t1, t2| t1.mm(t2));
@@ -1407,8 +1405,7 @@ mod tests {
 
             #[test]
             fn matmul_grad_tests(
-                a in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_with_shape(Shape::new(vec![2, 3])),
-                b in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_with_shape(Shape::new(vec![3, 4])),
+                (a, b) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_matmul_tuple(),
             ) {
                 binary_grad_assert(a.clone(), b.clone(), |t1, t2| t1.mm(t2));
             }
