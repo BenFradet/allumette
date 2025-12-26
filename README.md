@@ -41,7 +41,7 @@ The set of dependencies is otherwise pretty limited:
 ### Next up
 
 - [x] parallel backend
-- [ ] gpu backend
+- [x] gpu backend
 - [ ] visualization
 - [ ] convolution
 - [ ] ergonomics

@@ -28,42 +28,18 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
     }
 
     pub fn forward(&self, t: Tensor<E, BT, T>) -> Tensor<E, BT, T> {
-        let mut input_shape = t.data.shape().data().to_vec();
-        let input_first_dim = input_shape[0];
+        let input_shape = t.data.shape().data().to_vec();
+        let batch = input_shape[0];
+        let in_size = input_shape[1];
 
-        let mut weights_shape = self.weights.data.shape().data().to_vec();
-
-        // input size must match weight size
-        assert!(
-            input_shape.last() == weights_shape.first(),
-            "input size does not match weight size"
-        );
-
-        // reshape weights to prepare for matrix multiplication by adding a batch dimension
-        weights_shape.insert(0, 1);
-        let reshaped_weights = self.weights.clone().view(&Shape::new(weights_shape));
-
-        // reshape input tensor by adding an output dimension
-        input_shape.push(1);
-        let reshaped_input = t.view(&Shape::new(input_shape));
-
-        // perform element-wise multiplication and then sum across the input dimension
-        // to perform a dot product equivalent for each sample in the batch
-        let batch_product = reshaped_weights * reshaped_input;
-        let summed_product = batch_product.sum(Some(1)).contiguous();
-
-        // reshape the summed product to match the output dimension
-        // number of samples by output size
-        let output_shape = vec![input_first_dim, self.out_size];
-        let reshaped_output = summed_product.view(&Shape::new(output_shape));
-
-        // add bias to each output in the batch
-        // bias is reshaped to match the batch output shape (1, out_size) for broadcasting
-        reshaped_output
-            + self
-                .biases
-                .clone()
-                .view(&Shape::new(vec![1, self.out_size]))
+        (self
+            .weights
+            .clone()
+            .view(&Shape::new(vec![1, in_size, self.out_size]))
+            * t.view(&Shape::new(vec![batch, in_size, 1])))
+        .sum(Some(1))
+        .view(&Shape::new(vec![batch, self.out_size]))
+            + self.biases.clone().view(&Shape::new(vec![self.out_size]))
     }
 
     pub fn update_weights(mut self, w: Tensor<E, BT, T>) -> Self {
