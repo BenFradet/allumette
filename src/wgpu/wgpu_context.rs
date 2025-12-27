@@ -30,6 +30,20 @@ pub struct WgpuContext {
     pipelines: RwLock<HashMap<(&'static str, WorkgroupInfo), Arc<ComputePipeline>>>,
 }
 
+impl Default for WgpuContext {
+    fn default() -> Self {
+        let (device, queue) = Self::get_device_and_queue();
+        unsafe {
+            device.start_graphics_debugger_capture();
+        }
+        Self {
+            device,
+            queue,
+            pipelines: RwLock::new(HashMap::new()),
+        }
+    }
+}
+
 impl WgpuContext {
     const MAP_SHADER: &'static str = include_str!("shaders/map.wgsl");
     const ZIP_SHADER: &'static str = include_str!("shaders/zip.wgsl");
@@ -49,18 +63,6 @@ impl WgpuContext {
     const MM_OP: &'static str = "mm";
 
     const ENTRY_POINT: &'static str = "call";
-
-    pub fn new() -> Self {
-        let (device, queue) = Self::get_device_and_queue();
-        unsafe {
-            device.start_graphics_debugger_capture();
-        }
-        Self {
-            device,
-            queue,
-            pipelines: RwLock::new(HashMap::new()),
-        }
-    }
 
     pub fn encode_command(
         &self,
@@ -332,7 +334,7 @@ impl WgpuContext {
     }
 }
 
-static WGPU_CONTEXT: LazyLock<WgpuContext> = LazyLock::new(WgpuContext::new);
+static WGPU_CONTEXT: LazyLock<WgpuContext> = LazyLock::new(WgpuContext::default);
 
 pub fn get_wgpu_context() -> &'static WgpuContext {
     &WGPU_CONTEXT
