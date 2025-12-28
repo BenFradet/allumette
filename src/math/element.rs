@@ -1,11 +1,16 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::{
+    fmt::Display,
+    ops::{Add, Div, Mul, Neg, Sub},
+};
 
 pub trait Element:
     Clone
     + Copy
     + std::fmt::Debug
+    + Display
     + PartialEq
     + PartialOrd
+    + Add<Self, Output = Self>
     + Add<Self, Output = Self>
     + Sub<Self, Output = Self>
     + Mul<Self, Output = Self>

@@ -1,14 +1,14 @@
 use allumette::{
-    backend::backend_type::Par,
-    data::cpu_tensor_data::CpuTensorData,
+    backend::backend_type::{Gpu, Seq},
+    data::{cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData},
     training::{dataset::Dataset, train},
 };
 
 fn main() {
-    let pts = 1000;
+    let pts = 100;
     let dataset = Dataset::simple(pts);
     let hidden_layer_size = 3;
-    let learning_rate = 0.5;
+    let learning_rate = 0.01;
     let iterations = 500;
-    train::train::<Par, CpuTensorData>(dataset, learning_rate, iterations, hidden_layer_size);
+    train::train::<f32, Gpu, GpuTensorData>(dataset, learning_rate, iterations, hidden_layer_size);
 }
