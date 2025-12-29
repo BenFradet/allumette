@@ -8,7 +8,7 @@ fn main() {
     let pts = 100;
     let dataset = Dataset::simple(pts);
     let hidden_layer_size = 3;
-    let learning_rate = 0.01;
+    let learning_rate = 0.5;
     let iterations = 500;
-    train::train::<f32, Gpu, GpuTensorData>(dataset, learning_rate, iterations, hidden_layer_size);
+    train::train::<f64, Seq, CpuTensorData>(dataset, learning_rate, iterations, hidden_layer_size);
 }

@@ -16,14 +16,15 @@ pub struct Layer<'a, E: Element, BT: BackendType, T: Backend<E, BT>> {
     pub biases: Tensor<E, BT, T>,
 }
 
+// TODO: make a gpu-specific impl if cpu doesn't work
 impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Layer<'a, E, BT, T> {
     pub fn new(name: &'a str, in_size: usize, out_size: usize) -> Self {
         Self {
             name,
             in_size,
             out_size,
-            weights: Self::weights(name, in_size, out_size),
-            biases: Self::biases(name, out_size),
+            weights: Self::weights_gpu(name, in_size, out_size),
+            biases: Self::biases_gpu(name, out_size),
         }
     }
 
@@ -52,10 +53,25 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
         Self::param(Shape::new(vec![in_size, out_size])).id(id)
     }
 
+    pub fn weights_gpu(name: &str, in_size: usize, out_size: usize) -> Tensor<E, BT, T> {
+        let id = Self::weights_key(name);
+        let shape = Shape::new(vec![in_size, out_size]);
+        let t = Tensor::from_data(<T as TensorData<E>>::rand(shape));
+        (t - Tensor::from_scalar(E::fromf(0.5))).history(History::default()).id(id)
+    }
+
     pub fn biases(name: &str, out_size: usize) -> Tensor<E, BT, T> {
         let id = Self::biases_key(name);
         Self::param(Shape::new(vec![out_size])).id(id)
     }
+
+    pub fn biases_gpu(name: &str, out_size: usize) -> Tensor<E, BT, T> {
+        let id = Self::biases_key(name);
+        let shape = Shape::new(vec![out_size]);
+        let t = Tensor::from_data(<T as TensorData<E>>::zeros(shape));
+        (t + Tensor::from_scalar(E::fromf(0.1))).history(History::default()).id(id)
+    }
+
 
     fn param(shape: Shape) -> Tensor<E, BT, T> {
         let t = Tensor::from_data(<T as TensorData<E>>::rand(shape));
