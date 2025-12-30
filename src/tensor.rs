@@ -76,6 +76,19 @@ where
     pub fn from_2d(data: &[&[E]]) -> Option<Self> {
         <T as TensorData<E>>::from_2d(data).map(Self::from_data)
     }
+    
+    pub fn from_tuples(data: &[(E, E)]) -> Self {
+        let len = data.len();
+        let d = data.iter()
+            .fold(Vec::with_capacity(len * 2), |mut acc, t| {
+                acc.push(t.0);
+                acc.push(t.1);
+                acc
+            });
+        let shape = Shape::new(vec![len, 2]);
+        let strides = (&shape).into();
+        Self::from_data(<T as TensorData<E>>::from(&d, shape, strides))
+    }
 
     pub fn history(mut self, h: History<E, BT, T>) -> Self {
         self.history = h;
