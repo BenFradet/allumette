@@ -1,5 +1,6 @@
 use proptest::{collection, prelude::*};
-use rand::Rng;
+use rand::prelude::*;
+use rand::{SeedableRng, Rng};
 use std::sync::Arc;
 
 use wgpu::{
@@ -257,6 +258,13 @@ impl TensorData<f32> for GpuTensorData<'_> {
 
     fn rand(shape: Shape) -> Self {
         let mut rng = rand::thread_rng();
+        let data: Vec<f32> = (0..shape.size).map(|_| rng.r#gen()).collect();
+        let strides = (&shape).into();
+        Self::new(&data, shape, strides, get_wgpu_context())
+    }
+
+    fn rand_with_seed(shape: Shape, seed: u64) -> Self {
+        let mut rng = StdRng::seed_from_u64(seed);
         let data: Vec<f32> = (0..shape.size).map(|_| rng.r#gen()).collect();
         let strides = (&shape).into();
         Self::new(&data, shape, strides, get_wgpu_context())

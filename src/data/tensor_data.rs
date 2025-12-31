@@ -28,6 +28,7 @@ pub trait TensorData<E: Element> {
     fn ones(shape: Shape) -> Self;
     fn zeros(shape: Shape) -> Self;
     fn rand(shape: Shape) -> Self;
+    fn rand_with_seed(shape: Shape, seed: u64) -> Self;
     fn epsilon(shape: Shape, idx: &Idx, eps: E) -> Self;
 
     fn from(data: &[E], shape: Shape, strides: Strides) -> Self;
