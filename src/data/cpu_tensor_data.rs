@@ -4,7 +4,7 @@ use proptest::{collection, prelude::*};
 
 use crate::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::StdRng};
 
 use super::tensor_data::TensorData;
 
@@ -178,7 +178,7 @@ impl TensorData<f64> for CpuTensorData {
             strides,
         }
     }
-    
+
     fn rand_with_seed(shape: Shape, seed: u64) -> Self {
         let mut rng = StdRng::seed_from_u64(seed);
         let data: Vec<f64> = (0..shape.size).map(|_| rng.r#gen()).collect();

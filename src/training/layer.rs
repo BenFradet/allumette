@@ -56,8 +56,10 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
     pub fn weights_gpu(name: &str, in_size: usize, out_size: usize) -> Tensor<E, BT, T> {
         let id = Self::weights_key(name);
         let shape = Shape::new(vec![in_size, out_size]);
-        let t = Tensor::from_data(<T as TensorData<E>>::rand(shape));
-        (t - Tensor::from_scalar(E::fromf(0.5))).history(History::default()).id(id)
+        let t = Tensor::from_data(<T as TensorData<E>>::rand_with_seed(shape, 1234));
+        (t - Tensor::from_scalar(E::fromf(0.5)))
+            .history(History::default())
+            .id(id)
     }
 
     pub fn biases(name: &str, out_size: usize) -> Tensor<E, BT, T> {
@@ -69,9 +71,10 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
         let id = Self::biases_key(name);
         let shape = Shape::new(vec![out_size]);
         let t = Tensor::from_data(<T as TensorData<E>>::zeros(shape));
-        (t + Tensor::from_scalar(E::fromf(0.1))).history(History::default()).id(id)
+        (t + Tensor::from_scalar(E::fromf(0.1)))
+            .history(History::default())
+            .id(id)
     }
-
 
     fn param(shape: Shape) -> Tensor<E, BT, T> {
         let t = Tensor::from_data(<T as TensorData<E>>::rand(shape));

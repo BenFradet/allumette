@@ -1,6 +1,6 @@
 use proptest::{collection, prelude::*};
 use rand::prelude::*;
-use rand::{SeedableRng, Rng};
+use rand::{Rng, SeedableRng};
 use std::sync::Arc;
 
 use wgpu::{
