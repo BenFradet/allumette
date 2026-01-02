@@ -192,7 +192,7 @@ fn index_to_position_out(
 fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let i = global_id.x;
 
-    if (i > arrayLength(&output)) {
+    if (i >= arrayLength(&output)) {
         return;
     }
 
