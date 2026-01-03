@@ -36,6 +36,14 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
         t.view(&Shape::new(vec![batch, in_size]))
             .mm(self.weights.clone())
             + self.biases.clone()
+        //(self
+        //    .weights
+        //    .clone()
+        //    .view(&Shape::new(vec![1, in_size, self.out_size]))
+        //    * t.view(&Shape::new(vec![batch, in_size, 1])))
+        //.sum(Some(1))
+        //.view(&Shape::new(vec![batch, self.out_size]))
+        //    + self.biases.clone().view(&Shape::new(vec![self.out_size]))
     }
 
     pub fn update_weights(mut self, w: Tensor<E, BT, T>) -> Self {
@@ -96,5 +104,62 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
 
     pub fn bkey(&self) -> String {
         format!("{}_biases", self.name)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        backend::backend_type::Seq,
+        data::{cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData},
+        shaping::strides::Strides,
+        wgpu::wgpu_context::get_wgpu_context,
+    };
+
+    use super::*;
+
+    #[test]
+    fn layer_test() {
+        let shape = Shape::new(vec![2, 3]);
+        let strides: Strides = (&shape).into();
+
+        let tdg = GpuTensorData::new(
+            &[1., 2., 3., 4., 5., 6.],
+            shape.clone(),
+            strides.clone(),
+            get_wgpu_context(),
+        );
+        let g = Tensor::from_data(tdg);
+        let glayer = Layer::new("layer", 2, 2);
+        let gout = glayer.forward(g.clone());
+        let gloss = gout.sum(None);
+        let gres = gloss.backward();
+        println!(
+            "{:?}",
+            gres.get(&g.id)
+                .unwrap()
+                .grad
+                .clone()
+                .unwrap()
+                .data
+                .collect()
+        );
+
+        let tdc = CpuTensorData::new(vec![1., 2., 3., 4., 5., 6.], shape.clone(), strides.clone());
+        let c: Tensor<f64, Seq, _> = Tensor::from_data(tdc);
+        let clayer: Layer<_, Seq, _> = Layer::new("layer", 2, 2);
+        let cout = clayer.forward(c.clone());
+        let closs = cout.sum(None);
+        let cres = closs.backward();
+        println!(
+            "{:?}",
+            cres.get(&c.id)
+                .unwrap()
+                .grad
+                .clone()
+                .unwrap()
+                .data
+                .collect()
+        );
     }
 }

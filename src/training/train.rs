@@ -37,14 +37,11 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
         network.zero();
 
         let out = network.forward(x.clone()).view(&n_shape);
-        if iteration == 1 {
-            println!("{:?}", out.data.collect());
-        }
         let prob = (out.clone() * y.clone())
             + (out.clone() - Tensor::from_scalar(E::one()))
                 * (y.clone() - Tensor::from_scalar(E::one()));
 
-        let loss = -prob.clone().ln();
+        let loss = -prob.ln();
 
         let res = (loss.clone() / Tensor::from_scalar(E::fromf(data.n as f64)))
             .sum(None)

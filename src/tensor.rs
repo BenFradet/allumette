@@ -69,6 +69,10 @@ where
         Self::from_data(<T as TensorData<E>>::from_scalar(data)).make_constant()
     }
 
+    pub fn ones(shape: Shape) -> Self {
+        Self::from_data(<T as TensorData<E>>::ones(shape))
+    }
+
     pub fn from_1d(data: &[E]) -> Self {
         Self::from_data(<T as TensorData<E>>::from_1d(data))
     }
@@ -1685,7 +1689,7 @@ mod tests {
 
         #[test]
         fn test_backward_gpu() {
-            let shape = Shape::new(vec![3]);
+            let shape = Shape::new(vec![3, 1]);
             let strides: Strides = (&shape).into();
 
             let tdg = GpuTensorData::new(
@@ -1695,7 +1699,7 @@ mod tests {
                 get_wgpu_context(),
             );
             let g = Tensor::from_data(tdg);
-            let gs = g.clone().sum(None);
+            let gs = g.clone().view(&Shape::new(vec![3])).sum(None);
             let gres = gs.backward();
             println!(
                 "{:?}",
@@ -1710,7 +1714,7 @@ mod tests {
 
             let tdc = CpuTensorData::new(vec![1., 2., 3.], shape.clone(), strides.clone());
             let c: Tensor<f64, Seq, _> = Tensor::from_data(tdc);
-            let cs = c.clone().sum(None);
+            let cs = c.clone().view(&Shape::new(vec![3])).sum(None);
             let cres = cs.backward();
             println!(
                 "{:?}",
