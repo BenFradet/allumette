@@ -1728,6 +1728,25 @@ mod tests {
             );
         }
 
+        #[test]
+        fn test_view_backward() {
+            let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[1., 2., 3., 4., 5., 6.]);
+            let xc_id = xc.id.clone();
+            let vc = xc.view(&Shape::new(vec![3, 2]));
+            let yc = vc.sum(None);
+            let mc = yc.backward();
+            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![1., 1., 1., 1., 1., 1.], xcg);
+
+            let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[1., 2., 3., 4., 5., 6.]);
+            let xg_id = xg.id.clone();
+            let vg = xg.view(&Shape::new(vec![3, 2]));
+            let yg = vg.sum(None);
+            let mg = yg.backward();
+            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![1., 1., 1., 1., 1., 1.], xgg);
+        }
+
         //#[test]
         //fn test_matmul_square() {
         //    let shape = Shape::new(vec![4, 4]);
