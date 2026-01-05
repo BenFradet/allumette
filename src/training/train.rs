@@ -133,3 +133,38 @@ pub fn train_shuffle<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backen
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        backend::backend_type::{Gpu, Seq},
+        data::{cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData},
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_train() {
+        let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
+        let yc: Tensor<_, Seq, CpuTensorData> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();
+        let xc_id = xc.id.clone();
+        let pc = (xc.clone() * yc.clone())
+            + (xc - Tensor::from_scalar(1.) * (yc - Tensor::from_scalar(1.)));
+        let lc = -pc.ln();
+        let oc = lc.sum(None);
+        let mc = oc.backward();
+        let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
+        println!("xcg {xcg:?}");
+
+        let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
+        let yg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();
+        let xg_id = xg.id.clone();
+        let pg = (xg.clone() * yg.clone())
+            + (xg - Tensor::from_scalar(1.) * (yg - Tensor::from_scalar(1.)));
+        let lg = -pg.ln();
+        let og = lg.sum(None);
+        let mg = og.backward();
+        let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
+        println!("xgg {xgg:?}");
+    }
+}
