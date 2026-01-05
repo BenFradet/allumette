@@ -1730,17 +1730,21 @@ mod tests {
 
         #[test]
         fn test_view_backward() {
-            let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[1., 2., 3., 4., 5., 6.]);
+            let xc: Tensor<_, Seq, CpuTensorData> =
+                Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let xc_id = xc.id.clone();
-            let vc = xc.view(&Shape::new(vec![3, 2]));
+            let xc_size = xc.size();
+            let vc = xc.view(&Shape::scalar(xc_size));
             let yc = vc.sum(None);
             let mc = yc.backward();
             let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![1., 1., 1., 1., 1., 1.], xcg);
 
-            let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[1., 2., 3., 4., 5., 6.]);
+            let xg: Tensor<_, Gpu, GpuTensorData> =
+                Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let xg_id = xg.id.clone();
-            let vg = xg.view(&Shape::new(vec![3, 2]));
+            let xg_size = xg.size();
+            let vg = xg.view(&Shape::scalar(xg_size));
             let yg = vg.sum(None);
             let mg = yg.backward();
             let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
@@ -1749,21 +1753,23 @@ mod tests {
 
         #[test]
         fn test_broadcast_mul_backward() {
-            let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[1., 2., 3.]);
+            let xc: Tensor<_, Seq, CpuTensorData> =
+                Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let xc_id = xc.id.clone();
             let oc = xc * Tensor::from_scalar(2.);
             let lc = oc.sum(None);
             let mc = lc.backward();
             let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
-            assert_eq!(vec![2., 2., 2.], xcg);
+            assert_eq!(vec![2., 2., 2., 2., 2., 2.], xcg);
 
-            let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[1., 2., 3.]);
+            let xg: Tensor<_, Gpu, GpuTensorData> =
+                Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let xg_id = xg.id.clone();
             let og = xg * Tensor::from_scalar(2.);
             let lg = og.sum(None);
             let mg = lg.backward();
             let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
-            assert_eq!(vec![2., 2., 2.], xgg);
+            assert_eq!(vec![2., 2., 2., 2., 2., 2.], xgg);
         }
 
         #[test]
