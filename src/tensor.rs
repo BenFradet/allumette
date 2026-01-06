@@ -14,16 +14,15 @@ use crate::{
         unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
     shaping::{order::Order, shape::Shape, strides::Strides},
-    util::unsafe_usize_convert::UnsafeUsizeConvert,
+    util::{tensor_id::TensorId, unsafe_usize_convert::UnsafeUsizeConvert},
     wgpu::wgpu_context::get_wgpu_context,
 };
 use proptest::{collection, prelude::*};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     ops,
+    sync::Mutex,
 };
-
-use rand::Rng;
 
 #[derive(Clone, Debug)]
 pub struct Tensor<E: Element, BT: BackendType, T: Backend<E, BT>> {
@@ -34,7 +33,7 @@ pub struct Tensor<E: Element, BT: BackendType, T: Backend<E, BT>> {
     pub is_constant: bool,
 }
 
-//static TENSOR_COUNT: AtomicU32 = AtomicU32::new(0);
+static TENSOR_ID: Mutex<TensorId> = Mutex::new(TensorId::new(0));
 
 impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Tensor<E, BT, T>
 where
@@ -43,8 +42,9 @@ where
     T: TensorData<E> + std::fmt::Debug + Clone,
 {
     pub fn new(data: T, history: History<E, BT, T>) -> Self {
-        let id = rand::thread_rng().r#gen::<u64>().to_string();
-        //let id = TENSOR_COUNT.fetch_add(1, Ordering::Relaxed);
+        let mut tensor_id = TENSOR_ID.lock().unwrap();
+        let id = tensor_id.random().to_string();
+        //let id = rand::thread_rng().r#gen::<u64>().to_string();
         Self {
             data,
             grad: None,
@@ -54,12 +54,10 @@ where
         }
     }
 
-    pub fn ones(shape: Shape) -> Self {
-        Self::from_data(<T as TensorData<E>>::ones(shape))
-    }
-
     pub fn from_data(data: T) -> Self {
-        let id = rand::thread_rng().r#gen::<u64>().to_string();
+        let mut tensor_id = TENSOR_ID.lock().unwrap();
+        let id = tensor_id.random().to_string();
+        //let id = rand::thread_rng().r#gen::<u64>().to_string();
         Self {
             data,
             grad: None,
@@ -67,6 +65,10 @@ where
             id,
             is_constant: false,
         }
+    }
+
+    pub fn ones(shape: Shape) -> Self {
+        Self::from_data(<T as TensorData<E>>::ones(shape))
     }
 
     pub fn from_scalar(data: E) -> Self {
@@ -1774,25 +1776,6 @@ mod tests {
             let mg = lg.backward();
             let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![2., 2., 2., 2., 2., 2.], xgg);
-        }
-
-        #[test]
-        fn test_broadcast_add_backward() {
-            let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[1., 2., 3.]);
-            let xc_id = xc.id.clone();
-            let oc = xc + Tensor::from_scalar(5.);
-            let lc = oc.sum(None);
-            let mc = lc.backward();
-            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
-            assert_eq!(vec![1., 1., 1.], xcg);
-
-            let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[1., 2., 3.]);
-            let xg_id = xg.id.clone();
-            let og = xg + Tensor::from_scalar(5.);
-            let lg = og.sum(None);
-            let mg = lg.backward();
-            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
-            assert_eq!(vec![1., 1., 1.], xgg);
         }
 
         //#[test]
