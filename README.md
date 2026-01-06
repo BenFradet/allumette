@@ -2,7 +2,12 @@
 
 `allumette` is a toy tensor library built for fun to better understand autodifferentiation.
 
-It is based on [minitorch](minitorch.github.io).
+It is inspired by a small cohort of projects:
+- [minitorch](minitorch.github.io)
+- [tinygrad](https://github.com/tinygrad/tinygrad)
+- [burn](https://github.com/tracel-ai/burn)
+- [candle](https://github.com/huggingface/candle)
+- [tensorken](https://github.com/kurtschelfthout/tensorken)
 
 
 ### Usage
