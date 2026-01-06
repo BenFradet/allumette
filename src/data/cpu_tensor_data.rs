@@ -190,7 +190,13 @@ impl TensorData<f64> for CpuTensorData {
 
     fn rand_with_seed(shape: Shape, seed: u64) -> Self {
         let mut rng = StdRng::seed_from_u64(seed);
-        let data: Vec<f64> = (0..shape.size).map(|_| rng.r#gen()).collect();
+        // generating f32 and converting to have parity with gpu
+        let data: Vec<f64> = (0..shape.size)
+            .map(|_| {
+                let f = rng.r#gen::<f32>();
+                f as f64
+            })
+            .collect();
         let strides = (&shape).into();
         Self {
             data: Arc::new(data),

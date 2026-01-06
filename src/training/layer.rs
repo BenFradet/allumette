@@ -66,7 +66,7 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
     pub fn weights_gpu(name: &str, in_size: usize, out_size: usize) -> Tensor<E, BT, T> {
         let id = Self::weights_key(name);
         let shape = Shape::new(vec![in_size, out_size]);
-        let t = Tensor::ones(shape);//from_data(<T as TensorData<E>>::rand_with_seed(shape, 1234));
+        let t = Tensor::from_data(<T as TensorData<E>>::rand_with_seed(shape, 1234));
         (t - Tensor::from_scalar(E::fromf(0.5)))
             .history(History::default())
             .id(id)
