@@ -47,10 +47,6 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
             .sum(None)
             .view(&one_shape)
             .backward();
-        if iteration == 1 {
-            println!("grad keys: {:?}", res.keys().collect::<Vec<_>>());
-            println!("grad len: {:?}", res.keys().len());
-        }
         network.update(&res);
 
         let total_loss = loss

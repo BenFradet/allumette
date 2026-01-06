@@ -1778,6 +1778,49 @@ mod tests {
             assert_eq!(vec![2., 2., 2., 2., 2., 2.], xgg);
         }
 
+        #[test]
+        fn test_broadcast_add_backward() {
+            let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[1., 2., 3.]);
+            let xc_id = xc.id.clone();
+            let oc = xc + Tensor::from_scalar(5.);
+            let lc = oc.sum(None);
+            let mc = lc.backward();
+            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![1., 1., 1.], xcg);
+
+            let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[1., 2., 3.]);
+            let xg_id = xg.id.clone();
+            let og = xg + Tensor::from_scalar(5.);
+            let lg = og.sum(None);
+            let mg = lg.backward();
+            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![1., 1., 1.], xgg);
+        }
+
+        #[test]
+        fn test_expand_backward() {
+            let a_shape = Shape::new(vec![2, 1]);
+            let b_shape = Shape::new(vec![2, 3]);
+
+            let ac: Tensor<_, Seq, CpuTensorData> = Tensor::from_shape(&[1., 2.], a_shape.clone());
+            let ac_id = ac.id.clone();
+            let bc = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
+            let oc = ac + bc;
+            let lc = oc.sum(None);
+            let mc = lc.backward();
+            let acg = mc.get(&ac_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![3., 3.], acg);
+
+            let ag: Tensor<_, Gpu, GpuTensorData> = Tensor::from_shape(&[1., 2.], a_shape.clone());
+            let ag_id = ag.id.clone();
+            let bg = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
+            let og = ag + bg;
+            let lg = og.sum(None);
+            let mg = lg.backward();
+            let agg = mg.get(&ag_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![3., 3.], agg);
+        }
+
         //#[test]
         //fn test_matmul_square() {
         //    let shape = Shape::new(vec![4, 4]);

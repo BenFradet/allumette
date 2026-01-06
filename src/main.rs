@@ -35,6 +35,6 @@ fn main() {
     };
     let hidden_layer_size = 3;
     let learning_rate = 1.;
-    let iterations = 1;
-    train::train::<f64, Seq, CpuTensorData>(dataset, learning_rate, iterations, hidden_layer_size);
+    let iterations = 200;
+    train::train::<f32, Gpu, GpuTensorData>(dataset, learning_rate, iterations, hidden_layer_size);
 }
