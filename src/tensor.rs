@@ -1821,6 +1821,36 @@ mod tests {
             assert_eq!(vec![3., 3.], agg);
         }
 
+        #[test]
+        fn test_matmul_backward() {
+            let a_shape = Shape::new(vec![2, 3]);
+            let b_shape = Shape::new(vec![3, 2]);
+
+            let ac: Tensor<_, Seq, CpuTensorData> = Tensor::from_shape(&[1., 2., 3., 4., 5., 6.], a_shape.clone());
+            let ac_id = ac.id.clone();
+            let bc = Tensor::from_shape(&[1., 2., 3., 4., 5., 6.], b_shape.clone());
+            let bc_id = bc.id.clone();
+            let oc = ac.mm(bc);
+            let lc = oc.sum(None);
+            let mc = lc.backward();
+            let acg = mc.get(&ac_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![3., 7., 11., 3., 7., 11.], acg);
+            let bcg = mc.get(&bc_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![5., 5., 7., 7., 9., 9.], bcg);
+
+            let ag: Tensor<_, Gpu, GpuTensorData> = Tensor::from_shape(&[1., 2., 3., 4., 5., 6.], a_shape.clone());
+            let ag_id = ag.id.clone();
+            let bg = Tensor::from_shape(&[1., 2., 3., 4., 5., 6.], b_shape.clone());
+            let bg_id = bg.id.clone();
+            let og = ag.mm(bg);
+            let lg = og.sum(None);
+            let mg = lg.backward();
+            let agg = mg.get(&ag_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![3., 7., 11., 3., 7., 11.], agg);
+            let bgg = mg.get(&bg_id).unwrap().grad.clone().unwrap().data.collect();
+            assert_eq!(vec![5., 5., 7., 7., 9., 9.], bgg);
+        }
+
         //#[test]
         //fn test_matmul_square() {
         //    let shape = Shape::new(vec![4, 4]);

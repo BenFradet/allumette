@@ -34,7 +34,9 @@ fn main() {
         y: vec![1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1],
     };
     let hidden_layer_size = 3;
-    let learning_rate = 1.;
-    let iterations = 200;
-    train::train::<f64, Seq, CpuTensorData>(dataset, learning_rate, iterations, hidden_layer_size);
+    let learning_rate = 0.05;
+    let iterations = 1;
+    //cpu layer 1 grad [0.0, -0.00046193235971115645, 0.007418926796722089, 0.0, -0.0016358296782338297, -0.00019212343075844513]
+    //gpu layer 1 grad [0.0, 0.0, 0.0074904417, 0.0, 0.0, 0.0008900426]
+    train::train::<f32, Gpu, GpuTensorData>(dataset, learning_rate, iterations, hidden_layer_size);
 }

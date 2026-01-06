@@ -35,17 +35,17 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
         let batch = input_shape[0];
         let in_size = input_shape[1];
 
-        //t.view(&Shape::new(vec![batch, in_size]))
-        //    .mm(self.weights.clone())
-        //    + self.biases.clone()
-        (self
-            .weights
-            .clone()
-            .view(&Shape::new(vec![1, in_size, self.out_size]))
-            * t.view(&Shape::new(vec![batch, in_size, 1])))
-        .sum(Some(1))
-        .view(&Shape::new(vec![batch, self.out_size]))
-            + self.biases.clone().view(&Shape::new(vec![self.out_size]))
+        t.view(&Shape::new(vec![batch, in_size]))
+            .mm(self.weights.clone())
+            + self.biases.clone()
+        //(self
+        //    .weights
+        //    .clone()
+        //    .view(&Shape::new(vec![1, in_size, self.out_size]))
+        //    * t.view(&Shape::new(vec![batch, in_size, 1])))
+        //.sum(Some(1))
+        //.view(&Shape::new(vec![batch, self.out_size]))
+        //    + self.biases.clone().view(&Shape::new(vec![self.out_size]))
     }
 
     pub fn update_weights(mut self, w: Tensor<E, BT, T>) -> Self {
