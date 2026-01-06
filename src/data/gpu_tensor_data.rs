@@ -42,6 +42,23 @@ impl<'a> GpuTensorData<'a> {
         }
     }
 
+    pub fn with_inferred_strides(data: &[f32], shape: Shape, context: &'a WgpuContext) -> Self {
+        let strides = (&shape).into();
+        let buffer = context.device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Tensor new"),
+            contents: bytemuck::cast_slice(data),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        });
+        let init = data.to_vec();
+        Self {
+            buffer: Arc::new(buffer),
+            shape,
+            strides,
+            context,
+            init,
+        }
+    }
+
     pub fn from_buffer(
         shape: Shape,
         strides: Strides,
@@ -279,6 +296,10 @@ impl TensorData<f32> for GpuTensorData<'_> {
 
     fn from(data: &[f32], shape: Shape, strides: Strides) -> Self {
         Self::new(data, shape, strides, get_wgpu_context())
+    }
+
+    fn from_shape(data: &[f32], shape: Shape) -> Self {
+        Self::with_inferred_strides(data, shape, get_wgpu_context())
     }
 
     fn from_scalar(s: f32) -> Self {

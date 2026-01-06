@@ -54,6 +54,10 @@ where
         }
     }
 
+    pub fn ones(shape: Shape) -> Self {
+        Self::from_data(<T as TensorData<E>>::ones(shape))
+    }
+
     pub fn from_data(data: T) -> Self {
         let id = rand::thread_rng().r#gen::<u64>().to_string();
         Self {
@@ -69,8 +73,8 @@ where
         Self::from_data(<T as TensorData<E>>::from_scalar(data)).make_constant()
     }
 
-    pub fn ones(shape: Shape) -> Self {
-        Self::from_data(<T as TensorData<E>>::ones(shape))
+    pub fn from_shape(data: &[E], shape: Shape) -> Self {
+        Self::from_data(<T as TensorData<E>>::from_shape(data, shape))
     }
 
     pub fn from_1d(data: &[E]) -> Self {

@@ -23,6 +23,8 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
             name,
             in_size,
             out_size,
+            //weights: Self::weights(name, in_size, out_size),
+            //biases: Self::biases(name, out_size),
             weights: Self::weights_gpu(name, in_size, out_size),
             biases: Self::biases_gpu(name, out_size),
         }
@@ -85,7 +87,7 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
     }
 
     fn param(shape: Shape) -> Tensor<E, BT, T> {
-        let t = Tensor::from_data(<T as TensorData<E>>::rand(shape));
+        let t = Tensor::from_data(<T as TensorData<E>>::rand_with_seed(shape, 1234));
         ((t - Tensor::from_scalar(E::fromf(0.5))) * Tensor::from_scalar(E::fromf(2.)))
             .history(History::default())
     }

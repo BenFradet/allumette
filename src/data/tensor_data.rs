@@ -32,6 +32,7 @@ pub trait TensorData<E: Element> {
     fn epsilon(shape: Shape, idx: &Idx, eps: E) -> Self;
 
     fn from(data: &[E], shape: Shape, strides: Strides) -> Self;
+    fn from_shape(data: &[E], shape: Shape) -> Self;
     fn from_scalar(s: E) -> Self;
     fn from_1d(v: &[E]) -> Self;
     fn from_2d(m: &[&[E]]) -> Option<Self>

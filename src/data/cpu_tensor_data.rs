@@ -24,6 +24,15 @@ impl CpuTensorData {
         }
     }
 
+    pub fn with_inferred_strides(data: Vec<f64>, shape: Shape) -> Self {
+        let strides = (&shape).into();
+        Self {
+            data: Arc::new(data),
+            shape,
+            strides,
+        }
+    }
+
     // TODO: factor out into a trait between cpu_td and gpu_td
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         Shape::arbitrary().prop_flat_map(Self::arbitrary_with_shape)
@@ -203,6 +212,10 @@ impl TensorData<f64> for CpuTensorData {
 
     fn from(data: &[f64], shape: Shape, strides: Strides) -> Self {
         Self::new(data.to_vec(), shape, strides)
+    }
+
+    fn from_shape(data: &[f64], shape: Shape) -> Self {
+        Self::with_inferred_strides(data.to_vec(), shape)
     }
 
     fn from_scalar(s: f64) -> Self {
