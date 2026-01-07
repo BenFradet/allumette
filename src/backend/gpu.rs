@@ -208,8 +208,8 @@ impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
         let max_wg_size = 16;
         let workgroup_info = WorkgroupInfo {
             count: (
-                shape[1].div_ceil(max_wg_size),
-                shape[2].div_ceil(max_wg_size),
+                shape[2].div_ceil(max_wg_size), // x tiles over columns
+                shape[1].div_ceil(max_wg_size), // y tiles over rows
                 shape[0],
             ),
             size: (max_wg_size, max_wg_size, 1),

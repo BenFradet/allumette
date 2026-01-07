@@ -22,7 +22,7 @@ var<workgroup> b_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
 
 // used to create local arrays
 // might want to dynamically change it
-const TILE_SIZE: u32 = 32u;
+const TILE_SIZE: u32 = 16u;
 
 // shape lengths
 const PREAMBLE: u32 = 3u;
