@@ -65,8 +65,6 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Optimi
 
     fn step(&mut self, lr_tensor: Tensor<E, BT, T>) {
         if let Some(grad) = &self.layer1.weights.grad {
-            println!("layer 1 grad {:?}", grad.data.collect());
-            println!("layer 1 grad shape {:?}", grad.data.shape());
             let update = lr_tensor.clone() * *grad.clone();
             self.layer1.weights = (self.layer1.weights.clone() - update)
                 .history(History::default())

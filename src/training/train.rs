@@ -1,5 +1,3 @@
-use rand::{seq::SliceRandom, thread_rng};
-
 use crate::{
     backend::{backend::Backend, backend_type::BackendType},
     data::tensor_data::TensorData,
@@ -33,6 +31,7 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);
 
+    // TODO: remove from_scalar and prefer properly-sized clones
     for iteration in 1..iterations + 1 {
         network.zero();
 
@@ -47,18 +46,19 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
             .sum(None)
             .view(&one_shape)
             .backward();
+
         network.update(&res);
-
-        let total_loss = loss
-            .clone()
-            .sum(None)
-            .view(&one_shape)
-            .item()
-            .unwrap_or(E::zero());
-
         network.step(lr_tensor.clone());
 
         if iteration.is_multiple_of(10) || iteration == iterations {
+            // major bottleneck since item uses first (cpu: allocate, gpu: retrieve)
+            let total_loss = loss
+                .clone()
+                .sum(None)
+                .view(&one_shape)
+                .item()
+                .unwrap_or(E::zero());
+
             let y2 = y.clone();
             let correct = out
                 .clone()
@@ -67,69 +67,8 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
                 .sum(None)
                 .item()
                 .unwrap();
-            println!("Iteration {iteration}, loss: {total_loss}, correct: {correct}\n");
-        }
-    }
-}
 
-pub fn train_shuffle<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
-    data: Dataset<E>,
-    learning_rate: E,
-    iterations: usize,
-    hidden_layer_size: usize,
-) {
-    let mut network: Network<'_, E, BT, T> = Network::new(hidden_layer_size);
-    let lr_tensor = Tensor::from_scalar(learning_rate);
-    let mut rng = thread_rng();
-    let yd: Vec<_> = data.y.iter().map(|u| E::fromf(*u as f64)).collect();
-    let n_shape = Shape::new(vec![data.n]);
-    let one_shape = Shape::scalar(1);
-
-    let xt = Tensor::from_tuples(&data.x);
-    let yt = Tensor::from_1d(&yd);
-
-    let mut c: Vec<_> = data.x.iter().zip(yd).collect();
-    for iteration in 1..=iterations {
-        c.shuffle(&mut rng);
-        let (x_shuf, y_shuf): (Vec<_>, Vec<_>) = c.clone().into_iter().unzip();
-
-        network.zero();
-        let y = Tensor::from_1d(&y_shuf);
-        let x = Tensor::from_tuples(&x_shuf);
-
-        let out = network.forward(x.clone()).view(&n_shape);
-        let prob = (out.clone() * y.clone())
-            + (out.clone() - Tensor::from_scalar(E::one()))
-                * (y.clone() - Tensor::from_scalar(E::one()));
-
-        let loss = -prob.clone().ln();
-
-        let res = (loss.clone() / Tensor::from_scalar(E::fromf(data.n as f64)))
-            .sum(None)
-            .view(&one_shape)
-            .backward();
-        network.update(&res);
-
-        let total_loss = loss
-            .clone()
-            .sum(None)
-            .view(&one_shape)
-            .item()
-            .unwrap_or(E::zero());
-
-        network.step(lr_tensor.clone());
-
-        if iteration.is_multiple_of(10) || iteration == iterations {
-            let out = network.forward(xt.clone()).view(&n_shape);
-            let y2 = yt.clone();
-            let correct = out
-                .clone()
-                .gt(Tensor::from_scalar(E::fromf(0.5)))
-                .eq(y2)
-                .sum(None)
-                .item()
-                .unwrap();
-            println!("Iteration {iteration}, loss: {total_loss}, correct: {correct}\n");
+            println!("Iteration {iteration}, loss: {total_loss}, correct: {correct}");
         }
     }
 }
@@ -154,7 +93,7 @@ mod tests {
         let oc = lc.sum(None);
         let mc = oc.backward();
         let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
-        println!("xcg {xcg:?}");
+        assert_eq!(vec![-6.666666666666667, -3.333333333333333, -2.361111111111111], xcg);
 
         let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
         let yg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();
@@ -165,6 +104,6 @@ mod tests {
         let og = lg.sum(None);
         let mg = og.backward();
         let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
-        println!("xgg {xgg:?}");
+        assert_eq!(vec![-6.6666665, -3.3333335, -2.3611112], xgg);
     }
 }

@@ -121,7 +121,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn layer_test() {
+    fn test_layer() {
         let shape = Shape::new(vec![2, 3]);
         let strides: Strides = (&shape).into();
 
@@ -136,8 +136,8 @@ mod tests {
         let gout = glayer.forward(g.clone());
         let gloss = gout.sum(None);
         let gres = gloss.backward();
-        println!(
-            "{:?}",
+        assert_eq!(
+            vec![1., 1., 1., 1., 1., 1.],
             gres.get(&g.id)
                 .unwrap()
                 .grad
@@ -153,8 +153,8 @@ mod tests {
         let cout = clayer.forward(c.clone());
         let closs = cout.sum(None);
         let cres = closs.backward();
-        println!(
-            "{:?}",
+        assert_eq!(
+            vec![1., 1., 1., 1., 1., 1.],
             cres.get(&c.id)
                 .unwrap()
                 .grad

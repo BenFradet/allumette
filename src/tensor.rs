@@ -1707,8 +1707,8 @@ mod tests {
             let g = Tensor::from_data(tdg);
             let gs = g.clone().view(&Shape::new(vec![3])).sum(None);
             let gres = gs.backward();
-            println!(
-                "{:?}",
+            assert_eq!(
+                vec![1., 1., 1.],
                 gres.get(&g.id)
                     .unwrap()
                     .grad
@@ -1722,8 +1722,8 @@ mod tests {
             let c: Tensor<f64, Seq, _> = Tensor::from_data(tdc);
             let cs = c.clone().view(&Shape::new(vec![3])).sum(None);
             let cres = cs.backward();
-            println!(
-                "{:?}",
+            assert_eq!(
+                vec![1., 1., 1.],
                 cres.get(&c.id)
                     .unwrap()
                     .grad
