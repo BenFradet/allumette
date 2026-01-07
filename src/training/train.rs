@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use crate::{
     backend::{backend::Backend, backend_type::BackendType},
     data::tensor_data::TensorData,
@@ -9,6 +11,10 @@ use crate::{
 };
 
 use super::{dataset::Dataset, network::Network};
+
+trait Trainer<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> {
+    fn train(data: Dataset<E>, learning_rate: E, iterations: usize, hidden_layer_size: usize);
+}
 
 pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
     data: Dataset<E>,
@@ -30,19 +36,25 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
     let y = Tensor::from_data(y_data);
     let n_shape = Shape::new(vec![data.n]);
     let one_shape = Shape::scalar(1);
+    let ones = Tensor::ones(n_shape.clone());
+    let ns = Tensor::from_shape(
+        &std::iter::repeat_n(E::fromf(data.n as f64), data.n).collect::<Vec<_>>(),
+        n_shape.clone(),
+    );
+
+    let start_time = Instant::now();
 
     // TODO: remove from_scalar and prefer properly-sized clones
     for iteration in 1..iterations + 1 {
         network.zero();
 
         let out = network.forward(x.clone()).view(&n_shape);
-        let prob = (out.clone() * y.clone())
-            + (out.clone() - Tensor::from_scalar(E::one()))
-                * (y.clone() - Tensor::from_scalar(E::one()));
+        let prob =
+            (out.clone() * y.clone()) + (out.clone() - ones.clone()) * (y.clone() - ones.clone());
 
         let loss = -prob.ln();
 
-        let res = (loss.clone() / Tensor::from_scalar(E::fromf(data.n as f64)))
+        let res = (loss.clone() / ns.clone())
             .sum(None)
             .view(&one_shape)
             .backward();
@@ -50,8 +62,8 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
         network.update(&res);
         network.step(lr_tensor.clone());
 
-        if iteration.is_multiple_of(10) || iteration == iterations {
-            // major bottleneck since item uses first (cpu: allocate, gpu: retrieve)
+        if iteration == iterations {
+            let elapsed_time = start_time.elapsed();
             let total_loss = loss
                 .clone()
                 .sum(None)
@@ -68,7 +80,7 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
                 .item()
                 .unwrap();
 
-            println!("Iteration {iteration}, loss: {total_loss}, correct: {correct}");
+            println!("elapsed time: {elapsed_time:?}, loss: {total_loss}, correct: {correct}");
         }
     }
 }
@@ -93,7 +105,10 @@ mod tests {
         let oc = lc.sum(None);
         let mc = oc.backward();
         let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
-        assert_eq!(vec![-6.666666666666667, -3.333333333333333, -2.361111111111111], xcg);
+        assert_eq!(
+            vec![-6.666666666666667, -3.333333333333333, -2.361111111111111],
+            xcg
+        );
 
         let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
         let yg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();

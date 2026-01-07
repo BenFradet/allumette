@@ -1,11 +1,11 @@
 use allumette::{
-    backend::backend_type::{Gpu, Seq},
+    backend::backend_type::{Gpu, Par, Seq},
     data::{cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData},
     training::{dataset::Dataset, train},
 };
 
 fn main() {
-    let pts = 200;
+    let pts = 1000000;
     let dataset = Dataset::simple(pts);
     let hidden_layer_size = 3;
     let learning_rate = 0.1;
