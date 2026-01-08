@@ -31,7 +31,27 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Debugg
             let elapsed_time = start_time.elapsed();
             let total_loss = total_loss(loss);
             let correct = correct(labels, output);
-            println!("elapsed time: {elapsed_time:?}, loss: {total_loss}, correct: {correct}");
+            println!("iteration: {current}/{max}, elapsed time: {elapsed_time:?}, loss: {total_loss}, correct: {correct}");
+        }
+    }
+}
+
+pub struct TerseDebugger;
+impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Debugger<E, BT, T>
+    for TerseDebugger
+{
+    fn debug(
+        loss: &Tensor<E, BT, T>,
+        labels: &Tensor<E, BT, T>,
+        output: &Tensor<E, BT, T>,
+        (current, max): (usize, usize),
+        start_time: Instant,
+    ) {
+        if current == max {
+            let elapsed_time = start_time.elapsed();
+            let total_loss = total_loss(loss);
+            let correct = correct(labels, output);
+            println!("iteration: {current}/{max}, elapsed time: {elapsed_time:?}, loss: {total_loss}, correct: {correct}");
         }
     }
 }
