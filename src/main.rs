@@ -5,7 +5,7 @@ use allumette::{
 };
 
 fn main() {
-    let pts = 1000000;
+    let pts = 1000;
     let dataset = Dataset::simple(pts);
     let hidden_layer_size = 3;
     let learning_rate = 0.1;
