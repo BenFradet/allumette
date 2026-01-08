@@ -1,6 +1,10 @@
 use rand::{Rng, thread_rng};
 
-use crate::math::element::Element;
+use crate::backend::{backend::Backend, backend_type::BackendType};
+use crate::data::tensor_data::TensorData;
+use crate::shaping::shape::Shape;
+use crate::util::unsafe_usize_convert::UnsafeUsizeConvert;
+use crate::{math::element::Element, tensor::Tensor};
 
 #[derive(Clone, Debug)]
 pub struct Dataset<E: Element> {
@@ -9,7 +13,37 @@ pub struct Dataset<E: Element> {
     pub y: Vec<usize>,
 }
 
-impl<E: Element> Dataset<E> {
+impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
+    pub fn x<BT: BackendType, T: Backend<E, BT>>(&self) -> Tensor<E, BT, T> {
+        Tensor::from_tuples(&self.x)
+    }
+
+    pub fn y<BT: BackendType, T: Backend<E, BT>>(&self) -> Tensor<E, BT, T> {
+        let y_data = <T as TensorData<E>>::from_1d(
+            &self
+                .y
+                .iter()
+                .map(|u| E::fromf(*u as f64))
+                .collect::<Vec<_>>(),
+        );
+        Tensor::from_data(y_data)
+    }
+
+    pub fn n<BT: BackendType, T: Backend<E, BT>>(&self) -> Tensor<E, BT, T> {
+        Tensor::from_shape(
+            &std::iter::repeat_n(E::fromf(self.n as f64), self.n).collect::<Vec<_>>(),
+            self.n_shape(),
+        )
+    }
+
+    pub fn ones<BT: BackendType, T: Backend<E, BT>>(&self) -> Tensor<E, BT, T> {
+        Tensor::ones(self.n_shape())
+    }
+
+    pub fn n_shape(&self) -> Shape {
+        Shape::scalar(self.n)
+    }
+
     pub fn simple(n: usize) -> Self {
         let x = Self::make_points(n);
         let mut y = vec![];

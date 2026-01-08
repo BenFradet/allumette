@@ -2,7 +2,6 @@ use std::time::Instant;
 
 use crate::{
     backend::{backend::Backend, backend_type::BackendType},
-    data::tensor_data::TensorData,
     math::element::Element,
     optim::optimizer::Optimizer,
     shaping::shape::Shape,
@@ -11,10 +10,6 @@ use crate::{
 };
 
 use super::{dataset::Dataset, network::Network};
-
-trait Trainer<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> {
-    fn train(data: Dataset<E>, learning_rate: E, iterations: usize, hidden_layer_size: usize);
-}
 
 pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
     data: Dataset<E>,
@@ -25,26 +20,17 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
     let mut network: Network<'_, E, BT, T> = Network::new(hidden_layer_size);
     let lr_tensor = Tensor::from_scalar(learning_rate);
 
-    let x = Tensor::from_tuples(&data.x);
-    let y_data = <T as TensorData<E>>::from_1d(
-        &data
-            .y
-            .iter()
-            .map(|u| E::fromf(*u as f64))
-            .collect::<Vec<_>>(),
-    );
-    let y = Tensor::from_data(y_data);
-    let n_shape = Shape::new(vec![data.n]);
+    let x = data.x();
+    let y = data.y();
+    let n = data.n();
+    let ones = data.ones();
+    let one = Tensor::from_scalar(E::one());
+
     let one_shape = Shape::scalar(1);
-    let ones = Tensor::ones(n_shape.clone());
-    let ns = Tensor::from_shape(
-        &std::iter::repeat_n(E::fromf(data.n as f64), data.n).collect::<Vec<_>>(),
-        n_shape.clone(),
-    );
+    let n_shape = data.n_shape();
 
     let start_time = Instant::now();
 
-    // TODO: remove from_scalar and prefer properly-sized clones
     for iteration in 1..iterations + 1 {
         network.zero();
 
@@ -54,10 +40,10 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
 
         let loss = -prob.ln();
 
-        let res = (loss.clone() / ns.clone())
+        let res = (loss.clone() / n.clone())
             .sum(None)
             .view(&one_shape)
-            .backward();
+            .backprop(one.clone());
 
         network.update(&res);
         network.step(lr_tensor.clone());
@@ -71,11 +57,10 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
                 .item()
                 .unwrap_or(E::zero());
 
-            let y2 = y.clone();
             let correct = out
                 .clone()
                 .gt(Tensor::from_scalar(E::fromf(0.5)))
-                .eq(y2)
+                .eq(y.clone())
                 .sum(None)
                 .item()
                 .unwrap();
