@@ -6,12 +6,18 @@ use crate::{
     optim::optimizer::Optimizer,
     shaping::shape::Shape,
     tensor::Tensor,
+    training::debugger::Debugger,
     util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
 use super::{dataset::Dataset, network::Network};
 
-pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
+pub fn train<
+    E: Element + UnsafeUsizeConvert,
+    BT: BackendType,
+    T: Backend<E, BT>,
+    D: Debugger<E, BT, T>,
+>(
     data: Dataset<E>,
     learning_rate: E,
     iterations: usize,
@@ -48,25 +54,7 @@ pub fn train<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>
         network.update(&res);
         network.step(lr_tensor.clone());
 
-        if iteration == iterations {
-            let elapsed_time = start_time.elapsed();
-            let total_loss = loss
-                .clone()
-                .sum(None)
-                .view(&one_shape)
-                .item()
-                .unwrap_or(E::zero());
-
-            let correct = out
-                .clone()
-                .gt(Tensor::from_scalar(E::fromf(0.5)))
-                .eq(y.clone())
-                .sum(None)
-                .item()
-                .unwrap();
-
-            println!("elapsed time: {elapsed_time:?}, loss: {total_loss}, correct: {correct}");
-        }
+        D::debug(&loss, &y, &out, (iteration, iterations), start_time);
     }
 }
 
