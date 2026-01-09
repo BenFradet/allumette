@@ -8,16 +8,16 @@ use crate::{
     util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
-pub struct Layer<'a, E: Element, BT: BackendType, T: Backend<E, BT>> {
+pub struct Layer<'a, B: Backend> {
     pub name: &'a str,
     pub in_size: usize,
     pub out_size: usize,
-    pub weights: Tensor<E, BT, T>,
-    pub biases: Tensor<E, BT, T>,
+    pub weights: Tensor<B>,
+    pub biases: Tensor<B>,
 }
 
 // TODO: make a gpu-specific impl if cpu doesn't work
-impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Layer<'a, E, BT, T> {
+impl<'a, B: Backend> Layer<'a, B> {
     pub fn new(name: &'a str, in_size: usize, out_size: usize) -> Self {
         Self {
             name,
@@ -30,7 +30,7 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
         }
     }
 
-    pub fn forward(&self, t: Tensor<E, BT, T>) -> Tensor<E, BT, T> {
+    pub fn forward(&self, t: Tensor<B>) -> Tensor<B> {
         let input_shape = t.data.shape().data().to_vec();
         let batch = input_shape[0];
         let in_size = input_shape[1];
@@ -48,46 +48,46 @@ impl<'a, E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> La
         //    + self.biases.clone().view(&Shape::new(vec![self.out_size]))
     }
 
-    pub fn update_weights(mut self, w: Tensor<E, BT, T>) -> Self {
+    pub fn update_weights(mut self, w: Tensor<B>) -> Self {
         self.weights = w;
         self
     }
 
-    pub fn update_biases(mut self, b: Tensor<E, BT, T>) -> Self {
+    pub fn update_biases(mut self, b: Tensor<B>) -> Self {
         self.biases = b;
         self
     }
 
-    pub fn weights(name: &str, in_size: usize, out_size: usize) -> Tensor<E, BT, T> {
+    pub fn weights(name: &str, in_size: usize, out_size: usize) -> Tensor<B> {
         let id = Self::weights_key(name);
         Self::param(Shape::new(vec![in_size, out_size])).id(id)
     }
 
-    pub fn weights_gpu(name: &str, in_size: usize, out_size: usize) -> Tensor<E, BT, T> {
+    pub fn weights_gpu(name: &str, in_size: usize, out_size: usize) -> Tensor<B> {
         let id = Self::weights_key(name);
         let shape = Shape::new(vec![in_size, out_size]);
-        let t = Tensor::from_data(<T as TensorData<E>>::rand_with_seed(shape, 1234));
-        (t - Tensor::from_scalar(E::fromf(0.5)))
+        let t = Tensor::from_data(<B as TensorData<B::Element>>::rand_with_seed(shape, 1234));
+        (t - Tensor::from_scalar(B::Element::fromf(0.5)))
             .history(History::default())
             .id(id)
     }
 
-    pub fn biases(name: &str, out_size: usize) -> Tensor<E, BT, T> {
+    pub fn biases(name: &str, out_size: usize) -> Tensor<B> {
         let id = Self::biases_key(name);
         Self::param(Shape::new(vec![out_size])).id(id)
     }
 
-    pub fn biases_gpu(name: &str, out_size: usize) -> Tensor<E, BT, T> {
+    pub fn biases_gpu(name: &str, out_size: usize) -> Tensor<B> {
         let id = Self::biases_key(name);
         let shape = Shape::new(vec![out_size]);
-        let t = Tensor::from_data(<T as TensorData<E>>::zeros(shape));
-        (t + Tensor::from_scalar(E::fromf(0.1)))
+        let t = Tensor::from_data(<B as TensorData<B::Element>>::zeros(shape));
+        (t + Tensor::from_scalar(B::Element::fromf(0.1)))
             .history(History::default())
             .id(id)
     }
 
-    fn param(shape: Shape) -> Tensor<E, BT, T> {
-        let t = Tensor::from_data(<T as TensorData<E>>::rand_with_seed(shape, 1234));
+    fn param(shape: Shape) -> Tensor<B> {
+        let t = Tensor::from_data(<B as TensorData<E>>::rand_with_seed(shape, 1234));
         ((t - Tensor::from_scalar(E::fromf(0.5))) * Tensor::from_scalar(E::fromf(2.)))
             .history(History::default())
     }

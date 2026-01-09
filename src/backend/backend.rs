@@ -1,6 +1,37 @@
-use crate::{data::tensor_data::TensorData, math::element::Element, shaping::shape::Shape};
+use crate::{backend::backend_type::{Gpu, Par, Seq}, data::{cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData}, math::element::Element, shaping::shape::Shape, util::unsafe_usize_convert::UnsafeUsizeConvert};
 
 use super::backend_type::BackendType;
+
+pub trait Backend: Clone + std::fmt::Debug {
+    type Element: Element + UnsafeUsizeConvert;
+    type BackendType: BackendType;
+    type Storage<'a>: TensorBackend<Self::Element, Self::BackendType> + TensorData<Self::Element> + Clone + std::fmt::Debug
+        where Self: 'a;
+}
+
+#[derive(Clone, Debug)]
+pub struct CpuSeqBackend;
+impl Backend for CpuSeqBackend {
+    type Element = f64;
+    type BackendType = Seq;
+    type Storage<'a> = CpuTensorData;
+}
+
+#[derive(Clone, Debug)]
+pub struct CpuParBackend;
+impl Backend for CpuParBackend {
+    type Element = f64;
+    type BackendType = Par;
+    type Storage<'a> = CpuTensorData;
+}
+
+#[derive(Clone, Debug)]
+pub struct GpuBackend;
+impl Backend for GpuBackend {
+    type Element = f32;
+    type BackendType = Gpu;
+    type Storage<'a> = GpuTensorData<'a>;
+}
 
 pub trait TensorBackend<E: Element, T: BackendType> {
     fn map<F: Fn(E) -> E + Sync>(&self, f: F, tag: &'static str) -> Self;
@@ -64,6 +95,3 @@ pub trait TensorBackend<E: Element, T: BackendType> {
         Some(out)
     }
 }
-
-pub trait Backend<E: Element, T: BackendType> =
-    TensorBackend<E, T> + TensorData<E> + Clone + std::fmt::Debug;

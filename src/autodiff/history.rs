@@ -9,36 +9,36 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct History<E: Element, BT: BackendType, B: Backend<E, BT>> {
-    pub last_fn: Option<Function<E, BT, B>>,
-    pub ctx: Context<B>,
-    pub inputs: Vec<Tensor<E, BT, B>>,
-    marker: PhantomData<E>,
+pub struct History<B: Backend> {
+    pub last_fn: Option<Function<B>>,
+    pub ctx: Context<B::Storage>,
+    pub inputs: Vec<Tensor<B>>,
+    _marker: PhantomData<B::Element>,
 }
 
-impl<E: Element, BT: BackendType, B: Backend<E, BT>> Default for History<E, BT, B> {
+impl<B: Backend> Default for History<B> {
     fn default() -> Self {
         Self {
             last_fn: Default::default(),
             ctx: Default::default(),
             inputs: Default::default(),
-            marker: PhantomData,
+            _marker: PhantomData,
         }
     }
 }
 
-impl<E: Element, BT: BackendType, B: Backend<E, BT>> History<E, BT, B> {
-    pub fn last_fn(mut self, f: Function<E, BT, B>) -> Self {
+impl<B: Backend> History<B> {
+    pub fn last_fn(mut self, f: Function<B>) -> Self {
         self.last_fn = Some(f);
         self
     }
 
-    pub fn push_input(mut self, t: Tensor<E, BT, B>) -> Self {
+    pub fn push_input(mut self, t: Tensor<B>) -> Self {
         self.inputs.push(t);
         self
     }
 
-    pub fn context(mut self, c: Context<B>) -> Self {
+    pub fn context(mut self, c: Context<B::Storage>) -> Self {
         self.ctx = c;
         self
     }

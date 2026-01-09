@@ -4,8 +4,8 @@ use crate::{
     math::element::Element,
 };
 
-pub trait Binary<E: Element, BT: BackendType, B: Backend<E, BT>> {
-    fn forward(&self, lhs: &B, rhs: &B) -> B;
-    fn backward(&self, ctx: &Context<B>, d: &B) -> (B, B);
+pub trait Binary<B: Backend> {
+    fn forward(&self, lhs: &B::Storage, rhs: &B::Storage) -> B::Storage;
+    fn backward(&self, ctx: &Context<B::Storage>, d: &B::Storage) -> (B::Storage, B::Storage);
     fn tag(&self) -> &'static str;
 }

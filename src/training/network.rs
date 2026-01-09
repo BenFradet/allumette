@@ -11,13 +11,13 @@ use crate::{
 
 use super::layer::Layer;
 
-pub struct Network<'a, E: Element, BT: BackendType, T: Backend<E, BT>> {
-    layer1: Layer<'a, E, BT, T>,
-    layer2: Layer<'a, E, BT, T>,
-    layer3: Layer<'a, E, BT, T>,
+pub struct Network<'a, B: Backend> {
+    layer1: Layer<'a, B>,
+    layer2: Layer<'a, B>,
+    layer3: Layer<'a, B>,
 }
 
-impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Network<'_, E, BT, T> {
+impl<B: Backend> Network<'_, B> {
     pub fn new(hidden_layer_size: usize) -> Self {
         let layer1 = Layer::new("layer1", 2, hidden_layer_size);
         let layer2 = Layer::new("layer2", hidden_layer_size, hidden_layer_size);

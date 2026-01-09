@@ -12,11 +12,11 @@ use crate::{
 pub struct Forward;
 
 impl Forward {
-    pub fn binary<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
-        b: impl Binary<E, BT, T> + 'static,
-        lhs: Tensor<E, BT, T>,
-        rhs: Tensor<E, BT, T>,
-    ) -> Tensor<E, BT, T> {
+    pub fn binary<B: Backend>(
+        b: impl Binary<B> + 'static,
+        lhs: Tensor<B>,
+        rhs: Tensor<B>,
+    ) -> Tensor<B> {
         let res = b.forward(&lhs.data, &rhs.data);
         let ctx = Context::default()
             .fst(lhs.data.clone())
@@ -33,10 +33,10 @@ impl Forward {
         Tensor::new(res, new_history)
     }
 
-    pub fn unary<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
-        u: impl Unary<E, BT, T> + 'static,
-        a: Tensor<E, BT, T>,
-    ) -> Tensor<E, BT, T> {
+    pub fn unary<B: Backend>(
+        u: impl Unary<B> + 'static,
+        a: Tensor<B>,
+    ) -> Tensor<B> {
         let res = u.forward(&a.data);
         let ctx = Context::default().fst(a.data.clone());
         let new_history = if a.is_constant {
