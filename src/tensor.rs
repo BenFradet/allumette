@@ -2,7 +2,7 @@ use crate::{
     autodiff::{forward::Forward, history::History},
     backend::{
         backend::Backend,
-        backend_type::{BackendType, Gpu},
+        backend_type::{BackendType, Gpu, Par, Seq},
     },
     data::{
         cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
@@ -24,6 +24,8 @@ use std::{
     sync::Mutex,
 };
 
+static TENSOR_ID: Mutex<TensorId> = Mutex::new(TensorId::new(0));
+
 #[derive(Clone, Debug)]
 pub struct Tensor<E: Element, BT: BackendType, T: Backend<E, BT>> {
     pub data: T,
@@ -33,13 +35,15 @@ pub struct Tensor<E: Element, BT: BackendType, T: Backend<E, BT>> {
     pub is_constant: bool,
 }
 
-static TENSOR_ID: Mutex<TensorId> = Mutex::new(TensorId::new(0));
+pub type GpuTensor<'a> = Tensor<f32, Gpu, GpuTensorData<'a>>;
+pub type SeqCpuTensor = Tensor<f64, Seq, CpuTensorData>;
+pub type ParCpuTensor = Tensor<f64, Par, CpuTensorData>;
 
-impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Tensor<E, BT, T>
+impl<E, BT, T> Tensor<E, BT, T>
 where
-    E: Element,
-    BT: std::fmt::Debug + Clone,
-    T: TensorData<E> + std::fmt::Debug + Clone,
+    E: Element + UnsafeUsizeConvert,
+    BT: BackendType + std::fmt::Debug + Clone,
+    T: Backend<E, BT>,
 {
     pub fn new(data: T, history: History<E, BT, T>) -> Self {
         let mut tensor_id = TENSOR_ID.lock().unwrap();
