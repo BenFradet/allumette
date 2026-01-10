@@ -623,15 +623,15 @@ mod tests {
             );
         }
 
-        pub fn binary_grad_assert<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-            F: Fn(Tensor<f64, BT, T>, Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
-        >(
-            tensor1: Tensor<f64, BT, T>,
-            tensor2: Tensor<f64, BT, T>,
+        pub fn binary_grad_assert<'a, B, F>(
+            tensor1: Tensor<'a, B>,
+            tensor2: Tensor<'a, B>,
             f: F,
-        ) {
+        ) where
+            B: Backend<Element = f64>,
+            B::Storage<'a>: ops::Index<Idx, Output = f64>,
+            F: Fn(Tensor<'a, B>, Tensor<'a, B>) -> Tensor<'a, B>,
+        {
             let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
                 tensor1.grad(None).history(History::default()),
@@ -686,24 +686,23 @@ mod tests {
             delta.item().unwrap_or(0.) / (2. * eps)
         }
 
-        fn binary_grad_central_diff<
-            BT: BackendType,
-            T: Backend<f64, BT>,
-            F: Fn(Tensor<f64, BT, T>, Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
-        >(
-            tensor1: Tensor<f64, BT, T>,
-            tensor2: Tensor<f64, BT, T>,
+        fn binary_grad_central_diff<'a, B, F>(
+            tensor1: Tensor<'a, B>,
+            tensor2: Tensor<'a, B>,
             f: F,
             index: &Idx,
             first: bool,
-        ) -> f64 {
+        ) -> f64 where
+            B: Backend<Element = f64>,
+            F: Fn(Tensor<'a, B>, Tensor<'a, B>) -> Tensor<'a, B>,
+        {
             let eps = 1e-6;
             let shape = if first {
                 tensor1.data.shape().clone()
             } else {
                 tensor2.data.shape().clone()
             };
-            let up = Tensor::from_data(<T as TensorData<f64>>::epsilon(shape, index, eps));
+            let up = Tensor::from_data(<B::Storage<'a> as TensorData<f64>>::epsilon(shape, index, eps));
             let (add1, add2) = if first {
                 (tensor1.clone() + up.clone(), tensor2.clone())
             } else {
