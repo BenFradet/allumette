@@ -69,3 +69,8 @@ C.f. https://github.com/proptest-rs/proptest/issues/82
 GPU is fast except going to and from the CPU which happens a lot with prop tests
 
 #### IGPs are slow
+
+#### rust superpowers
+
+- associated types
+- const generics

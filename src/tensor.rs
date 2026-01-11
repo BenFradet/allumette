@@ -20,15 +20,18 @@ use crate::{
 use proptest::{collection, prelude::*};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
+    marker::PhantomData,
     ops,
     sync::Mutex,
-    marker::PhantomData,
 };
 
 static TENSOR_ID: Mutex<TensorId> = Mutex::new(TensorId::new(0));
 
 #[derive(Clone, Debug)]
-pub struct Tensor<'a, B> where B: Backend + 'a {
+pub struct Tensor<'a, B>
+where
+    B: Backend + 'a,
+{
     pub data: B::Storage<'a>,
     pub grad: Option<Box<Tensor<'a, B>>>,
     pub history: History<B>,
@@ -71,11 +74,16 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     pub fn from_scalar(data: B::Element) -> Self {
-        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_scalar(data)).make_constant()
+        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_scalar(
+            data,
+        ))
+        .make_constant()
     }
 
     pub fn from_shape(data: &[B::Element], shape: Shape) -> Self {
-        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_shape(data, shape))
+        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_shape(
+            data, shape,
+        ))
     }
 
     pub fn from_1d(data: &[B::Element]) -> Self {
@@ -95,7 +103,9 @@ impl<'a, B: Backend> Tensor<'a, B> {
         });
         let shape = Shape::new(vec![len, 2]);
         let strides = (&shape).into();
-        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from(&d, shape, strides))
+        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from(
+            &d, shape, strides,
+        ))
     }
 
     pub fn history(mut self, h: History<B>) -> Self {
@@ -329,12 +339,14 @@ impl<'a, B: Backend> Tensor<'a, B> {
         match dim {
             Some(d) => {
                 let d = UnsafeUsizeConvert::unsafe_from(self.data.shape()[d]);
-                let div = Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_scalar(d));
+                let div =
+                    Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_scalar(d));
                 self.sum(dim) / div
             }
             None => {
                 let s = UnsafeUsizeConvert::unsafe_from(self.size());
-                let div = Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_scalar(s));
+                let div =
+                    Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_scalar(s));
                 self.sum(None) / div
             }
         }
@@ -388,7 +400,10 @@ impl<'a, B: Backend> Tensor<'a, B> {
 }
 
 // TODO: find a way to make this drier
-impl<'a, B> Tensor<'a, B> where B: Backend<Storage<'a> = CpuTensorData> {
+impl<'a, B> Tensor<'a, B>
+where
+    B: Backend<Storage<'a> = CpuTensorData>,
+{
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         CpuTensorData::arbitrary().prop_map(Self::from_data)
     }
@@ -534,9 +549,7 @@ impl<'a> Tensor<'a, GpuBackend> {
     }
 }
 
-impl<'a, B: Backend> ops::Add<Tensor<'a, B>>
-    for Tensor<'a, B>
-{
+impl<'a, B: Backend> ops::Add<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
     fn add(self, rhs: Tensor<B>) -> Self::Output {
@@ -544,9 +557,7 @@ impl<'a, B: Backend> ops::Add<Tensor<'a, B>>
     }
 }
 
-impl<'a, B: Backend> ops::Sub<Tensor<'a, B>>
-    for Tensor<'a, B>
-{
+impl<'a, B: Backend> ops::Sub<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
     fn sub(self, rhs: Tensor<B>) -> Self::Output {
@@ -555,9 +566,7 @@ impl<'a, B: Backend> ops::Sub<Tensor<'a, B>>
     }
 }
 
-impl<'a, B: Backend> ops::Mul<Tensor<'a, B>>
-    for Tensor<'a, B>
-{
+impl<'a, B: Backend> ops::Mul<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
     fn mul(self, rhs: Tensor<B>) -> Self::Output {
@@ -565,9 +574,7 @@ impl<'a, B: Backend> ops::Mul<Tensor<'a, B>>
     }
 }
 
-impl<'a, B: Backend> ops::Div<Tensor<'a, B>>
-    for Tensor<'a, B>
-{
+impl<'a, B: Backend> ops::Div<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
     fn div(self, rhs: Tensor<B>) -> Self::Output {
@@ -576,9 +583,7 @@ impl<'a, B: Backend> ops::Div<Tensor<'a, B>>
     }
 }
 
-impl<'a, B: Backend> ops::Neg
-    for Tensor<'a, B>
-{
+impl<'a, B: Backend> ops::Neg for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
     fn neg(self) -> Self::Output {
@@ -601,8 +606,8 @@ mod tests {
 
         fn unary_grad_assert<'a, B, F>(tensor: Tensor<'a, B>, f: F)
         where
-            B: Backend<Element = f64>,
-            B::Storage<'a>: ops::Index<Idx, Output = f64>,
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
             F: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
         {
             let id = &tensor.id.clone();
@@ -623,13 +628,10 @@ mod tests {
             );
         }
 
-        pub fn binary_grad_assert<'a, B, F>(
-            tensor1: Tensor<'a, B>,
-            tensor2: Tensor<'a, B>,
-            f: F,
-        ) where
-            B: Backend<Element = f64>,
-            B::Storage<'a>: ops::Index<Idx, Output = f64>,
+        pub fn binary_grad_assert<'a, B, F>(tensor1: Tensor<'a, B>, tensor2: Tensor<'a, B>, f: F)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
             F: Fn(Tensor<'a, B>, Tensor<'a, B>) -> Tensor<'a, B>,
         {
             let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
@@ -671,19 +673,21 @@ mod tests {
             );
         }
 
-        fn unary_grad_central_diff<'a, B, F>(tensor: Tensor<'a, B>, f: F, index: &Idx) -> f64
+        fn unary_grad_central_diff<'a, B, F>(tensor: Tensor<'a, B>, f: F, index: &Idx) -> B::Element
         where
-            B: Backend<Element = f64>,
+            B: Backend,
             F: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
         {
-            let eps = 1e-6;
+            let eps = B::Element::fromf(1e-6);
             let shape = tensor.data.shape().clone();
-            let up = Tensor::from_data(<B::Storage<'a> as TensorData<f64>>::epsilon(shape, index, eps));
+            let up = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::epsilon(
+                shape, index, eps,
+            ));
             let add = tensor.clone() + up.clone();
             let sub = tensor - up;
             let delta = f(add).sum(None) - f(sub).sum(None);
 
-            delta.item().unwrap_or(0.) / (2. * eps)
+            delta.item().unwrap_or(B::Element::zero()) / (B::Element::fromf(2.) * eps)
         }
 
         fn binary_grad_central_diff<'a, B, F>(
@@ -692,17 +696,20 @@ mod tests {
             f: F,
             index: &Idx,
             first: bool,
-        ) -> f64 where
-            B: Backend<Element = f64>,
+        ) -> B::Element
+        where
+            B: Backend,
             F: Fn(Tensor<'a, B>, Tensor<'a, B>) -> Tensor<'a, B>,
         {
-            let eps = 1e-6;
+            let eps = B::Element::fromf(1e-6);
             let shape = if first {
                 tensor1.data.shape().clone()
             } else {
                 tensor2.data.shape().clone()
             };
-            let up = Tensor::from_data(<B::Storage<'a> as TensorData<f64>>::epsilon(shape, index, eps));
+            let up = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::epsilon(
+                shape, index, eps,
+            ));
             let (add1, add2) = if first {
                 (tensor1.clone() + up.clone(), tensor2.clone())
             } else {
@@ -715,20 +722,16 @@ mod tests {
             };
             let delta = f(add1, add2).sum(None) - f(sub1, sub2).sum(None);
 
-            delta.item().unwrap_or(0.) / (2. * eps)
+            delta.item().unwrap_or(B::Element::zero()) / (B::Element::fromf(2.) * eps)
         }
 
-        fn unary_assert<
-            E: Element,
-            BT: BackendType,
-            T: Backend<E, BT> + ops::Index<Idx, Output = E>,
-            FT: Fn(Tensor<B>) -> Tensor<B>,
-            FF: Fn(E) -> E,
-        >(
-            t: Tensor<B>,
-            ft: FT,
-            ff: FF,
-        ) {
+        fn unary_assert<'a, B, FT, FF>(t: Tensor<'a, B>, ft: FT, ff: FF)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+            FT: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
+            FF: Fn(B::Element) -> B::Element,
+        {
             let data = t.data.clone();
             let res = ft(t);
             for idx in res.data.indices() {
@@ -736,17 +739,13 @@ mod tests {
             }
         }
 
-        fn binary_assert<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-            FT: Fn(Tensor<f64, BT, T>, Tensor<f64, BT, T>) -> Tensor<f64, BT, T>,
-            FF: Fn(f64, f64) -> f64,
-        >(
-            t1: Tensor<f64, BT, T>,
-            t2: Tensor<f64, BT, T>,
-            ft: FT,
-            ff: FF,
-        ) {
+        fn binary_assert<'a, B, FT, FF>(t1: Tensor<'a, B>, t2: Tensor<'a, B>, ft: FT, ff: FF)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+            FT: Fn(Tensor<'a, B>, Tensor<'a, B>) -> Tensor<'a, B>,
+            FF: Fn(B::Element, B::Element) -> B::Element,
+        {
             let data1 = t1.data.clone();
             let data2 = t2.data.clone();
             let res = ft(t1, t2);
@@ -755,50 +754,43 @@ mod tests {
             }
         }
 
-        fn permute_grad_test<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-        >(
-            t: Tensor<f64, BT, T>,
-            o: Order,
-        ) {
+        fn permute_grad_test<'a, B>(t: Tensor<'a, B>, o: Order)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
             unary_grad_assert(t, move |t| t.permute(o.clone()));
         }
 
-        fn reduce_grad_test<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-        >(
-            t: Tensor<f64, BT, T>,
-        ) {
+        fn reduce_grad_test<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
             unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
             unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
             unary_grad_assert(t.clone(), |t| t.mean(None));
         }
 
-        fn binary_grad_test<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-        >(
-            t1: Tensor<f64, BT, T>,
-            t2: Tensor<f64, BT, T>,
-        ) {
+        fn binary_grad_test<'a, B>(t1: Tensor<'a, B>, t2: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2);
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| {
-                t1 / (t2 + Tensor::from_scalar(5.5))
+                t1 / (t2 + Tensor::from_scalar(B::Element::fromf(5.5)))
             });
             binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.eq(t2));
         }
 
-        fn binary_grad_broadcast_test<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-        >(
-            t1: Tensor<f64, BT, T>,
-            t2: Tensor<f64, BT, T>,
-        ) {
+        fn binary_grad_broadcast_test<'a, B>(t1: Tensor<'a, B>, t2: Tensor<'a, B>)
+            where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
             binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 + t2);
             binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 + t2);
             binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 - t2);
@@ -806,10 +798,10 @@ mod tests {
             binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 * t2);
             binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 * t2);
             binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| {
-                t1 / (t2 + Tensor::from_scalar(5.5))
+                t1 / (t2 + Tensor::from_scalar(B::Element::fromf(5.5)))
             });
             binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| {
-                t1 / (t2 + Tensor::from_scalar(5.5))
+                t1 / (t2 + Tensor::from_scalar(B::Element::fromf(5.5)))
             });
             binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.eq(t2));
             binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.eq(t2));
