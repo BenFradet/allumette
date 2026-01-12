@@ -602,6 +602,8 @@ mod tests {
     use super::*;
 
     mod cpu {
+        use crate::backend::backend::{CpuParBackend, CpuSeqBackend};
+
         use super::*;
 
         fn unary_grad_assert<'a, B, F>(tensor: Tensor<'a, B>, f: F)
@@ -787,7 +789,7 @@ mod tests {
         }
 
         fn binary_grad_broadcast_test<'a, B>(t1: Tensor<'a, B>, t2: Tensor<'a, B>)
-            where
+        where
             B: Backend,
             B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
         {
@@ -807,57 +809,61 @@ mod tests {
             binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.eq(t2));
         }
 
-        fn unary_grad_complex_test1_<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-        >(
-            t: Tensor<f64, BT, T>,
-        ) {
-            let ft_seq = |t: Tensor<f64, BT, T>| {
-                (t.clone() + Tensor::from_scalar(100000.)).ln()
-                    + (t - Tensor::from_scalar(200.)).exp()
+        fn unary_grad_complex_test1_<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
+            let ft_seq = |t: Tensor<'a, B>| {
+                (t.clone() + Tensor::from_scalar(B::Element::fromf(100000.))).ln()
+                    + (t - Tensor::from_scalar(B::Element::fromf(200.))).exp()
             };
             unary_grad_assert(t.clone(), ft_seq);
         }
 
-        fn unary_grad_complex_test2_<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-        >(
-            t: Tensor<f64, BT, T>,
-        ) {
-            let ft = |t: Tensor<f64, BT, T>| {
-                ((((t * Tensor::from_scalar(10.) + Tensor::from_scalar(7.)).relu()
-                    * Tensor::from_scalar(6.)
-                    + Tensor::from_scalar(5.))
+        fn unary_grad_complex_test2_<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
+            let ft = |t: Tensor<'a, B>| {
+                ((((t * Tensor::from_scalar(B::Element::fromf(10.))
+                    + Tensor::from_scalar(B::Element::fromf(7.)))
                 .relu()
-                    * Tensor::from_scalar(10.))
+                    * Tensor::from_scalar(B::Element::fromf(6.))
+                    + Tensor::from_scalar(B::Element::fromf(5.)))
+                .relu()
+                    * Tensor::from_scalar(B::Element::fromf(10.)))
                 .sig())
                 .ln()
-                    / Tensor::from_scalar(50.)
+                    / Tensor::from_scalar(B::Element::fromf(50.))
             };
             unary_grad_assert(t.clone(), ft);
         }
 
-        fn unary_grad_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
-            t: Tensor<f64, BT, T>,
-        ) {
+        fn unary_grad_test<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
             unary_grad_assert(t.clone(), |t| -t);
             unary_grad_assert(t.clone(), |t| t.clone() * t);
             unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
-            unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(3.5)).inv());
+            unary_grad_assert(t.clone(), |t| {
+                (t + Tensor::from_scalar(B::Element::fromf(3.5))).inv()
+            });
             unary_grad_assert(t.clone(), |t| t.sig());
-            unary_grad_assert(t.clone(), |t| (t + Tensor::from_scalar(100000.)).ln());
+            unary_grad_assert(t.clone(), |t| {
+                (t + Tensor::from_scalar(B::Element::fromf(100000.))).ln()
+            });
             unary_grad_assert(t.clone(), |t| t.exp());
         }
 
-        fn unary_test<
-            E: Element + UnsafeUsizeConvert,
-            BT: BackendType,
-            T: Backend<E, BT> + ops::Index<Idx, Output = E>,
-        >(
-            t: Tensor<B>,
-        ) {
+        fn unary_test<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
             unary_assert(t.clone(), |t| -t, |f| -f);
             unary_assert(t.clone(), |t| t.clone() * t, |f| f * f);
             unary_assert(t.clone(), |t| t.clone() * t.clone() * t, |f| f * f * f);
@@ -865,10 +871,10 @@ mod tests {
                 t.clone(),
                 |t| t.inv(),
                 |f| {
-                    if f != E::zero() {
-                        E::one() / f
+                    if f != B::Element::zero() {
+                        B::Element::one() / f
                     } else {
-                        E::zero()
+                        B::Element::zero()
                     }
                 },
             );
@@ -876,51 +882,69 @@ mod tests {
             unary_assert(
                 t.clone(),
                 |t| t.ln(),
-                |f| if f > E::zero() { f.ln() } else { E::zero() },
+                |f| {
+                    if f > B::Element::zero() {
+                        f.ln()
+                    } else {
+                        B::Element::zero()
+                    }
+                },
             );
             unary_assert(t.clone(), |t| t.relu(), |f| f.relu());
             unary_assert(t.clone(), |t| t.exp(), |f| f.exp());
             unary_assert(t.clone(), |t| t.contiguous(), |f| f);
         }
 
-        fn unary_complex_test1_<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-        >(
-            t: Tensor<f64, BT, T>,
-        ) {
-            let ft = |t: Tensor<f64, BT, T>| {
-                (t.clone() + Tensor::from_scalar(100000.)).ln()
-                    + (t - Tensor::from_scalar(200.)).exp()
+        fn unary_complex_test1_<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
+            let ft = |t: Tensor<'a, B>| {
+                (t.clone() + Tensor::from_scalar(B::Element::fromf(100000.))).ln()
+                    + (t - Tensor::from_scalar(B::Element::fromf(200.))).exp()
             };
-            let ff = |f: f64| (f + 100000.).ln() + (f - 200.).exp();
+            let ff = |f: B::Element| {
+                (f + B::Element::fromf(100000.)).ln() + (f - B::Element::fromf(200.)).exp()
+            };
             unary_assert(t.clone(), ft, ff);
         }
 
-        fn unary_complex_test2_<
-            BT: BackendType,
-            T: Backend<f64, BT> + ops::Index<Idx, Output = f64>,
-        >(
-            t: Tensor<f64, BT, T>,
-        ) {
-            let ft = |t: Tensor<f64, BT, T>| {
-                ((((t * Tensor::from_scalar(10.) + Tensor::from_scalar(7.)).relu()
-                    * Tensor::from_scalar(6.)
-                    + Tensor::from_scalar(5.))
+        fn unary_complex_test2_<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
+            let ft = |t: Tensor<'a, B>| {
+                ((((t * Tensor::from_scalar(B::Element::fromf(10.))
+                    + Tensor::from_scalar(B::Element::fromf(7.)))
                 .relu()
-                    * Tensor::from_scalar(10.))
+                    * Tensor::from_scalar(B::Element::fromf(6.))
+                    + Tensor::from_scalar(B::Element::fromf(5.)))
+                .relu()
+                    * Tensor::from_scalar(B::Element::fromf(10.)))
                 .sig())
                 .ln()
-                    / Tensor::from_scalar(50.)
+                    / Tensor::from_scalar(B::Element::fromf(50.))
             };
-            let ff = |f: f64| ((((f * 10. + 7.).relu() * 6. + 5.).relu() * 10.).sig()).ln() / 50.;
+            let ff = |f: B::Element| {
+                ((((f * B::Element::fromf(10.) + B::Element::fromf(7.)).relu()
+                    * B::Element::fromf(6.)
+                    + B::Element::fromf(5.))
+                .relu()
+                    * B::Element::fromf(10.))
+                .sig())
+                .ln()
+                    / B::Element::fromf(50.)
+            };
             unary_assert(t.clone(), ft, ff);
         }
 
-        fn binary_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
-            t1: Tensor<f64, BT, T>,
-            t2: Tensor<f64, BT, T>,
-        ) {
+        fn binary_test<'a, B>(t1: Tensor<'a, B>, t2: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
             binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
             binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
             binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 * t2, |f1, f2| f1 * f2);
@@ -928,32 +952,57 @@ mod tests {
                 t1.clone(),
                 t2.clone(),
                 |t1, t2| t1 / t2,
-                |f1, f2| if f2 == 0. { 0. } else { f1 / f2 },
+                |f1, f2| {
+                    if f2 == B::Element::zero() {
+                        B::Element::zero()
+                    } else {
+                        f1 / f2
+                    }
+                },
             );
             binary_assert(
                 t1.clone(),
                 t2.clone(),
                 |t1, t2| t1.gt(t2),
-                |f1, f2| if f2 < f1 { 1. } else { 0. },
+                |f1, f2| {
+                    if f2 < f1 {
+                        B::Element::one()
+                    } else {
+                        B::Element::zero()
+                    }
+                },
             );
             binary_assert(
                 t1.clone(),
                 t2.clone(),
                 |t1, t2| t1.lt(t2),
-                |f1, f2| if f1 < f2 { 1. } else { 0. },
+                |f1, f2| {
+                    if f1 < f2 {
+                        B::Element::one()
+                    } else {
+                        B::Element::zero()
+                    }
+                },
             );
             binary_assert(
                 t1.clone(),
                 t2.clone(),
                 |t1, t2| t1.eq(t2),
-                |f1, f2| if f1 == f2 { 1. } else { 0. },
+                |f1, f2| {
+                    if f1 == f2 {
+                        B::Element::one()
+                    } else {
+                        B::Element::zero()
+                    }
+                },
             );
         }
 
-        fn matmul_test<BT: BackendType, T: Backend<f64, BT> + ops::Index<Idx, Output = f64>>(
-            t1: Tensor<f64, BT, T>,
-            t2: Tensor<f64, BT, T>,
-        ) {
+        fn matmul_test<'a, B>(t1: Tensor<'a, B>, t2: Tensor<'a, B>)
+        where
+            B: Backend,
+            B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
+        {
             if let [d, a, b] = t1.data.shape().data()
                 && let [_, _, c] = t2.data.shape().data()
             {
@@ -967,7 +1016,7 @@ mod tests {
                         .view(&Shape::new(vec![1, 1, *b, *c])))
                 .sum(Some(2))
                 .view(&Shape::new(vec![*d, *a, *c]));
-                assert_eq!(Some(1.), c_mm.is_close(c_prime).all(None).item());
+                assert_eq!(Some(B::Element::one()), c_mm.is_close(c_prime).all(None).item());
             } else {
                 panic!("both tensors should be 3d");
             }
@@ -976,8 +1025,8 @@ mod tests {
         proptest! {
             #[test]
             fn matmul_tests(
-                (a_seq, b_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_matmul_tuple(),
-                (a_par, b_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_matmul_tuple(),
+                (a_seq, b_seq) in Tensor::<CpuSeqBackend>::arbitrary_matmul_tuple(),
+                (a_par, b_par) in Tensor::<CpuParBackend>::arbitrary_matmul_tuple(),
             ) {
                 matmul_test(a_seq, b_seq);
                 matmul_test(a_par, b_par);
@@ -985,8 +1034,8 @@ mod tests {
 
             #[test]
             fn matmul_grad_tests(
-                (a_seq, b_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_matmul_tuple(),
-                (a_par, b_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_matmul_tuple(),
+                (a_seq, b_seq) in Tensor::<CpuSeqBackend>::arbitrary_matmul_tuple(),
+                (a_par, b_par) in Tensor::<CpuParBackend>::arbitrary_matmul_tuple(),
             ) {
                 binary_grad_assert(a_seq, b_seq, |t1, t2| t1.mm(t2));
                 binary_grad_assert(a_par, b_par, |t1, t2| t1.mm(t2));
@@ -994,8 +1043,8 @@ mod tests {
 
             #[test]
             fn permute_grad_tests(
-                (t_seq, o_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_with_order(),
-                (t_par, o_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_with_order(),
+                (t_seq, o_seq) in Tensor::<CpuSeqBackend>::arbitrary_with_order(),
+                (t_par, o_par) in Tensor::<CpuParBackend>::arbitrary_with_order(),
             ) {
                 permute_grad_test(t_seq, o_seq);
                 permute_grad_test(t_par, o_par);
@@ -1003,8 +1052,8 @@ mod tests {
 
             #[test]
             fn reduce_grad_tests(
-                t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
-                t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
+                t_seq in Tensor::<CpuSeqBackend>::arbitrary(),
+                t_par in Tensor::<CpuParBackend>::arbitrary(),
             ) {
                 reduce_grad_test(t_seq);
                 reduce_grad_test(t_par);
@@ -1012,8 +1061,8 @@ mod tests {
 
             #[test]
             fn binary_grad_tests(
-                (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
-                (t1_par, t2_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_tuple(),
+                (t1_seq, t2_seq) in Tensor::<CpuSeqBackend>::arbitrary_tuple(),
+                (t1_par, t2_par) in Tensor::<CpuParBackend>::arbitrary_tuple(),
             ) {
                 binary_grad_test(t1_seq, t2_seq);
                 binary_grad_test(t1_par, t2_par);
@@ -1022,8 +1071,8 @@ mod tests {
             // central diff doesn't work for lt and gt if x = y
             #[test]
             fn binary_grad_lt_gt_tests(
-                (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_disjoint_tuple(),
-                (t1_par, t2_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_disjoint_tuple(),
+                (t1_seq, t2_seq) in Tensor::<CpuSeqBackend>::arbitrary_disjoint_tuple(),
+                (t1_par, t2_par) in Tensor::<CpuParBackend>::arbitrary_disjoint_tuple(),
             ) {
                 binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.gt(t2));
                 binary_grad_assert(t1_seq.clone(), t2_seq.clone(), |t1, t2| t1.lt(t2));
@@ -1033,8 +1082,8 @@ mod tests {
 
             #[test]
             fn binary_grad_broadcast_tests(
-                (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
-                (t1_par, t2_par) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
+                (t1_seq, t2_seq) in Tensor::<CpuSeqBackend>::arbitrary_tuple(),
+                (t1_par, t2_par) in Tensor::<CpuParBackend>::arbitrary_tuple(),
             ) {
                 binary_grad_broadcast_test(t1_seq, t2_seq);
                 binary_grad_broadcast_test(t1_par, t2_par);
@@ -1043,8 +1092,8 @@ mod tests {
             // central diff doesn't work for lt and gt if x = y
             #[test]
             fn binary_grad_broadcast_lt_gt_tests(
-                (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_disjoint_tuple(),
-                (t1_par, t2_par) in Tensor::<f64, Par, CpuTensorData>::arbitrary_disjoint_tuple(),
+                (t1_seq, t2_seq) in Tensor::<CpuSeqBackend>::arbitrary_disjoint_tuple(),
+                (t1_par, t2_par) in Tensor::<CpuParBackend>::arbitrary_disjoint_tuple(),
             ) {
                 binary_grad_assert(t1_seq.clone().sum(Some(0)), t2_seq.clone(), |t1, t2| t1.gt(t2));
                 binary_grad_assert(t1_seq.clone().sum(Some(0)), t2_seq.clone(), |t1, t2| t1.gt(t2));
@@ -1060,8 +1109,8 @@ mod tests {
 
             #[test]
             fn unary_grad_complex_test1(
-                t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
-                t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
+                t_seq in Tensor::<CpuSeqBackend>::arbitrary(),
+                t_par in Tensor::<CpuParBackend>::arbitrary(),
             ) {
                 unary_grad_complex_test1_(t_seq);
                 unary_grad_complex_test1_(t_par);
@@ -1070,8 +1119,8 @@ mod tests {
             // no zero since relu
             #[test]
             fn unary_grad_complex_test2(
-                t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_no_zero(),
-                t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary_no_zero(),
+                t_seq in Tensor::<CpuSeqBackend>::arbitrary_no_zero(),
+                t_par in Tensor::<CpuParBackend>::arbitrary_no_zero(),
             ) {
                 unary_grad_complex_test2_(t_seq);
                 unary_grad_complex_test2_(t_par);
@@ -1079,8 +1128,8 @@ mod tests {
 
             #[test]
             fn unary_grad_relu_test(
-                t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary_no_zero(),
-                t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary_no_zero(),
+                t_seq in Tensor::<CpuSeqBackend>::arbitrary_no_zero(),
+                t_par in Tensor::<CpuParBackend>::arbitrary_no_zero(),
             ) {
                 unary_grad_assert(t_seq, |t| t.relu());
                 unary_grad_assert(t_par, |t| t.relu());
@@ -1088,8 +1137,8 @@ mod tests {
 
             #[test]
             fn unary_grad_tests(
-                t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
-                t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
+                t_seq in Tensor::<CpuSeqBackend>::arbitrary(),
+                t_par in Tensor::<CpuParBackend>::arbitrary(),
             ) {
                 unary_grad_test(t_seq);
                 unary_grad_test(t_par);
@@ -1097,8 +1146,8 @@ mod tests {
 
             #[test]
             fn binary_tests(
-                (t1_seq, t2_seq) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
-                (t1_par, t2_par) in Tensor::<f64, Seq, CpuTensorData>::arbitrary_tuple(),
+                (t1_seq, t2_seq) in Tensor::<CpuSeqBackend>::arbitrary_tuple(),
+                (t1_par, t2_par) in Tensor::<CpuParBackend>::arbitrary_tuple(),
             ) {
                 binary_test(t1_seq, t2_seq);
                 binary_test(t1_par, t2_par);
@@ -1106,8 +1155,8 @@ mod tests {
 
             #[test]
             fn unary_tests(
-                t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
-                t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
+                t_seq in Tensor::<CpuSeqBackend>::arbitrary(),
+                t_par in Tensor::<CpuParBackend>::arbitrary(),
             ) {
                 unary_test(t_seq);
                 unary_test(t_par);
@@ -1115,8 +1164,8 @@ mod tests {
 
             #[test]
             fn unary_complex_test1(
-                t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
-                t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
+                t_seq in Tensor::<CpuSeqBackend>::arbitrary(),
+                t_par in Tensor::<CpuParBackend>::arbitrary(),
             ) {
                 unary_complex_test1_(t_seq);
                 unary_complex_test1_(t_par);
@@ -1124,8 +1173,8 @@ mod tests {
 
             #[test]
             fn unary_complex_test2(
-                t_seq in Tensor::<f64, Seq, CpuTensorData>::arbitrary(),
-                t_par in Tensor::<f64, Par, CpuTensorData>::arbitrary(),
+                t_seq in Tensor::<CpuSeqBackend>::arbitrary(),
+                t_par in Tensor::<CpuParBackend>::arbitrary(),
             ) {
                 unary_complex_test2_(t_seq);
                 unary_complex_test2_(t_par);
