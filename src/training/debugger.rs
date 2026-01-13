@@ -2,28 +2,24 @@ use std::time::Instant;
 
 use crate::backend::{backend::Backend, backend_type::BackendType};
 use crate::shaping::shape::Shape;
-use crate::{
-    math::element::Element, tensor::Tensor, util::unsafe_usize_convert::UnsafeUsizeConvert,
-};
+use crate::{math::element::Element, tensor::Tensor};
 
-pub trait Debugger<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> {
+pub trait Debugger<'a, B: Backend> {
     fn debug(
-        loss: &Tensor<E, BT, T>,
-        labels: &Tensor<E, BT, T>,
-        output: &Tensor<E, BT, T>,
+        loss: &Tensor<'a, B>,
+        labels: &Tensor<'a, B>,
+        output: &Tensor<'a, B>,
         iterations: (usize, usize),
         start_time: Instant,
     );
 }
 
 pub struct ChattyDebugger;
-impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Debugger<E, BT, T>
-    for ChattyDebugger
-{
+impl<'a, B: Backend> Debugger<'a, B> for ChattyDebugger {
     fn debug(
-        loss: &Tensor<E, BT, T>,
-        labels: &Tensor<E, BT, T>,
-        output: &Tensor<E, BT, T>,
+        loss: &Tensor<'a, B>,
+        labels: &Tensor<'a, B>,
+        output: &Tensor<'a, B>,
         (current, max): (usize, usize),
         start_time: Instant,
     ) {
@@ -31,19 +27,19 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Debugg
             let elapsed_time = start_time.elapsed();
             let total_loss = total_loss(loss);
             let correct = correct(labels, output);
-            println!("iteration: {current}/{max}, elapsed time: {elapsed_time:?}, loss: {total_loss}, correct: {correct}");
+            println!(
+                "iteration: {current}/{max}, elapsed time: {elapsed_time:?}, loss: {total_loss}, correct: {correct}"
+            );
         }
     }
 }
 
 pub struct TerseDebugger;
-impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Debugger<E, BT, T>
-    for TerseDebugger
-{
+impl<'a, B: Backend> Debugger<'a, B> for TerseDebugger {
     fn debug(
-        loss: &Tensor<E, BT, T>,
-        labels: &Tensor<E, BT, T>,
-        output: &Tensor<E, BT, T>,
+        loss: &Tensor<'a, B>,
+        labels: &Tensor<'a, B>,
+        output: &Tensor<'a, B>,
         (current, max): (usize, usize),
         start_time: Instant,
     ) {
@@ -51,28 +47,25 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Debugg
             let elapsed_time = start_time.elapsed();
             let total_loss = total_loss(loss);
             let correct = correct(labels, output);
-            println!("iteration: {current}/{max}, elapsed time: {elapsed_time:?}, loss: {total_loss}, correct: {correct}");
+            println!(
+                "iteration: {current}/{max}, elapsed time: {elapsed_time:?}, loss: {total_loss}, correct: {correct}"
+            );
         }
     }
 }
 
-fn total_loss<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
-    loss: &Tensor<E, BT, T>,
-) -> E {
+fn total_loss<'a, B: Backend>(loss: &Tensor<'a, B>) -> B::Element {
     loss.clone()
         .sum(None)
         .view(&Shape::scalar(1))
         .item()
-        .unwrap_or(E::zero())
+        .unwrap_or(B::Element::zero())
 }
 
-fn correct<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
-    labels: &Tensor<E, BT, T>,
-    output: &Tensor<E, BT, T>,
-) -> E {
+fn correct<'a, B: Backend>(labels: &Tensor<'a, B>, output: &Tensor<'a, B>) -> B::Element {
     output
         .clone()
-        .gt(Tensor::from_scalar(E::fromf(0.5)))
+        .gt(Tensor::from_scalar(B::Element::fromf(0.5)))
         .eq(labels.clone())
         .sum(None)
         .item()
