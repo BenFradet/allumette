@@ -3,10 +3,8 @@ use std::collections::HashMap;
 use crate::{
     autodiff::history::History,
     backend::{backend::Backend, backend_type::BackendType},
-    math::element::Element,
     optim::optimizer::Optimizer,
     tensor::Tensor,
-    util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
 use super::layer::Layer;
@@ -17,7 +15,7 @@ pub struct Network<'a, B: Backend> {
     layer3: Layer<'a, B>,
 }
 
-impl<B: Backend> Network<'_, B> {
+impl<'a, B: Backend> Network<'a, B> {
     pub fn new(hidden_layer_size: usize) -> Self {
         let layer1 = Layer::new("layer1", 2, hidden_layer_size);
         let layer2 = Layer::new("layer2", hidden_layer_size, hidden_layer_size);
@@ -29,7 +27,7 @@ impl<B: Backend> Network<'_, B> {
         }
     }
 
-    pub fn update(&mut self, tensors: &HashMap<String, Tensor<E, BT, T>>) {
+    pub fn update(&mut self, tensors: &HashMap<String, Tensor<'a, B>>) {
         let l1_wkey = self.layer1.wkey();
         let l1_bkey = self.layer1.bkey();
         self.layer1.weights = tensors.get(&l1_wkey).unwrap().clone();
@@ -44,15 +42,15 @@ impl<B: Backend> Network<'_, B> {
         self.layer3.biases = tensors.get(&l3_bkey).unwrap().clone();
     }
 
-    pub fn forward(&self, x: Tensor<E, BT, T>) -> Tensor<E, BT, T> {
+    pub fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
         let l1 = self.layer1.forward(x).relu();
         let l2 = self.layer2.forward(l1).relu();
         self.layer3.forward(l2).sig()
     }
 }
 
-impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Optimizer<E, BT, T>
-    for Network<'_, E, BT, T>
+impl<'a, B: Backend> Optimizer<'a, B>
+    for Network<'a, B>
 {
     fn zero(&mut self) {
         self.layer1.weights.grad = None;
@@ -63,7 +61,7 @@ impl<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>> Optimi
         self.layer3.biases.grad = None;
     }
 
-    fn step(&mut self, lr_tensor: Tensor<E, BT, T>) {
+    fn step(&mut self, lr_tensor: Tensor<'a, B>) {
         if let Some(grad) = &self.layer1.weights.grad {
             let update = lr_tensor.clone() * *grad.clone();
             self.layer1.weights = (self.layer1.weights.clone() - update)

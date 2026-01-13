@@ -1,7 +1,7 @@
 use crate::{
     autodiff::{forward::Forward, history::History},
     backend::{
-        backend::{Backend, GpuBackend},
+        backend::{Backend, GpuBackend, TensorBackend},
         backend_type::{BackendType},
     },
     data::{
@@ -34,14 +34,14 @@ where
 {
     pub data: B::Storage<'a>,
     pub grad: Option<Box<Tensor<'a, B>>>,
-    pub history: History<B>,
+    pub history: History<'a, B>,
     pub id: String,
     pub is_constant: bool,
     _marker: PhantomData<(B::Element, B::BackendType)>,
 }
 
 impl<'a, B: Backend> Tensor<'a, B> {
-    pub fn new(data: B::Storage<'a>, history: History<B>) -> Self {
+    pub fn new(data: B::Storage<'a>, history: History<'a, B>) -> Self {
         let mut tensor_id = TENSOR_ID.lock().unwrap();
         let id = tensor_id.random().to_string();
         //let id = rand::thread_rng().r#gen::<u64>().to_string();
@@ -108,7 +108,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         ))
     }
 
-    pub fn history(mut self, h: History<B>) -> Self {
+    pub fn history(mut self, h: History<'a, B>) -> Self {
         self.history = h;
         self
     }
@@ -141,7 +141,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         self.backprop(Self::from_scalar(B::Element::one()))
     }
 
-    pub fn backprop(&self, d: Tensor<B>) -> HashMap<String, Self> {
+    pub fn backprop(&self, d: Tensor<'a, B>) -> HashMap<String, Self> {
         let sorted = self.topological_sort_dfs();
         let mut derivs = HashMap::from([(&self.id, d)]);
         let mut res: HashMap<String, Self> = HashMap::new();

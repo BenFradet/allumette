@@ -5,15 +5,14 @@ use crate::{
     math::element::Element,
     shaping::shape::Shape,
     tensor::Tensor,
-    util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
 pub struct Layer<'a, B: Backend> {
     pub name: &'a str,
     pub in_size: usize,
     pub out_size: usize,
-    pub weights: Tensor<B>,
-    pub biases: Tensor<B>,
+    pub weights: Tensor<'a, B>,
+    pub biases: Tensor<'a, B>,
 }
 
 // TODO: make a gpu-specific impl if cpu doesn't work
@@ -30,7 +29,7 @@ impl<'a, B: Backend> Layer<'a, B> {
         }
     }
 
-    pub fn forward(&self, t: Tensor<B>) -> Tensor<B> {
+    pub fn forward(&self, t: Tensor<'a, B>) -> Tensor<'a, B> {
         let input_shape = t.data.shape().data().to_vec();
         let batch = input_shape[0];
         let in_size = input_shape[1];
@@ -48,47 +47,47 @@ impl<'a, B: Backend> Layer<'a, B> {
         //    + self.biases.clone().view(&Shape::new(vec![self.out_size]))
     }
 
-    pub fn update_weights(mut self, w: Tensor<B>) -> Self {
+    pub fn update_weights(mut self, w: Tensor<'a, B>) -> Self {
         self.weights = w;
         self
     }
 
-    pub fn update_biases(mut self, b: Tensor<B>) -> Self {
+    pub fn update_biases(mut self, b: Tensor<'a, B>) -> Self {
         self.biases = b;
         self
     }
 
-    pub fn weights(name: &str, in_size: usize, out_size: usize) -> Tensor<B> {
+    pub fn weights(name: &str, in_size: usize, out_size: usize) -> Tensor<'a, B> {
         let id = Self::weights_key(name);
         Self::param(Shape::new(vec![in_size, out_size])).id(id)
     }
 
-    pub fn weights_gpu(name: &str, in_size: usize, out_size: usize) -> Tensor<B> {
+    pub fn weights_gpu(name: &str, in_size: usize, out_size: usize) -> Tensor<'a, B> {
         let id = Self::weights_key(name);
         let shape = Shape::new(vec![in_size, out_size]);
-        let t = Tensor::from_data(<B as TensorData<B::Element>>::rand_with_seed(shape, 1234));
+        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::rand_with_seed(shape, 1234));
         (t - Tensor::from_scalar(B::Element::fromf(0.5)))
             .history(History::default())
             .id(id)
     }
 
-    pub fn biases(name: &str, out_size: usize) -> Tensor<B> {
+    pub fn biases(name: &str, out_size: usize) -> Tensor<'a, B> {
         let id = Self::biases_key(name);
         Self::param(Shape::new(vec![out_size])).id(id)
     }
 
-    pub fn biases_gpu(name: &str, out_size: usize) -> Tensor<B> {
+    pub fn biases_gpu(name: &str, out_size: usize) -> Tensor<'a, B> {
         let id = Self::biases_key(name);
         let shape = Shape::new(vec![out_size]);
-        let t = Tensor::from_data(<B as TensorData<B::Element>>::zeros(shape));
+        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::zeros(shape));
         (t + Tensor::from_scalar(B::Element::fromf(0.1)))
             .history(History::default())
             .id(id)
     }
 
-    fn param(shape: Shape) -> Tensor<B> {
-        let t = Tensor::from_data(<B as TensorData<E>>::rand_with_seed(shape, 1234));
-        ((t - Tensor::from_scalar(E::fromf(0.5))) * Tensor::from_scalar(E::fromf(2.)))
+    fn param(shape: Shape) -> Tensor<'a, B> {
+        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::rand_with_seed(shape, 1234));
+        ((t - Tensor::from_scalar(B::Element::fromf(0.5))) * Tensor::from_scalar(B::Element::fromf(2.)))
             .history(History::default())
     }
 
@@ -112,7 +111,7 @@ impl<'a, B: Backend> Layer<'a, B> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        backend::backend_type::Seq,
+        backend::backend::{CpuSeqBackend, GpuBackend},
         data::{cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData},
         shaping::strides::Strides,
         wgpu::wgpu_context::get_wgpu_context,
@@ -131,7 +130,7 @@ mod tests {
             strides.clone(),
             get_wgpu_context(),
         );
-        let g = Tensor::from_data(tdg);
+        let g: Tensor<GpuBackend> = Tensor::from_data(tdg);
         let glayer = Layer::new("layer", 2, 2);
         let gout = glayer.forward(g.clone());
         let gloss = gout.sum(None);
@@ -148,8 +147,8 @@ mod tests {
         );
 
         let tdc = CpuTensorData::new(vec![1., 2., 3., 4., 5., 6.], shape.clone(), strides.clone());
-        let c: Tensor<f64, Seq, _> = Tensor::from_data(tdc);
-        let clayer: Layer<_, Seq, _> = Layer::new("layer", 2, 2);
+        let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
+        let clayer = Layer::new("layer", 2, 2);
         let cout = clayer.forward(c.clone());
         let closs = cout.sum(None);
         let cres = closs.backward();
