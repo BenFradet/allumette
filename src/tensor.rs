@@ -1016,7 +1016,10 @@ mod tests {
                         .view(&Shape::new(vec![1, 1, *b, *c])))
                 .sum(Some(2))
                 .view(&Shape::new(vec![*d, *a, *c]));
-                assert_eq!(Some(B::Element::one()), c_mm.is_close(c_prime).all(None).item());
+                assert_eq!(
+                    Some(B::Element::one()),
+                    c_mm.is_close(c_prime).all(None).item()
+                );
             } else {
                 panic!("both tensors should be 3d");
             }
@@ -1181,14 +1184,18 @@ mod tests {
             }
         }
 
-        fn reduce_forward_one_dim_test<BT: BackendType, T: Backend<f64, BT>>(
-            t: Tensor<f64, BT, T>,
-        ) {
+        fn reduce_forward_one_dim_test<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+        {
             let summed = t.sum(Some(0));
-            let exp = Tensor::from_1d(&[11., 16.]);
+            let exp = Tensor::from_1d(&[11., 16.].map(B::Element::fromf));
             let is_close = summed.is_close(exp);
             let shape = Shape::scalar(is_close.size());
-            assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
+            assert_eq!(
+                Some(B::Element::one()),
+                is_close.view(&shape).all(Some(0)).item()
+            );
         }
 
         #[test]
@@ -1197,20 +1204,29 @@ mod tests {
             let strides = (&shape).into();
             let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
 
-            let t_seq: Tensor<f64, Seq, _> = Tensor::from_data(td.clone());
+            let t_seq: Tensor<CpuSeqBackend> = Tensor::from_data(td.clone());
             reduce_forward_one_dim_test(t_seq);
-            let t_par: Tensor<f64, Par, _> = Tensor::from_data(td.clone());
+            let t_par: Tensor<CpuParBackend> = Tensor::from_data(td.clone());
             reduce_forward_one_dim_test(t_par);
         }
 
-        fn reduce_forward_one_dim_2_test<BT: BackendType, T: Backend<f64, BT>>(
-            t: Tensor<f64, BT, T>,
-        ) {
+        fn reduce_forward_one_dim_2_test<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+        {
             let summed = t.sum(Some(1));
-            let exp = Tensor::from_2d(&[&[5.], &[10.], &[12.]]).unwrap();
+            let exp = Tensor::from_2d(&[
+                &[B::Element::fromf(5.)],
+                &[B::Element::fromf(10.)],
+                &[B::Element::fromf(12.)],
+            ])
+            .unwrap();
             let is_close = summed.is_close(exp);
             let shape = Shape::scalar(is_close.size());
-            assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
+            assert_eq!(
+                Some(B::Element::one()),
+                is_close.view(&shape).all(Some(0)).item()
+            );
         }
 
         #[test]
@@ -1219,27 +1235,27 @@ mod tests {
             let strides = (&shape).into();
             let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
 
-            let t_seq: Tensor<f64, Seq, _> = Tensor::from_data(td.clone());
+            let t_seq: Tensor<CpuSeqBackend> = Tensor::from_data(td.clone());
             reduce_forward_one_dim_2_test(t_seq);
-            let t_par: Tensor<f64, Par, _> = Tensor::from_data(td);
+            let t_par: Tensor<CpuParBackend> = Tensor::from_data(td);
             reduce_forward_one_dim_2_test(t_par);
         }
 
-        fn reduce_forward_all_dim_test<BT: BackendType, T: Backend<f64, BT>>(
-            t: Tensor<f64, BT, T>,
-        ) {
+        fn reduce_forward_all_dim_test<'a, B>(t: Tensor<'a, B>)
+        where
+            B: Backend,
+        {
             let summed = t.sum(None);
-            assert_eq!(Some(27.), summed.item());
+            assert_eq!(Some(B::Element::fromf(27.)), summed.item());
         }
 
         #[test]
         fn test_reduce_forward_all_dim() {
             let shape = Shape::new(vec![3, 2]);
-            let t_seq = Tensor::<f64, Seq, CpuTensorData>::from_1d(&[2., 3., 4., 6., 5., 7.])
-                .reshape(shape.clone());
+            let t_seq =
+                Tensor::<CpuSeqBackend>::from_1d(&[2., 3., 4., 6., 5., 7.]).reshape(shape.clone());
             reduce_forward_all_dim_test(t_seq);
-            let t_par = Tensor::<f64, Par, CpuTensorData>::from_1d(&[2., 3., 4., 6., 5., 7.])
-                .reshape(shape);
+            let t_par = Tensor::<CpuParBackend>::from_1d(&[2., 3., 4., 6., 5., 7.]).reshape(shape);
             reduce_forward_all_dim_test(t_par);
         }
     }
@@ -1247,6 +1263,8 @@ mod tests {
     mod gpu {
         use super::*;
 
+        // TODO: merge with cpu impl using Idx
+        // only difference is eps
         fn unary_grad_central_diff<
             F: Fn(Tensor<f32, Gpu, GpuTensorData>) -> Tensor<f32, Gpu, GpuTensorData>,
         >(
