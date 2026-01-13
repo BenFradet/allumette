@@ -3,20 +3,18 @@ use std::rc::Rc;
 use crate::{
     autodiff::{context::Context, history::History},
     backend::{backend::Backend, backend_type::BackendType},
-    math::element::Element,
     ops::{binary::Binary, function::Function, unary::Unary},
     tensor::Tensor,
-    util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
 pub struct Forward;
 
 impl Forward {
-    pub fn binary<B: Backend>(
-        b: impl Binary<B> + 'static,
-        lhs: Tensor<B>,
-        rhs: Tensor<B>,
-    ) -> Tensor<B> {
+    pub fn binary<'a, B: Backend>(
+        b: impl Binary<'a, B> + 'static,
+        lhs: Tensor<'a, B>,
+        rhs: Tensor<'a, B>,
+    ) -> Tensor<'a, B> {
         let res = b.forward(&lhs.data, &rhs.data);
         let ctx = Context::default()
             .fst(lhs.data.clone())
@@ -33,10 +31,10 @@ impl Forward {
         Tensor::new(res, new_history)
     }
 
-    pub fn unary<B: Backend>(
-        u: impl Unary<B> + 'static,
-        a: Tensor<B>,
-    ) -> Tensor<B> {
+    pub fn unary<'a, B: Backend>(
+        u: impl Unary<'a, B> + 'static,
+        a: Tensor<'a, B>,
+    ) -> Tensor<'a, B> {
         let res = u.forward(&a.data);
         let ctx = Context::default().fst(a.data.clone());
         let new_history = if a.is_constant {

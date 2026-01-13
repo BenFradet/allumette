@@ -2,21 +2,20 @@ use std::marker::PhantomData;
 
 use crate::{
     autodiff::context::Context,
-    backend::{backend::Backend, backend_type::BackendType},
-    math::element::Element,
+    backend::backend::Backend,
     ops::function::Function,
     tensor::Tensor,
 };
 
 #[derive(Clone, Debug)]
-pub struct History<B: Backend> {
-    pub last_fn: Option<Function<B>>,
-    pub ctx: Context<B::Storage>,
-    pub inputs: Vec<Tensor<B>>,
+pub struct History<'a, B: Backend> {
+    pub last_fn: Option<Function<'a, B>>,
+    pub ctx: Context<B::Storage<'a>>,
+    pub inputs: Vec<Tensor<'a, B>>,
     _marker: PhantomData<B::Element>,
 }
 
-impl<B: Backend> Default for History<B> {
+impl<'a, B: Backend> Default for History<'a, B> {
     fn default() -> Self {
         Self {
             last_fn: Default::default(),
@@ -27,18 +26,18 @@ impl<B: Backend> Default for History<B> {
     }
 }
 
-impl<B: Backend> History<B> {
-    pub fn last_fn(mut self, f: Function<B>) -> Self {
+impl<'a, B: Backend> History<'a, B> {
+    pub fn last_fn(mut self, f: Function<'a, B>) -> Self {
         self.last_fn = Some(f);
         self
     }
 
-    pub fn push_input(mut self, t: Tensor<B>) -> Self {
+    pub fn push_input(mut self, t: Tensor<'a, B>) -> Self {
         self.inputs.push(t);
         self
     }
 
-    pub fn context(mut self, c: Context<B::Storage>) -> Self {
+    pub fn context(mut self, c: Context<B::Storage<'a>>) -> Self {
         self.ctx = c;
         self
     }

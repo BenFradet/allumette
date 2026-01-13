@@ -7,12 +7,12 @@ use crate::{
 use super::{binary::Binary, unary::Unary};
 
 #[derive(Clone)]
-pub enum Function<B: Backend> {
-    U(Rc<dyn Unary<B>>),
-    B(Rc<dyn Binary<B>>),
+pub enum Function<'a, B: Backend> {
+    U(Rc<dyn Unary<'a, B>>),
+    B(Rc<dyn Binary<'a, B>>),
 }
 
-impl<B: Backend> Debug for Function<B> {
+impl<'a, B: Backend> Debug for Function<'a, B> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::U(u) => write!(f, "Unary: {}", u.tag()),

@@ -150,7 +150,7 @@ impl TensorBackend<f64, Par> for CpuTensorData {
 mod tests {
     use proptest::proptest;
 
-    use crate::backend::backend::Backend;
+    use crate::data::tensor_data::TensorData;
 
     use super::*;
 
