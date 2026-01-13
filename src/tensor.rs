@@ -2,7 +2,7 @@ use crate::{
     autodiff::{forward::Forward, history::History},
     backend::{
         backend::{Backend, GpuBackend},
-        backend_type::{BackendType, Gpu},
+        backend_type::{BackendType},
     },
     data::{
         cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
@@ -41,7 +41,7 @@ where
 }
 
 impl<'a, B: Backend> Tensor<'a, B> {
-    pub fn new(data: B::Storage, history: History<B>) -> Self {
+    pub fn new(data: B::Storage<'a>, history: History<B>) -> Self {
         let mut tensor_id = TENSOR_ID.lock().unwrap();
         let id = tensor_id.random().to_string();
         //let id = rand::thread_rng().r#gen::<u64>().to_string();
@@ -55,7 +55,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         }
     }
 
-    pub fn from_data(data: B::Storage) -> Self {
+    pub fn from_data(data: B::Storage<'a>) -> Self {
         let mut tensor_id = TENSOR_ID.lock().unwrap();
         let id = tensor_id.random().to_string();
         //let id = rand::thread_rng().r#gen::<u64>().to_string();
@@ -168,7 +168,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         res
     }
 
-    fn accumulate_derivative(mut self, d: Tensor<B>) -> Self {
+    fn accumulate_derivative(mut self, d: Tensor<'a, B>) -> Self {
         if self.is_leaf() {
             let grad = self.grad.map(|t| *t + d.clone()).unwrap_or(d);
             self.grad = Some(Box::new(grad.clone()));
@@ -594,12 +594,71 @@ impl<'a, B: Backend> ops::Neg for Tensor<'a, B> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        backend::backend_type::{Gpu, Par, Seq},
+        backend::{
+            backend::{CpuParBackend, CpuSeqBackend},
+            backend_type::{Gpu, Par, Seq},
+        },
         data::gpu_tensor_data::GpuTensorData,
         shaping::idx::Idx,
     };
 
     use super::*;
+
+    fn unary_grad_central_diff<'a, B, F>(
+        tensor: Tensor<'a, B>,
+        f: F,
+        index: &Idx,
+        eps: B::Element,
+    ) -> B::Element
+    where
+        B: Backend,
+        F: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
+    {
+        let shape = tensor.data.shape().clone();
+        let up = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::epsilon(
+            shape, index, eps,
+        ));
+        let add = tensor.clone() + up.clone();
+        let sub = tensor - up;
+        let delta = f(add).sum(None) - f(sub).sum(None);
+
+        delta.item().unwrap_or(B::Element::zero()) / (B::Element::fromf(2.) * eps)
+    }
+
+    fn binary_grad_central_diff<'a, B, F>(
+        tensor1: Tensor<'a, B>,
+        tensor2: Tensor<'a, B>,
+        f: F,
+        index: &Idx,
+        first: bool,
+        eps: B::Element,
+    ) -> B::Element
+    where
+        B: Backend,
+        F: Fn(Tensor<'a, B>, Tensor<'a, B>) -> Tensor<'a, B>,
+    {
+        let shape = if first {
+            tensor1.data.shape().clone()
+        } else {
+            tensor2.data.shape().clone()
+        };
+        let up = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::epsilon(
+            shape, index, eps,
+        ));
+        let (add1, add2) = if first {
+            (tensor1.clone() + up.clone(), tensor2.clone())
+        } else {
+            (tensor1.clone(), tensor2.clone() + up.clone())
+        };
+        let (sub1, sub2) = if first {
+            (tensor1 - up, tensor2)
+        } else {
+            (tensor1, tensor2 - up)
+        };
+        let delta = f(add1, add2).sum(None) - f(sub1, sub2).sum(None);
+
+        delta.item().unwrap_or(B::Element::zero()) / (B::Element::fromf(2.) * eps)
+    }
 
     mod cpu {
         use crate::backend::backend::{CpuParBackend, CpuSeqBackend};
@@ -620,7 +679,8 @@ mod tests {
             let tensor_after = res.remove(id);
             assert!(tensor_after.is_some(), "tensor should be in backprop map");
             let unwrapped = tensor_after.unwrap();
-            let check = unary_grad_central_diff(unwrapped.clone(), f, &idx);
+            let check =
+                unary_grad_central_diff(unwrapped.clone(), f, &idx, B::Element::fromf(1e-6));
             assert!(unwrapped.grad.is_some(), "tensor should have a grad");
             let grad_data = unwrapped.grad.unwrap().data;
             let grad = grad_data[idx];
@@ -654,8 +714,22 @@ mod tests {
             );
             let (unwrapped1, unwrapped2) = (after1.unwrap(), after2.unwrap());
             let (check1, check2) = (
-                binary_grad_central_diff(unwrapped1.clone(), unwrapped2.clone(), &f, &idx1, true),
-                binary_grad_central_diff(unwrapped1.clone(), unwrapped2.clone(), f, &idx2, false),
+                binary_grad_central_diff(
+                    unwrapped1.clone(),
+                    unwrapped2.clone(),
+                    &f,
+                    &idx1,
+                    true,
+                    B::Element::fromf(1e-6),
+                ),
+                binary_grad_central_diff(
+                    unwrapped1.clone(),
+                    unwrapped2.clone(),
+                    f,
+                    &idx2,
+                    false,
+                    B::Element::fromf(1e-6),
+                ),
             );
             assert!(
                 unwrapped1.grad.is_some() && unwrapped2.grad.is_some(),
@@ -673,58 +747,6 @@ mod tests {
                 grad2.is_close(check2),
                 "tensor 2 grad ({grad2:?}) should be close to central diff ({check2:?})",
             );
-        }
-
-        fn unary_grad_central_diff<'a, B, F>(tensor: Tensor<'a, B>, f: F, index: &Idx) -> B::Element
-        where
-            B: Backend,
-            F: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
-        {
-            let eps = B::Element::fromf(1e-6);
-            let shape = tensor.data.shape().clone();
-            let up = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::epsilon(
-                shape, index, eps,
-            ));
-            let add = tensor.clone() + up.clone();
-            let sub = tensor - up;
-            let delta = f(add).sum(None) - f(sub).sum(None);
-
-            delta.item().unwrap_or(B::Element::zero()) / (B::Element::fromf(2.) * eps)
-        }
-
-        fn binary_grad_central_diff<'a, B, F>(
-            tensor1: Tensor<'a, B>,
-            tensor2: Tensor<'a, B>,
-            f: F,
-            index: &Idx,
-            first: bool,
-        ) -> B::Element
-        where
-            B: Backend,
-            F: Fn(Tensor<'a, B>, Tensor<'a, B>) -> Tensor<'a, B>,
-        {
-            let eps = B::Element::fromf(1e-6);
-            let shape = if first {
-                tensor1.data.shape().clone()
-            } else {
-                tensor2.data.shape().clone()
-            };
-            let up = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::epsilon(
-                shape, index, eps,
-            ));
-            let (add1, add2) = if first {
-                (tensor1.clone() + up.clone(), tensor2.clone())
-            } else {
-                (tensor1.clone(), tensor2.clone() + up.clone())
-            };
-            let (sub1, sub2) = if first {
-                (tensor1 - up, tensor2)
-            } else {
-                (tensor1, tensor2 - up)
-            };
-            let delta = f(add1, add2).sum(None) - f(sub1, sub2).sum(None);
-
-            delta.item().unwrap_or(B::Element::zero()) / (B::Element::fromf(2.) * eps)
         }
 
         fn unary_assert<'a, B, FT, FF>(t: Tensor<'a, B>, ft: FT, ff: FF)
@@ -1261,33 +1283,14 @@ mod tests {
     }
 
     mod gpu {
+        use crate::backend::backend::CpuSeqBackend;
+
         use super::*;
 
-        // TODO: merge with cpu impl using Idx
-        // only difference is eps
-        fn unary_grad_central_diff<
-            F: Fn(Tensor<f32, Gpu, GpuTensorData>) -> Tensor<f32, Gpu, GpuTensorData>,
-        >(
-            tensor: Tensor<f32, Gpu, GpuTensorData>,
-            f: F,
-            index: &Idx,
-        ) -> f32 {
-            let eps = 1e-3;
-            let shape = tensor.data.shape().clone();
-            let up = Tensor::from_data(GpuTensorData::epsilon(shape, index, eps));
-            let add = tensor.clone() + up.clone();
-            let sub = tensor - up;
-            let delta = f(add).sum(None) - f(sub).sum(None);
-
-            delta.item().unwrap_or(0.) / (2. * eps)
-        }
-
-        fn unary_grad_assert<
-            F: Fn(Tensor<f32, Gpu, GpuTensorData>) -> Tensor<f32, Gpu, GpuTensorData>,
-        >(
-            tensor: Tensor<f32, Gpu, GpuTensorData>,
-            f: F,
-        ) {
+        fn unary_grad_assert<'a, F>(tensor: Tensor<'a, GpuBackend>, f: F)
+        where
+            F: Fn(Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
+        {
             let id = &tensor.id.clone();
             let reset = tensor.grad(None).history(History::default());
             let idx = reset.data.shape().sample_idx();
@@ -1296,7 +1299,7 @@ mod tests {
             let tensor_after = res.remove(id);
             assert!(tensor_after.is_some(), "tensor should be in backprop map");
             let unwrapped = tensor_after.unwrap();
-            let check = unary_grad_central_diff(unwrapped.clone(), f, &idx);
+            let check = unary_grad_central_diff(unwrapped.clone(), f, &idx, 1e-3);
             assert!(unwrapped.grad.is_some(), "tensor should have a grad");
 
             let grad_data = unwrapped.grad.unwrap().data;
@@ -1309,52 +1312,13 @@ mod tests {
             );
         }
 
-        fn binary_grad_central_diff<
-            'a,
-            F: Fn(
-                Tensor<f32, Gpu, GpuTensorData<'a>>,
-                Tensor<f32, Gpu, GpuTensorData<'a>>,
-            ) -> Tensor<f32, Gpu, GpuTensorData<'a>>,
-        >(
-            tensor1: Tensor<f32, Gpu, GpuTensorData<'a>>,
-            tensor2: Tensor<f32, Gpu, GpuTensorData<'a>>,
+        pub fn binary_grad_assert<'a, F>(
+            tensor1: Tensor<'a, GpuBackend>,
+            tensor2: Tensor<'a, GpuBackend>,
             f: F,
-            index: &Idx,
-            first: bool,
-        ) -> f32 {
-            let eps = 1e-3;
-            let shape = if first {
-                tensor1.data.shape().clone()
-            } else {
-                tensor2.data.shape().clone()
-            };
-            let up = Tensor::from_data(GpuTensorData::epsilon(shape, index, eps));
-            let (add1, add2) = if first {
-                (tensor1.clone() + up.clone(), tensor2.clone())
-            } else {
-                (tensor1.clone(), tensor2.clone() + up.clone())
-            };
-            let (sub1, sub2) = if first {
-                (tensor1 - up, tensor2)
-            } else {
-                (tensor1, tensor2 - up)
-            };
-            let delta = f(add1, add2).sum(None) - f(sub1, sub2).sum(None);
-
-            delta.item().unwrap_or(0.) / (2. * eps)
-        }
-
-        pub fn binary_grad_assert<
-            'a,
-            F: Fn(
-                Tensor<f32, Gpu, GpuTensorData<'a>>,
-                Tensor<f32, Gpu, GpuTensorData<'a>>,
-            ) -> Tensor<f32, Gpu, GpuTensorData<'a>>,
-        >(
-            tensor1: Tensor<f32, Gpu, GpuTensorData<'a>>,
-            tensor2: Tensor<f32, Gpu, GpuTensorData<'a>>,
-            f: F,
-        ) {
+        ) where
+            F: Fn(Tensor<'a, GpuBackend>, Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
+        {
             let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
                 tensor1.grad(None).history(History::default()),
@@ -1373,8 +1337,22 @@ mod tests {
             );
             let (unwrapped1, unwrapped2) = (after1.unwrap(), after2.unwrap());
             let (check1, check2) = (
-                binary_grad_central_diff(unwrapped1.clone(), unwrapped2.clone(), &f, &idx1, true),
-                binary_grad_central_diff(unwrapped1.clone(), unwrapped2.clone(), f, &idx2, false),
+                binary_grad_central_diff(
+                    unwrapped1.clone(),
+                    unwrapped2.clone(),
+                    &f,
+                    &idx1,
+                    true,
+                    1e-3,
+                ),
+                binary_grad_central_diff(
+                    unwrapped1.clone(),
+                    unwrapped2.clone(),
+                    f,
+                    &idx2,
+                    false,
+                    1e-3,
+                ),
             );
             assert!(
                 unwrapped1.grad.is_some() && unwrapped2.grad.is_some(),
@@ -1402,14 +1380,11 @@ mod tests {
             );
         }
 
-        fn unary_assert<
-            FT: Fn(Tensor<f32, Gpu, GpuTensorData>) -> Tensor<f32, Gpu, GpuTensorData>,
+        fn unary_assert<'a, FT, FF>(t: Tensor<'a, GpuBackend>, ft: FT, ff: FF)
+        where
+            FT: Fn(Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
             FF: Fn(f32) -> f32,
-        >(
-            t: Tensor<f32, Gpu, GpuTensorData>,
-            ft: FT,
-            ff: FF,
-        ) {
+        {
             let data = t.data.to_cpu();
             let strides = t.data.strides.clone();
             let res = ft(t);
@@ -1422,19 +1397,15 @@ mod tests {
             }
         }
 
-        fn binary_assert<
-            'a,
-            FT: Fn(
-                Tensor<f32, Gpu, GpuTensorData<'a>>,
-                Tensor<f32, Gpu, GpuTensorData<'a>>,
-            ) -> Tensor<f32, Gpu, GpuTensorData<'a>>,
-            FF: Fn(f32, f32) -> f32,
-        >(
-            t1: Tensor<f32, Gpu, GpuTensorData<'a>>,
-            t2: Tensor<f32, Gpu, GpuTensorData<'a>>,
+        fn binary_assert<'a, FT, FF>(
+            t1: Tensor<'a, GpuBackend>,
+            t2: Tensor<'a, GpuBackend>,
             ft: FT,
             ff: FF,
-        ) {
+        ) where
+            FT: Fn(Tensor<'a, GpuBackend>, Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
+            FF: Fn(f32, f32) -> f32,
+        {
             let data1 = t1.data.to_cpu();
             let strides1 = t1.data.strides.clone();
 
@@ -1456,7 +1427,7 @@ mod tests {
         proptest! {
             #[test]
             fn matmul_tests(
-                (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_matmul_tuple(),
+                (t1, t2) in Tensor::<GpuBackend>::arbitrary_matmul_tuple(),
             ) {
                 if let [d, a, b] = t1.data.shape().data() && let [_, _, c] = t2.data.shape().data() {
                     let c_mm = t1.clone().mm(t2.clone());
@@ -1472,21 +1443,21 @@ mod tests {
 
             #[test]
             fn matmul_grad_tests(
-                (a, b) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_matmul_tuple(),
+                (a, b) in Tensor::<GpuBackend>::arbitrary_matmul_tuple(),
             ) {
                 binary_grad_assert(a.clone(), b.clone(), |t1, t2| t1.mm(t2));
             }
 
             #[test]
             fn permute_grad_tests(
-                (t, o) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_with_order(),
+                (t, o) in Tensor::<GpuBackend>::arbitrary_with_order(),
             ) {
                 unary_grad_assert(t, move |t| t.permute(o.clone()));
             }
 
             #[test]
             fn reduce_grad_tests(
-                t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+                t in Tensor::<GpuBackend>::arbitrary(),
             ) {
                 unary_grad_assert(t.clone(), |t| t.sum(Some(0)));
                 unary_grad_assert(t.clone(), |t| t.mean(Some(0)));
@@ -1495,7 +1466,7 @@ mod tests {
 
             #[test]
             fn binary_grad_tests(
-                (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_tuple(),
+                (t1, t2) in Tensor::<GpuBackend>::arbitrary_tuple(),
             ) {
                 binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2);
                 binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2);
@@ -1509,7 +1480,7 @@ mod tests {
             // central diff doesn't work for lt gt if x == y
             #[test]
             fn binary_grad_lt_gt_tests(
-                (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_disjoint_tuple(),
+                (t1, t2) in Tensor::<GpuBackend>::arbitrary_disjoint_tuple(),
             ) {
                 binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.lt(t2));
                 binary_grad_assert(t1.clone(), t2.clone(), |t1, t2| t1.gt(t2));
@@ -1517,7 +1488,7 @@ mod tests {
 
             #[test]
             fn binary_grad_broadcast_tests(
-                (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_tuple(),
+                (t1, t2) in Tensor::<GpuBackend>::arbitrary_tuple(),
             ) {
                 binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1 + t2);
                 binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1 + t2);
@@ -1538,7 +1509,7 @@ mod tests {
             // central diff doesn't work for lt gt if x == y
             #[test]
             fn binary_grad_broadcast_lt_gt_tests(
-                (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_disjoint_tuple(),
+                (t1, t2) in Tensor::<GpuBackend>::arbitrary_disjoint_tuple(),
             ) {
                 binary_grad_assert(t1.clone().sum(Some(0)), t2.clone(), |t1, t2| t1.lt(t2));
                 binary_grad_assert(t1.clone(), t2.clone().sum(Some(0)), |t1, t2| t1.lt(t2));
@@ -1548,7 +1519,7 @@ mod tests {
 
             #[test]
             fn unary_grad_complex_test1(
-                t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+                t in Tensor::<GpuBackend>::arbitrary(),
             ) {
                 unary_grad_assert(t, |t|
                     (t.clone() + Tensor::from_scalar(100000.)).ln() +
@@ -1558,7 +1529,7 @@ mod tests {
 
             #[test]
             fn unary_grad_complex_test2(
-                t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_no_zero(),
+                t in Tensor::<GpuBackend>::arbitrary_no_zero(),
             ) {
                 unary_grad_assert(t, |t| {
                     ((((t * Tensor::from_scalar(10.) + Tensor::from_scalar(7.)).relu()
@@ -1574,13 +1545,13 @@ mod tests {
 
             #[test]
             fn unary_grad_relu_test(
-                t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_no_zero(),
+                t in Tensor::<GpuBackend>::arbitrary_no_zero(),
             ) {
                 unary_grad_assert(t, |t| t.relu());
             }
 
             #[test]
-            fn unary_grad_tests(t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary()) {
+            fn unary_grad_tests(t in Tensor::<GpuBackend>::arbitrary()) {
                 unary_grad_assert(t.clone(), |t| -t);
                 unary_grad_assert(t.clone(), |t| t.clone() * t);
                 unary_grad_assert(t.clone(), |t| t.clone() * t.clone() * t);
@@ -1592,7 +1563,7 @@ mod tests {
 
             #[test]
             fn binary_tests(
-                (t1, t2) in Tensor::<f32, Gpu, GpuTensorData>::arbitrary_tuple(),
+                (t1, t2) in Tensor::<GpuBackend>::arbitrary_tuple(),
             ) {
                 binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 + t2, |f1, f2| f1 + f2);
                 binary_assert(t1.clone(), t2.clone(), |t1, t2| t1 - t2, |f1, f2| f1 - f2);
@@ -1625,7 +1596,7 @@ mod tests {
 
             #[test]
             fn unary_tests(
-                t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+                t in Tensor::<GpuBackend>::arbitrary(),
             ) {
                 unary_assert(t.clone(), |t| -t, |f| -f);
                 unary_assert(
@@ -1654,7 +1625,7 @@ mod tests {
 
             #[test]
             fn unary_complex_test1(
-                t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+                t in Tensor::<GpuBackend>::arbitrary(),
             ) {
                 let ff = |f: f32| (f + 100000.).ln() + (f - 200.).exp();
                 unary_assert(t.clone(), |t| {
@@ -1665,7 +1636,7 @@ mod tests {
 
             #[test]
             fn unary_complex_test2(
-                t in Tensor::<f32, Gpu, GpuTensorData>::arbitrary(),
+                t in Tensor::<GpuBackend>::arbitrary(),
             ) {
                 let ff =
                     |f: f32| ((((f * 10. + 7.).relu() * 6. + 5.).relu() * 10.).sig()).ln() / 50.;
@@ -1693,7 +1664,7 @@ mod tests {
                 get_wgpu_context(),
             );
 
-            let t = Tensor::from_data(td);
+            let t: Tensor<GpuBackend> = Tensor::from_data(td);
             let summed = t.sum(Some(0));
 
             let exp = Tensor::from_1d(&[11., 16.]);
@@ -1713,7 +1684,7 @@ mod tests {
                 get_wgpu_context(),
             );
 
-            let t = Tensor::from_data(td);
+            let t: Tensor<GpuBackend> = Tensor::from_data(td);
             let summed = t.sum(Some(1));
 
             let exp = Tensor::from_2d(&[&[5.], &[10.], &[12.]]).unwrap();
@@ -1733,7 +1704,7 @@ mod tests {
                 get_wgpu_context(),
             );
 
-            let t = Tensor::from_data(td);
+            let t: Tensor<GpuBackend> = Tensor::from_data(td);
             let summed = t.sum(None);
             assert_eq!(Some(27.), summed.item());
         }
@@ -1749,7 +1720,7 @@ mod tests {
                 strides.clone(),
                 get_wgpu_context(),
             );
-            let g = Tensor::from_data(tdg);
+            let g: Tensor<GpuBackend> = Tensor::from_data(tdg);
             let gs = g.clone().view(&Shape::new(vec![3])).sum(None);
             let gres = gs.backward();
             assert_eq!(
@@ -1764,7 +1735,7 @@ mod tests {
             );
 
             let tdc = CpuTensorData::new(vec![1., 2., 3.], shape.clone(), strides.clone());
-            let c: Tensor<f64, Seq, _> = Tensor::from_data(tdc);
+            let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
             let cs = c.clone().view(&Shape::new(vec![3])).sum(None);
             let cres = cs.backward();
             assert_eq!(
@@ -1781,7 +1752,7 @@ mod tests {
 
         #[test]
         fn test_view_backward() {
-            let xc: Tensor<_, Seq, CpuTensorData> =
+            let xc: Tensor<CpuSeqBackend> =
                 Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let xc_id = xc.id.clone();
             let xc_size = xc.size();
@@ -1791,8 +1762,7 @@ mod tests {
             let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![1., 1., 1., 1., 1., 1.], xcg);
 
-            let xg: Tensor<_, Gpu, GpuTensorData> =
-                Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
+            let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let xg_id = xg.id.clone();
             let xg_size = xg.size();
             let vg = xg.view(&Shape::scalar(xg_size));
@@ -1804,7 +1774,7 @@ mod tests {
 
         #[test]
         fn test_broadcast_mul_backward() {
-            let xc: Tensor<_, Seq, CpuTensorData> =
+            let xc: Tensor<CpuSeqBackend> =
                 Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let xc_id = xc.id.clone();
             let oc = xc * Tensor::from_scalar(2.);
@@ -1813,8 +1783,7 @@ mod tests {
             let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![2., 2., 2., 2., 2., 2.], xcg);
 
-            let xg: Tensor<_, Gpu, GpuTensorData> =
-                Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
+            let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let xg_id = xg.id.clone();
             let og = xg * Tensor::from_scalar(2.);
             let lg = og.sum(None);
@@ -1825,7 +1794,7 @@ mod tests {
 
         #[test]
         fn test_broadcast_add_backward() {
-            let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[1., 2., 3.]);
+            let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[1., 2., 3.]);
             let xc_id = xc.id.clone();
             let oc = xc + Tensor::from_scalar(5.);
             let lc = oc.sum(None);
@@ -1833,7 +1802,7 @@ mod tests {
             let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![1., 1., 1.], xcg);
 
-            let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[1., 2., 3.]);
+            let xg: Tensor<GpuBackend> = Tensor::from_1d(&[1., 2., 3.]);
             let xg_id = xg.id.clone();
             let og = xg + Tensor::from_scalar(5.);
             let lg = og.sum(None);
@@ -1847,7 +1816,7 @@ mod tests {
             let a_shape = Shape::new(vec![2, 1]);
             let b_shape = Shape::new(vec![2, 3]);
 
-            let ac: Tensor<_, Seq, CpuTensorData> = Tensor::from_shape(&[1., 2.], a_shape.clone());
+            let ac: Tensor<CpuSeqBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
             let ac_id = ac.id.clone();
             let bc = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
             let oc = ac + bc;
@@ -1856,7 +1825,7 @@ mod tests {
             let acg = mc.get(&ac_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![3., 3.], acg);
 
-            let ag: Tensor<_, Gpu, GpuTensorData> = Tensor::from_shape(&[1., 2.], a_shape.clone());
+            let ag: Tensor<GpuBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
             let ag_id = ag.id.clone();
             let bg = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
             let og = ag + bg;
@@ -1875,7 +1844,7 @@ mod tests {
             ];
             let b_grad = vec![30., 35., 40.];
 
-            let ac: Tensor<_, Seq, CpuTensorData> = Tensor::from_shape(
+            let ac: Tensor<CpuSeqBackend> = Tensor::from_shape(
                 &(0..15).map(|i| i as f64).collect::<Vec<_>>(),
                 a_shape.clone(),
             );
@@ -1890,7 +1859,7 @@ mod tests {
             let bcg = mc.get(&bc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(b_grad.clone(), bcg);
 
-            let ag: Tensor<_, Gpu, GpuTensorData> = Tensor::from_shape(
+            let ag: Tensor<GpuBackend> = Tensor::from_shape(
                 &(0..15).map(|i| i as f32).collect::<Vec<_>>(),
                 a_shape.clone(),
             );
@@ -1908,7 +1877,7 @@ mod tests {
 
         #[test]
         fn test_relu_backward() {
-            let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[-1., 0., 1.]);
+            let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let xc_id = xc.id.clone();
             let oc = xc.relu();
             let lc = oc.sum(None);
@@ -1916,7 +1885,7 @@ mod tests {
             let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![0., 0., 1.], xcg);
 
-            let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[-1., 0., 1.]);
+            let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let xg_id = xg.id.clone();
             let og = xg.relu();
             let lg = og.sum(None);
@@ -1927,7 +1896,7 @@ mod tests {
 
         #[test]
         fn test_sig_backward() {
-            let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[-1., 0., 1.]);
+            let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let xc_id = xc.id.clone();
             let oc = xc.sig();
             let lc = oc.sum(None);
@@ -1935,7 +1904,7 @@ mod tests {
             let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![0.19661193324148185, 0.25, 0.19661193324148185], xcg);
 
-            let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[-1., 0., 1.]);
+            let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let xg_id = xg.id.clone();
             let og = xg.sig();
             let lg = og.sum(None);
@@ -2015,9 +1984,10 @@ mod tests {
         //}
     }
 
-    fn view_test<E: Element + UnsafeUsizeConvert, BT: BackendType, T: Backend<E, BT>>(
-        t: Tensor<B>,
-    ) {
+    fn view_test<'a, B>(t: Tensor<'a, B>)
+    where
+        B: Backend,
+    {
         assert_eq!(&Shape::new(vec![2, 3]), t.data.shape());
         let t2 = t.clone().view(&Shape::new(vec![6]));
         assert_eq!(&Shape::new(vec![6]), t2.data.shape());
@@ -2027,19 +1997,16 @@ mod tests {
         assert_eq!(&Shape::new(vec![6, 1]), t4.data.shape());
         let t5 = t4.view(&Shape::new(vec![2, 3]));
         assert_eq!(&Shape::new(vec![2, 3]), t5.data.shape());
-        assert_eq!(Some(E::one()), t.is_close(t5).all(None).item());
+        assert_eq!(Some(B::Element::one()), t.is_close(t5).all(None).item());
     }
 
     #[test]
     fn test_view() {
-        let t_seq =
-            Tensor::<f64, Seq, CpuTensorData>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
+        let t_seq = Tensor::<CpuSeqBackend>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_seq);
-        let t_par =
-            Tensor::<f64, Par, CpuTensorData>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
+        let t_par = Tensor::<CpuParBackend>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_par);
-        let t_gpu =
-            Tensor::<f32, Gpu, GpuTensorData>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
+        let t_gpu = Tensor::<GpuBackend>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_gpu);
     }
 }
