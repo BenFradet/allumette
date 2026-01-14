@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     autodiff::history::History,
-    backend::{backend::Backend, backend_type::BackendType},
+    backend::{backend::Backend, mode::Mode},
     optim::optimizer::Optimizer,
     tensor::Tensor,
 };

@@ -1,7 +1,7 @@
 use wgpu::BufferUsages;
 
 use crate::{
-    backend::{backend::TensorBackend, backend_type::Gpu},
+    backend::{backend::TensorBackend, mode::Gpu},
     data::gpu_tensor_data::GpuTensorData,
     shaping::shape::Shape,
     wgpu::workgroup_info::WorkgroupInfo,

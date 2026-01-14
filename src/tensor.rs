@@ -2,7 +2,7 @@ use crate::{
     autodiff::{forward::Forward, history::History},
     backend::{
         backend::{Backend, GpuBackend, TensorBackend},
-        backend_type::BackendType,
+        mode::Mode,
     },
     data::{
         cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
@@ -37,7 +37,7 @@ where
     pub history: History<'a, B>,
     pub id: String,
     pub is_constant: bool,
-    _marker: PhantomData<(B::Element, B::BackendType)>,
+    _marker: PhantomData<(B::Element, B::Mode)>,
 }
 
 impl<'a, B: Backend> Tensor<'a, B> {

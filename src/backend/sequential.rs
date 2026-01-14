@@ -5,7 +5,7 @@ use crate::{
     shaping::{shape::Shape, strides::Strides},
 };
 
-use super::{backend::TensorBackend, backend_type::Seq};
+use super::{backend::TensorBackend, mode::Seq};
 
 impl TensorBackend<f64, Seq> for CpuTensorData {
     fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F, _tag: &str) -> Self {

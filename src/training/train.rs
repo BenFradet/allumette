@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use crate::{
-    backend::{backend::Backend, backend_type::BackendType},
+    backend::{backend::Backend, mode::Mode},
     math::element::Element,
     optim::optimizer::Optimizer,
     shaping::shape::Shape,

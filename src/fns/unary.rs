@@ -1,6 +1,6 @@
 use crate::{autodiff::context::Context, backend::backend::Backend};
 use crate::{
-    backend::{backend::TensorBackend, backend_type::BackendType},
+    backend::{backend::TensorBackend, mode::Mode},
     data::tensor_data::TensorData,
     math::element::Element,
 };

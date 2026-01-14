@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use crate::backend::{backend::Backend, backend_type::BackendType};
+use crate::backend::{backend::Backend, mode::Mode};
 use crate::shaping::shape::Shape;
 use crate::{math::element::Element, tensor::Tensor};
 

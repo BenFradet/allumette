@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     autodiff::{context::Context, history::History},
-    backend::{backend::Backend, backend_type::BackendType},
+    backend::{backend::Backend, mode::Mode},
     fns::{binary::Binary, function::Function, unary::Unary},
     tensor::Tensor,
 };

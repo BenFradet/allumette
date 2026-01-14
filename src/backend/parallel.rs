@@ -7,7 +7,7 @@ use crate::{
     shaping::{shape::Shape, strides::Strides},
 };
 
-use super::{backend::TensorBackend, backend_type::Par};
+use super::{backend::TensorBackend, mode::Par};
 
 impl TensorBackend<f64, Par> for CpuTensorData {
     fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F, _tag: &str) -> Self {

@@ -1,5 +1,5 @@
 use crate::{
-    backend::backend_type::{Gpu, Par, Seq},
+    backend::mode::{Gpu, Par, Seq},
     data::{
         cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
     },
@@ -8,13 +8,13 @@ use crate::{
     util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
-use super::backend_type::BackendType;
+use super::mode::Mode;
 
 // TODO: remove clone and debug constraints
 pub trait Backend: Clone + std::fmt::Debug {
     type Element: Element + UnsafeUsizeConvert;
-    type BackendType: BackendType;
-    type Storage<'a>: TensorBackend<Self::Element, Self::BackendType>
+    type Mode: Mode;
+    type Storage<'a>: TensorBackend<Self::Element, Self::Mode>
         + TensorData<Self::Element>
         + Clone
         + std::fmt::Debug
@@ -26,7 +26,7 @@ pub trait Backend: Clone + std::fmt::Debug {
 pub struct CpuSeqBackend;
 impl Backend for CpuSeqBackend {
     type Element = f64;
-    type BackendType = Seq;
+    type Mode = Seq;
     type Storage<'a> = CpuTensorData;
 }
 
@@ -34,7 +34,7 @@ impl Backend for CpuSeqBackend {
 pub struct CpuParBackend;
 impl Backend for CpuParBackend {
     type Element = f64;
-    type BackendType = Par;
+    type Mode = Par;
     type Storage<'a> = CpuTensorData;
 }
 
@@ -42,11 +42,11 @@ impl Backend for CpuParBackend {
 pub struct GpuBackend;
 impl Backend for GpuBackend {
     type Element = f32;
-    type BackendType = Gpu;
+    type Mode = Gpu;
     type Storage<'a> = GpuTensorData<'a>;
 }
 
-pub trait TensorBackend<E: Element, T: BackendType> {
+pub trait TensorBackend<E: Element, T: Mode> {
     fn map<F: Fn(E) -> E + Sync>(&self, f: F, tag: &'static str) -> Self;
     fn map_broadcast<F: Fn(E) -> E + Sync>(
         &self,
