@@ -7,30 +7,24 @@ use crate::{
     shaping::shape::Shape,
     tensor::Tensor,
     training::debugger::Debugger,
-    util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
 use super::{dataset::Dataset, network::Network};
 
-pub fn train<
-    E: Element + UnsafeUsizeConvert,
-    BT: BackendType,
-    T: Backend<E, BT>,
-    D: Debugger<E, BT, T>,
->(
-    data: Dataset<E>,
-    learning_rate: E,
+pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
+    data: Dataset<B::Element>,
+    learning_rate: B::Element,
     iterations: usize,
     hidden_layer_size: usize,
 ) {
-    let mut network: Network<'_, E, BT, T> = Network::new(hidden_layer_size);
+    let mut network = Network::new(hidden_layer_size);
     let lr_tensor = Tensor::from_scalar(learning_rate);
 
     let x = data.x();
     let y = data.y();
     let n = data.n();
     let ones = data.ones();
-    let one = Tensor::from_scalar(E::one());
+    let one = Tensor::from_scalar(B::Element::one());
 
     let one_shape = Shape::scalar(1);
     let n_shape = data.n_shape();
@@ -61,16 +55,15 @@ pub fn train<
 #[cfg(test)]
 mod tests {
     use crate::{
-        backend::backend_type::{Gpu, Seq},
-        data::{cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData},
+        backend::backend::{CpuSeqBackend, GpuBackend}, data::tensor_data::TensorData,
     };
 
     use super::*;
 
     #[test]
     fn test_train() {
-        let xc: Tensor<_, Seq, CpuTensorData> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
-        let yc: Tensor<_, Seq, CpuTensorData> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();
+        let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
+        let yc: Tensor<CpuSeqBackend> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();
         let xc_id = xc.id.clone();
         let pc = (xc.clone() * yc.clone())
             + (xc - Tensor::from_scalar(1.) * (yc - Tensor::from_scalar(1.)));
@@ -83,8 +76,8 @@ mod tests {
             xcg
         );
 
-        let xg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
-        let yg: Tensor<_, Gpu, GpuTensorData> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();
+        let xg: Tensor<GpuBackend> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
+        let yg: Tensor<GpuBackend> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();
         let xg_id = xg.id.clone();
         let pg = (xg.clone() * yg.clone())
             + (xg - Tensor::from_scalar(1.) * (yg - Tensor::from_scalar(1.)));

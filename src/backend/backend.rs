@@ -2,6 +2,7 @@ use crate::{backend::backend_type::{Gpu, Par, Seq}, data::{cpu_tensor_data::CpuT
 
 use super::backend_type::BackendType;
 
+// TODO: remove clone and debug constraints
 pub trait Backend: Clone + std::fmt::Debug {
     type Element: Element + UnsafeUsizeConvert;
     type BackendType: BackendType;

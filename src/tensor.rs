@@ -264,19 +264,19 @@ impl<'a, B: Backend> Tensor<'a, B> {
         self.history.last_fn.is_none()
     }
 
-    pub fn lt(self, rhs: Tensor<B>) -> Self {
+    pub fn lt(self, rhs: Tensor<'a, B>) -> Self {
         Forward::binary(Lt {}, self, rhs)
     }
 
-    pub fn gt(self, rhs: Tensor<B>) -> Self {
+    pub fn gt(self, rhs: Tensor<'a, B>) -> Self {
         Forward::binary(Lt {}, rhs, self)
     }
 
-    pub fn eq(self, rhs: Tensor<B>) -> Self {
+    pub fn eq(self, rhs: Tensor<'a, B>) -> Self {
         Forward::binary(Eq {}, self, rhs)
     }
 
-    pub fn mm(self, other: Tensor<B>) -> Self {
+    pub fn mm(self, other: Tensor<'a, B>) -> Self {
         let self_shape = self.data.shape().clone();
         let other_shape = other.data.shape().clone();
         let both_2d = self_shape.len() == 2 && other_shape.len() == 2;
@@ -374,7 +374,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         Forward::unary(Copy {}, self)
     }
 
-    pub fn is_close(self, rhs: Tensor<B>) -> Self {
+    pub fn is_close(self, rhs: Tensor<'a, B>) -> Self {
         Forward::binary(IsClose {}, self, rhs)
     }
 
@@ -552,7 +552,7 @@ impl<'a> Tensor<'a, GpuBackend> {
 impl<'a, B: Backend> ops::Add<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
-    fn add(self, rhs: Tensor<B>) -> Self::Output {
+    fn add(self, rhs: Tensor<'a, B>) -> Self::Output {
         Forward::binary(Add {}, self, rhs)
     }
 }
@@ -560,7 +560,7 @@ impl<'a, B: Backend> ops::Add<Tensor<'a, B>> for Tensor<'a, B> {
 impl<'a, B: Backend> ops::Sub<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
-    fn sub(self, rhs: Tensor<B>) -> Self::Output {
+    fn sub(self, rhs: Tensor<'a, B>) -> Self::Output {
         let new_rhs = Forward::unary(Neg {}, rhs);
         Forward::binary(Add {}, self, new_rhs)
     }
@@ -569,7 +569,7 @@ impl<'a, B: Backend> ops::Sub<Tensor<'a, B>> for Tensor<'a, B> {
 impl<'a, B: Backend> ops::Mul<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
-    fn mul(self, rhs: Tensor<B>) -> Self::Output {
+    fn mul(self, rhs: Tensor<'a, B>) -> Self::Output {
         Forward::binary(Mul {}, self, rhs)
     }
 }
@@ -577,7 +577,7 @@ impl<'a, B: Backend> ops::Mul<Tensor<'a, B>> for Tensor<'a, B> {
 impl<'a, B: Backend> ops::Div<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
-    fn div(self, rhs: Tensor<B>) -> Self::Output {
+    fn div(self, rhs: Tensor<'a, B>) -> Self::Output {
         let new_rhs = Forward::unary(Inv {}, rhs);
         Forward::binary(Mul {}, self, new_rhs)
     }
@@ -596,7 +596,6 @@ mod tests {
     use crate::{
         backend::{
             backend::{CpuParBackend, CpuSeqBackend},
-            backend_type::{Gpu, Par, Seq},
         },
         data::gpu_tensor_data::GpuTensorData,
         shaping::idx::Idx,
