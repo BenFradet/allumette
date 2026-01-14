@@ -1,7 +1,8 @@
 use crate::{autodiff::context::Context, backend::backend::Backend};
 
 use crate::{
-    backend::{backend::TensorBackend, mode::Mode},
+    ops::tensor_ops::Ops,
+    backend::mode::Mode,
     data::tensor_data::TensorData,
     math::element::Element,
     shaping::{order::Order, shape::Shape},

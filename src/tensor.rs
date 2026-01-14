@@ -1,7 +1,7 @@
 use crate::{
     autodiff::{forward::Forward, history::History},
     backend::{
-        backend::{Backend, GpuBackend, TensorBackend},
+        backend::{Backend, GpuBackend},
         mode::Mode,
     },
     data::{
@@ -12,6 +12,7 @@ use crate::{
         function::Function,
         unary::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
+    ops::tensor_ops::Ops,
     math::element::Element,
     shaping::{order::Order, shape::Shape, strides::Strides},
     util::{tensor_id::TensorId, unsafe_usize_convert::UnsafeUsizeConvert},

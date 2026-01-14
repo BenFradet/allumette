@@ -1,14 +1,11 @@
 use wgpu::BufferUsages;
 
 use crate::{
-    backend::{backend::TensorBackend, mode::Gpu},
-    data::gpu_tensor_data::GpuTensorData,
-    shaping::shape::Shape,
-    wgpu::workgroup_info::WorkgroupInfo,
+    backend::mode::Gpu, data::gpu_tensor_data::GpuTensorData, ops::tensor_ops::Ops, shaping::shape::Shape, wgpu::workgroup_info::WorkgroupInfo
 };
 
 // TODO: abstract fn, they're all doing mostly the same
-impl TensorBackend<f32, Gpu> for GpuTensorData<'_> {
+impl Ops<f32, Gpu> for GpuTensorData<'_> {
     // TODO: rm unwraps
     fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
         let workgroup_info = (&self.shape).into();
