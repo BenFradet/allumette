@@ -8,10 +8,10 @@ use crate::{
         cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
     },
     math::element::Element,
-    ops::{
-        binary_ops::{Add, All, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
+    fns::{
+        binary::{Add, All, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
         function::Function,
-        unary_ops::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
+        unary::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
     shaping::{order::Order, shape::Shape, strides::Strides},
     util::{tensor_id::TensorId, unsafe_usize_convert::UnsafeUsizeConvert},

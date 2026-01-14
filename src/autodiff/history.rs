@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use crate::{
     autodiff::context::Context,
     backend::backend::Backend,
-    ops::function::Function,
+    fns::function::Function,
     tensor::Tensor,
 };
 

@@ -8,7 +8,7 @@ pub mod backend;
 pub mod data;
 pub mod math;
 pub mod module;
-pub mod ops;
+pub mod fns;
 pub mod optim;
 pub mod shaping;
 pub mod tensor;
