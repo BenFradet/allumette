@@ -1,7 +1,7 @@
 use std::{fmt::Debug, rc::Rc};
 
 use crate::{
-    backend::{backend::{Backend, TensorBackend}, backend_type::BackendType}, data::tensor_data::TensorData, math::element::Element
+    backend::backend::Backend
 };
 
 use super::{binary::Binary, unary::Unary};
