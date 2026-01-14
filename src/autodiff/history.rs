@@ -1,10 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    autodiff::context::Context,
-    backend::backend::Backend,
-    fns::function::Function,
-    tensor::Tensor,
+    autodiff::context::Context, backend::backend::Backend, fns::function::Function, tensor::Tensor,
 };
 
 #[derive(Clone, Debug)]

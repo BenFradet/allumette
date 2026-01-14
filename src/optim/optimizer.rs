@@ -1,7 +1,4 @@
-use crate::{
-    backend::backend::Backend,
-    tensor::Tensor,
-};
+use crate::{backend::backend::Backend, tensor::Tensor};
 
 pub trait Optimizer<'a, B: Backend> {
     fn zero(&mut self);

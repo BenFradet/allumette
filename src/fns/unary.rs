@@ -1,9 +1,6 @@
+use crate::{autodiff::context::Context, backend::backend::Backend};
 use crate::{
-    autodiff::context::Context,
-    backend::backend::Backend,
-};
-use crate::{
-    backend::{backend::{TensorBackend}, backend_type::BackendType},
+    backend::{backend::TensorBackend, backend_type::BackendType},
     data::tensor_data::TensorData,
     math::element::Element,
 };
@@ -56,7 +53,9 @@ impl<'a, B: Backend> Unary<'a, B> for Inv {
             .and_then(|a| a.zip(a, |e1, e2| e1 * e2, "mul"))
             .map(|a2| <Inv as Unary<'a, B>>::forward(self, &a2))
             .and_then(|a2_inv| d_neg.zip(&a2_inv, |e1, e2| e1 * e2, "mul"))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(d.shape().clone()))
+            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+                d.shape().clone(),
+            ))
     }
 
     fn tag(&self) -> &'static str {
@@ -68,7 +67,13 @@ pub struct Ln;
 impl<'a, B: Backend> Unary<'a, B> for Ln {
     fn forward(&self, a: &B::Storage<'a>) -> B::Storage<'a> {
         a.map(
-            |e| if e > B::Element::zero() { e.ln() } else { B::Element::zero() },
+            |e| {
+                if e > B::Element::zero() {
+                    e.ln()
+                } else {
+                    B::Element::zero()
+                }
+            },
             <Ln as Unary<'a, B>>::tag(self),
         )
     }
@@ -79,11 +84,19 @@ impl<'a, B: Backend> Unary<'a, B> for Ln {
             .and_then(|a| {
                 a.zip(
                     d,
-                    |e1, e2| if e1 == B::Element::zero() { e2 } else { e2 / e1 },
+                    |e1, e2| {
+                        if e1 == B::Element::zero() {
+                            e2
+                        } else {
+                            e2 / e1
+                        }
+                    },
                     "ln_diff",
                 )
             })
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(d.shape().clone()))
+            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+                d.shape().clone(),
+            ))
     }
 
     fn tag(&self) -> &'static str {
@@ -104,15 +117,16 @@ impl<'a, B: Backend> Unary<'a, B> for Sig {
             .and_then(|t| {
                 let sig = <Sig as Unary<'a, B>>::forward(self, t);
                 let minus_sig = sig.map(|e| -e, "neg");
-                let one_minus_sig = <B::Storage<'a> as TensorData<B::Element>>::from_scalar(B::Element::one()).zip(
-                    &minus_sig,
-                    |e1, e2| e1 + e2,
-                    "add",
-                );
+                let one_minus_sig = <B::Storage<'a> as TensorData<B::Element>>::from_scalar(
+                    B::Element::one(),
+                )
+                .zip(&minus_sig, |e1, e2| e1 + e2, "add");
                 one_minus_sig.and_then(|oms| sig.zip(&oms, |e1, e2| e1 * e2, "mul"))
             })
             .and_then(|deriv| d.zip(&deriv, |e1, e2| e1 * e2, "mul"))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(d.shape().clone()))
+            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+                d.shape().clone(),
+            ))
     }
 
     fn tag(&self) -> &'static str {
@@ -130,7 +144,9 @@ impl<'a, B: Backend> Unary<'a, B> for Relu {
         ctx.fst
             .as_ref()
             .and_then(|a| a.zip(d, |e1, e2| e1.relu_diff(e2), "relu_diff"))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(d.shape().clone()))
+            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+                d.shape().clone(),
+            ))
     }
 
     fn tag(&self) -> &'static str {
@@ -149,7 +165,9 @@ impl<'a, B: Backend> Unary<'a, B> for Exp {
             .as_ref()
             .map(|t| <Exp as Unary<'a, B>>::forward(self, t))
             .and_then(|exp| exp.zip(d, |e1, e2| e1 * e2, "mul"))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(d.shape().clone()))
+            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+                d.shape().clone(),
+            ))
     }
 
     fn tag(&self) -> &'static str {

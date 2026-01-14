@@ -1,4 +1,12 @@
-use crate::{backend::backend_type::{Gpu, Par, Seq}, data::{cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData}, math::element::Element, shaping::shape::Shape, util::unsafe_usize_convert::UnsafeUsizeConvert};
+use crate::{
+    backend::backend_type::{Gpu, Par, Seq},
+    data::{
+        cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
+    },
+    math::element::Element,
+    shaping::shape::Shape,
+    util::unsafe_usize_convert::UnsafeUsizeConvert,
+};
 
 use super::backend_type::BackendType;
 
@@ -6,8 +14,12 @@ use super::backend_type::BackendType;
 pub trait Backend: Clone + std::fmt::Debug {
     type Element: Element + UnsafeUsizeConvert;
     type BackendType: BackendType;
-    type Storage<'a>: TensorBackend<Self::Element, Self::BackendType> + TensorData<Self::Element> + Clone + std::fmt::Debug
-        where Self: 'a;
+    type Storage<'a>: TensorBackend<Self::Element, Self::BackendType>
+        + TensorData<Self::Element>
+        + Clone
+        + std::fmt::Debug
+    where
+        Self: 'a;
 }
 
 #[derive(Clone, Debug)]

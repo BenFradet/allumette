@@ -1,8 +1,6 @@
 use std::{fmt::Debug, rc::Rc};
 
-use crate::{
-    backend::backend::Backend
-};
+use crate::backend::backend::Backend;
 
 use super::{binary::Binary, unary::Unary};
 

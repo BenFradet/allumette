@@ -1,6 +1,10 @@
 use allumette::{
     backend::backend::{CpuParBackend, CpuSeqBackend, GpuBackend},
-    training::{dataset::Dataset, debugger::{ChattyDebugger, TerseDebugger}, train},
+    training::{
+        dataset::Dataset,
+        debugger::{ChattyDebugger, TerseDebugger},
+        train,
+    },
 };
 
 fn main() {

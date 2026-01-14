@@ -65,7 +65,9 @@ impl<'a, B: Backend> Layer<'a, B> {
     pub fn weights_gpu(name: &str, in_size: usize, out_size: usize) -> Tensor<'a, B> {
         let id = Self::weights_key(name);
         let shape = Shape::new(vec![in_size, out_size]);
-        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::rand_with_seed(shape, 1234));
+        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::rand_with_seed(
+            shape, 1234,
+        ));
         (t - Tensor::from_scalar(B::Element::fromf(0.5)))
             .history(History::default())
             .id(id)
@@ -86,9 +88,12 @@ impl<'a, B: Backend> Layer<'a, B> {
     }
 
     fn param(shape: Shape) -> Tensor<'a, B> {
-        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::rand_with_seed(shape, 1234));
-        ((t - Tensor::from_scalar(B::Element::fromf(0.5))) * Tensor::from_scalar(B::Element::fromf(2.)))
-            .history(History::default())
+        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::rand_with_seed(
+            shape, 1234,
+        ));
+        ((t - Tensor::from_scalar(B::Element::fromf(0.5)))
+            * Tensor::from_scalar(B::Element::fromf(2.)))
+        .history(History::default())
     }
 
     pub fn wkey(&self) -> String {

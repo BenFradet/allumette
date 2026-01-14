@@ -49,9 +49,7 @@ impl<'a, B: Backend> Network<'a, B> {
     }
 }
 
-impl<'a, B: Backend> Optimizer<'a, B>
-    for Network<'a, B>
-{
+impl<'a, B: Backend> Optimizer<'a, B> for Network<'a, B> {
     fn zero(&mut self) {
         self.layer1.weights.grad = None;
         self.layer2.weights.grad = None;

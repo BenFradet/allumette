@@ -2,17 +2,17 @@ use crate::{
     autodiff::{forward::Forward, history::History},
     backend::{
         backend::{Backend, GpuBackend, TensorBackend},
-        backend_type::{BackendType},
+        backend_type::BackendType,
     },
     data::{
         cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
     },
-    math::element::Element,
     fns::{
         binary::{Add, All, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
         function::Function,
         unary::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
+    math::element::Element,
     shaping::{order::Order, shape::Shape, strides::Strides},
     util::{tensor_id::TensorId, unsafe_usize_convert::UnsafeUsizeConvert},
     wgpu::wgpu_context::get_wgpu_context,
@@ -594,9 +594,7 @@ impl<'a, B: Backend> ops::Neg for Tensor<'a, B> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        backend::{
-            backend::{CpuParBackend, CpuSeqBackend},
-        },
+        backend::backend::{CpuParBackend, CpuSeqBackend},
         data::gpu_tensor_data::GpuTensorData,
         shaping::idx::Idx,
     };
