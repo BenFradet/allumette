@@ -16,14 +16,6 @@ impl<A> Default for Context<A> {
 }
 
 impl<A: Clone> Context<A> {
-    fn new(grad: bool, fst: A, snd: A) -> Self {
-        Self {
-            grad,
-            fst: Some(fst),
-            snd: Some(snd),
-        }
-    }
-
     pub fn fst(mut self, a: A) -> Self {
         self.fst = Some(a);
         self
@@ -34,12 +26,12 @@ impl<A: Clone> Context<A> {
         self
     }
 
-    fn grad(mut self) -> Self {
+    pub fn grad(mut self) -> Self {
         self.grad = true;
         self
     }
 
-    fn no_grad(mut self) -> Self {
+    pub fn no_grad(mut self) -> Self {
         self.grad = false;
         self
     }
@@ -52,12 +44,6 @@ impl<A: Clone> Context<A> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn new_test() {
-        let c = Context::new(false, 1., 2.);
-        assert!(!c.grad);
-    }
 
     #[test]
     fn default_test() {

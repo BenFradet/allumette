@@ -1,4 +1,7 @@
-use crate::{backend::mode::Mode, data::tensor_data::TensorData, math::element::Element, shaping::shape::Shape};
+use crate::{
+    backend::mode::Mode, data::tensor_data::TensorData, math::element::Element,
+    shaping::shape::Shape,
+};
 
 pub trait Ops<E: Element, T: Mode> {
     fn map<F: Fn(E) -> E + Sync>(&self, f: F, tag: &'static str) -> Self;

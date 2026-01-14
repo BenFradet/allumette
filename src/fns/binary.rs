@@ -1,10 +1,10 @@
 use crate::{autodiff::context::Context, backend::backend::Backend};
 
 use crate::{
-    ops::tensor_ops::Ops,
     backend::mode::Mode,
     data::tensor_data::TensorData,
     math::element::Element,
+    ops::tensor_ops::Ops,
     shaping::{order::Order, shape::Shape},
     util::unsafe_usize_convert::UnsafeUsizeConvert,
 };

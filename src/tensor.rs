@@ -12,8 +12,8 @@ use crate::{
         function::Function,
         unary::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
-    ops::tensor_ops::Ops,
     math::element::Element,
+    ops::tensor_ops::Ops,
     shaping::{order::Order, shape::Shape, strides::Strides},
     util::{tensor_id::TensorId, unsafe_usize_convert::UnsafeUsizeConvert},
     wgpu::wgpu_context::get_wgpu_context,
@@ -227,22 +227,22 @@ impl<'a, B: Backend> Tensor<'a, B> {
         q.into_iter()
     }
 
-    fn topological_sort(&self) -> impl Iterator<Item = &Self> {
-        let mut queue = VecDeque::new();
-        queue.push_back(self);
-        let mut visited = HashSet::from([&self.id]);
-        let mut result = Vec::new();
-        while let Some(var) = queue.pop_front() {
-            for parent in var.parents() {
-                if !visited.contains(&parent.id) && !parent.is_constant {
-                    visited.insert(&parent.id);
-                    queue.push_back(parent);
-                }
-            }
-            result.push(var);
-        }
-        result.into_iter()
-    }
+    //fn topological_sort(&self) -> impl Iterator<Item = &Self> {
+    //    let mut queue = VecDeque::new();
+    //    queue.push_back(self);
+    //    let mut visited = HashSet::from([&self.id]);
+    //    let mut result = Vec::new();
+    //    while let Some(var) = queue.pop_front() {
+    //        for parent in var.parents() {
+    //            if !visited.contains(&parent.id) && !parent.is_constant {
+    //                visited.insert(&parent.id);
+    //                queue.push_back(parent);
+    //            }
+    //        }
+    //        result.push(var);
+    //    }
+    //    result.into_iter()
+    //}
 
     pub fn reshape(mut self, shape: Shape) -> Self {
         self.data = self.data.reshape(shape);

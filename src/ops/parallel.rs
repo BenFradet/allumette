@@ -3,7 +3,10 @@ use std::sync::Arc;
 use rayon::prelude::*;
 
 use crate::{
-    backend::mode::Par, data::cpu_tensor_data::CpuTensorData, ops::tensor_ops::Ops, shaping::{shape::Shape, strides::Strides}
+    backend::mode::Par,
+    data::cpu_tensor_data::CpuTensorData,
+    ops::tensor_ops::Ops,
+    shaping::{shape::Shape, strides::Strides},
 };
 
 impl Ops<f64, Par> for CpuTensorData {

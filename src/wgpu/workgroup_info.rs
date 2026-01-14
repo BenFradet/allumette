@@ -12,7 +12,8 @@ pub struct WorkgroupInfo {
     pub size: (usize, usize, usize),
 }
 
-const MAX_WORKGROUP_COUNT: usize = 65535;
+// TODO: batching
+//const MAX_WORKGROUP_COUNT: usize = 65535;
 const MAX_WORKGROUP_SIZE: usize = 256;
 
 impl WorkgroupInfo {

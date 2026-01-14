@@ -274,6 +274,8 @@ mod tests {
 
     use super::*;
 
+    // proptest macro is not picked up
+    #[allow(dead_code)]
     fn assert_tensor_eq(t1: &CpuTensorData, t2: &CpuTensorData) {
         assert_eq!(t1.shape, t2.shape);
         assert_eq!(t1.strides, t2.strides);

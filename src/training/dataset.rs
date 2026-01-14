@@ -127,6 +127,8 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
 
+    // proptest macro is not picked up
+    #[allow(dead_code)]
     fn common_test<E: Element>(ds: &Dataset<E>, n: usize) {
         assert_eq!(n, ds.n);
         assert_eq!(n, ds.x.len());

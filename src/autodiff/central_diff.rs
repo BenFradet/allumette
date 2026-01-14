@@ -1,19 +1,19 @@
 // https://en.wikipedia.org/wiki/Finite_difference
-fn central_diff<F>(f: F, a: f64, eps: f64) -> f64
+pub fn central_diff<F>(f: F, a: f64, eps: f64) -> f64
 where
     F: Fn(f64) -> f64,
 {
     (f(a + eps) - f(a - eps)) / (2. * eps)
 }
 
-fn central_diff_a<F>(f: F, a: f64, b: f64, eps: f64) -> f64
+pub fn central_diff_a<F>(f: F, a: f64, b: f64, eps: f64) -> f64
 where
     F: Fn(f64, f64) -> f64,
 {
     (f(a + eps, b) - f(a - eps, b)) / (2. * eps)
 }
 
-fn central_diff_b<F>(f: F, a: f64, b: f64, eps: f64) -> f64
+pub fn central_diff_b<F>(f: F, a: f64, b: f64, eps: f64) -> f64
 where
     F: Fn(f64, f64) -> f64,
 {

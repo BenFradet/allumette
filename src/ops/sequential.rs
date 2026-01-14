@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    backend::mode::Seq, data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData}, ops::tensor_ops::Ops, shaping::{shape::Shape, strides::Strides}
+    backend::mode::Seq,
+    data::{cpu_tensor_data::CpuTensorData, tensor_data::TensorData},
+    ops::tensor_ops::Ops,
+    shaping::{shape::Shape, strides::Strides},
 };
 
 impl Ops<f64, Seq> for CpuTensorData {

@@ -1,5 +1,8 @@
 use crate::{autodiff::context::Context, backend::backend::Backend};
-use crate::{ops::tensor_ops::Ops, backend::mode::Mode, data::tensor_data::TensorData, math::element::Element};
+use crate::{
+    backend::mode::Mode, data::tensor_data::TensorData, math::element::Element,
+    ops::tensor_ops::Ops,
+};
 
 pub trait Unary<'a, B: Backend> {
     // need to have self otherwise can't be made into an object and can't dyn Unary

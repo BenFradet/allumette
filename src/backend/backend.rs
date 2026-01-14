@@ -1,7 +1,11 @@
 use crate::{
-    backend::mode::{Gpu, Par, Seq}, data::{
+    backend::mode::{Gpu, Par, Seq},
+    data::{
         cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
-    }, math::element::Element, ops::tensor_ops::Ops, util::unsafe_usize_convert::UnsafeUsizeConvert
+    },
+    math::element::Element,
+    ops::tensor_ops::Ops,
+    util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
 use super::mode::Mode;
