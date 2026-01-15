@@ -102,6 +102,40 @@ impl<'a> VizDebugger<'a> {
     }
 
     fn render_scatter(&self, frame: &mut Frame, area: Rect) {
+        let datasets = vec![
+            Dataset::default()
+                .name("Correct")
+                .marker(Marker::Dot)
+                .graph_type(GraphType::Scatter)
+                .style(Style::new().green())
+                .data(&[]),
+            Dataset::default()
+                .name("Incorrect")
+                .marker(Marker::Dot)
+                .graph_type(GraphType::Scatter)
+                .style(Style::new().red())
+                .data(&[]),
+        ];
+
+        let chart = Chart::new(datasets)
+            .block(Block::bordered().title(Line::from("Classification").cyan().bold().centered()))
+            .x_axis(
+                Axis::default()
+                    .title("x")
+                    .bounds(todo!())
+                    .style(Style::default().fg(Color::Gray))
+                    .labels(["todo"])
+            )
+            .y_axis(
+                Axis::default()
+                    .title("y")
+                    .bounds(todo!())
+                    .style(Style::default().fg(Color::Gray))
+                    .labels(["todo"])
+            )
+                .hidden_legend_constraints((Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)));
+
+        frame.render_widget(chart, area);
     }
 
     fn render_line_chart(&self, frame: &mut Frame, area: Rect) {
