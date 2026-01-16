@@ -20,8 +20,8 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     let mut network = Network::new(hidden_layer_size);
     let lr_tensor = Tensor::from_scalar(learning_rate);
 
-    let x = data.x();
-    let y = data.y();
+    let features = data.features();
+    let labels = data.labels();
     let n = data.n();
     let ones = data.ones();
     let one = Tensor::from_scalar(B::Element::one());
@@ -34,9 +34,9 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     for iteration in 1..iterations + 1 {
         network.zero();
 
-        let out = network.forward(x.clone()).view(&n_shape);
-        let prob =
-            (out.clone() * y.clone()) + (out.clone() - ones.clone()) * (y.clone() - ones.clone());
+        let out = network.forward(features.clone()).view(&n_shape);
+        let prob = (out.clone() * labels.clone())
+            + (out.clone() - ones.clone()) * (labels.clone() - ones.clone());
 
         let loss = -prob.ln();
 
@@ -48,7 +48,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
         network.update(&res);
         network.step(lr_tensor.clone());
 
-        D::debug(&loss, &y, &out, (iteration, iterations), start_time);
+        D::debug(&loss, &labels, &out, (iteration, iterations), start_time);
     }
 }
 
