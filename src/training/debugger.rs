@@ -70,44 +70,53 @@ pub struct Point {
     predicted: u8,
 }
 
-pub struct VizDebugger<'a> {
+pub struct VizDebugger {
     points: Vec<Point>,
     loss: Vec<(usize, f64)>,
-    x_bounds: (f64, f64),
-    x_labels: Vec<&'a str>,
-    y_bounds: (f64, f64),
-    y_labels: Vec<&'a str>,
-    loss_bounds: (f64, f64),
-    loss_labels: Vec<&'a str>,
-    iteration_bounds: (f64, f64),
-    iteration_labels: Vec<&'a str>,
-    n: usize,
+    x_bounds: [f64; 2],
+    x_labels: [String; 3],
+    y_bounds: [f64; 2],
+    y_labels: [String; 3],
+    loss_bounds: [f64; 2],
+    loss_labels: [String; 3],
+    iteration_bounds: [f64; 2],
+    iteration_labels: [String; 3],
 }
 
-impl<'a> VizDebugger<'a> {
-    pub fn new<E: Element>(d: ClassificationDataset<E>) -> VizDebugger<'a> {
+impl VizDebugger {
+    pub fn new<E: Element>(d: ClassificationDataset<E>, iterations: usize) -> VizDebugger {
         let (x_bounds, y_bounds) = d.features.iter().fold(
             (
-                (f64::INFINITY, f64::NEG_INFINITY),
-                (f64::INFINITY, f64::NEG_INFINITY),
+                [f64::INFINITY, f64::NEG_INFINITY],
+                [f64::INFINITY, f64::NEG_INFINITY],
             ),
-            |((min_x, max_x), (min_y, max_y)), (x, y)| {
+            |([min_x, max_x], [min_y, max_y]), (x, y)| {
                 let (xf, yf) = (x.tof(), y.tof());
-                ((min_x.min(xf), max_x.max(xf)), (min_y.min(yf), max_y.max(yf)))
+                (
+                    [min_x.min(xf), max_x.max(xf)],
+                    [min_y.min(yf), max_y.max(yf)],
+                )
             },
         );
+        let x_labels = Self::axis_labels(x_bounds[0], x_bounds[1]);
+        let y_labels = Self::axis_labels(y_bounds[0], y_bounds[1]);
+
+        let loss_bounds = [0., d.n as f64];
+        let loss_labels = Self::axis_labels(loss_bounds[0], loss_bounds[1]);
+        let iteration_bounds = [0., iterations as f64];
+        let iteration_labels = Self::axis_labels(iteration_bounds[0], iteration_bounds[1]);
+
         Self {
             points: vec![],
             loss: vec![],
             x_bounds,
-            x_labels: vec!["0.0"],
+            x_labels,
             y_bounds,
-            y_labels: vec!["0.0"],
-            loss_bounds: (0., 0.),
-            loss_labels: vec!["0.0"],
-            iteration_bounds: (0., 0.),
-            iteration_labels: vec!["0.0"],
-            n: d.n,
+            y_labels,
+            loss_bounds,
+            loss_labels,
+            iteration_bounds,
+            iteration_labels,
         }
     }
 
@@ -139,16 +148,16 @@ impl<'a> VizDebugger<'a> {
             .x_axis(
                 Axis::default()
                     .title("x")
-                    .bounds(todo!())
+                    .bounds(self.x_bounds)
                     .style(Style::default().fg(Color::Gray))
-                    .labels(["todo"]),
+                    .labels(self.x_labels.clone()),
             )
             .y_axis(
                 Axis::default()
                     .title("y")
-                    .bounds(todo!())
+                    .bounds(self.y_bounds)
                     .style(Style::default().fg(Color::Gray))
-                    .labels(["todo"]),
+                    .labels(self.y_labels.clone()),
             )
             .hidden_legend_constraints((Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)));
 
@@ -170,21 +179,47 @@ impl<'a> VizDebugger<'a> {
             .x_axis(
                 Axis::default()
                     .title("iteration")
-                    .bounds(todo!())
+                    .bounds(self.iteration_bounds)
                     .style(Style::default().fg(Color::Gray))
-                    .labels(["todo"]),
+                    .labels(self.iteration_labels.clone()),
             )
             .y_axis(
                 Axis::default()
                     .title("loss")
-                    .bounds(todo!())
+                    .bounds(self.loss_bounds)
                     .style(Style::default().fg(Color::Gray))
-                    .labels(["todo"]),
+                    .labels(self.loss_labels.clone()),
             )
             .hidden_legend_constraints((Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)));
 
         frame.render_widget(chart, area);
     }
+
+    fn axis_labels(min: f64, max: f64) -> [String; 3] {
+        let range = max - min;
+        let interval = range / 3.;
+        [
+            format!("{min:.2}")
+                .trim_end_matches('0')
+                .trim_end_matches('.')
+                .to_string(),
+            format!("{:.2}", min + interval)
+                .trim_end_matches('0')
+                .trim_end_matches('.')
+                .to_string(),
+            format!("{:.2}", min + interval * 2.)
+                .trim_end_matches('0')
+                .trim_end_matches('.')
+                .to_string(),
+        ]
+    }
+
+    // ratatui only supports 2 or 3 axis labels
+    //fn axis_labels(n: u8, min: f64, max: f64) -> Vec<String> {
+    //    let range = max - min;
+    //    let interval = range / n as f64;
+    //    (0..n).map(|i| (min + i as f64 * interval).to_string()).collect()
+    //}
 }
 
 fn total_loss<'a, B: Backend>(loss: &Tensor<'a, B>) -> B::Element {
@@ -203,4 +238,16 @@ fn correct<'a, B: Backend>(labels: &Tensor<'a, B>, output: &Tensor<'a, B>) -> B:
         .sum(None)
         .item()
         .unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_axis_labels() {
+        let labels = VizDebugger::axis_labels(5., 10.);
+        //let labels = VizDebugger::axis_labels(4, 5., 10.);
+        assert_eq!(vec!["5", "6.67", "8.33"], labels);
+    }
 }
