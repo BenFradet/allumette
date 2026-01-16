@@ -9,6 +9,7 @@ use ratatui::widgets::{Axis, Block, Chart, Dataset, GraphType};
 
 use crate::backend::{backend::Backend, mode::Mode};
 use crate::shaping::shape::Shape;
+use crate::training::dataset::Dataset as ClassificationDataset;
 use crate::{math::element::Element, tensor::Tensor};
 
 pub trait Debugger<'a, B: Backend> {
@@ -84,19 +85,29 @@ pub struct VizDebugger<'a> {
 }
 
 impl<'a> VizDebugger<'a> {
-    pub fn new(n: usize) -> VizDebugger<'a> {
+    pub fn new<E: Element>(d: ClassificationDataset<E>) -> VizDebugger<'a> {
+        let (x_bounds, y_bounds) = d.features.iter().fold(
+            (
+                (f64::INFINITY, f64::NEG_INFINITY),
+                (f64::INFINITY, f64::NEG_INFINITY),
+            ),
+            |((min_x, max_x), (min_y, max_y)), (x, y)| {
+                let (xf, yf) = (x.tof(), y.tof());
+                ((min_x.min(xf), max_x.max(xf)), (min_y.min(yf), max_y.max(yf)))
+            },
+        );
         Self {
             points: vec![],
             loss: vec![],
-            x_bounds: (0., 0.),
+            x_bounds,
             x_labels: vec!["0.0"],
-            y_bounds: (0., 0.),
+            y_bounds,
             y_labels: vec!["0.0"],
             loss_bounds: (0., 0.),
             loss_labels: vec!["0.0"],
             iteration_bounds: (0., 0.),
             iteration_labels: vec!["0.0"],
-            n,
+            n: d.n,
         }
     }
 

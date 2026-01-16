@@ -23,6 +23,7 @@ where
     fn one() -> Self;
     fn two() -> Self;
     fn fromf(f: f64) -> Self;
+    fn tof(self) -> f64;
     fn is_close(self, rhs: Self) -> bool;
 
     fn powf(self, exp: Self) -> Self;
@@ -70,6 +71,10 @@ impl Element for f32 {
         f as f32
     }
 
+    fn tof(self) -> f64 {
+        self as f64
+    }
+
     // gpu is less precise
     fn is_close(self, rhs: Self) -> bool {
         (self - rhs).abs() < 1e-2
@@ -103,6 +108,10 @@ impl Element for f64 {
 
     fn fromf(f: f64) -> Self {
         f
+    }
+
+    fn tof(self) -> f64 {
+        self
     }
 
     fn is_close(self, rhs: Self) -> bool {
