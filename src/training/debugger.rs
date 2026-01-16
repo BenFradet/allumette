@@ -1,11 +1,11 @@
 use std::time::Instant;
 
+use ratatui::Frame;
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::symbols::Marker;
 use ratatui::text::Line;
 use ratatui::widgets::{Axis, Block, Chart, Dataset, GraphType};
-use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout, Rect};
 
 use crate::backend::{backend::Backend, mode::Mode};
 use crate::shaping::shape::Shape;
@@ -76,12 +76,15 @@ pub struct VizDebugger<'a> {
     x_labels: Vec<&'a str>,
     y_bounds: (f64, f64),
     y_labels: Vec<&'a str>,
-    max_iterations: usize,
+    loss_bounds: (f64, f64),
+    loss_labels: Vec<&'a str>,
+    iteration_bounds: (f64, f64),
+    iteration_labels: Vec<&'a str>,
     n: usize,
 }
 
 impl<'a> VizDebugger<'a> {
-    pub fn new(total_iterations: usize, n: usize) -> VizDebugger<'a> {
+    pub fn new(n: usize) -> VizDebugger<'a> {
         Self {
             points: vec![],
             loss: vec![],
@@ -89,7 +92,10 @@ impl<'a> VizDebugger<'a> {
             x_labels: vec!["0.0"],
             y_bounds: (0., 0.),
             y_labels: vec!["0.0"],
-            max_iterations: total_iterations,
+            loss_bounds: (0., 0.),
+            loss_labels: vec!["0.0"],
+            iteration_bounds: (0., 0.),
+            iteration_labels: vec!["0.0"],
             n,
         }
     }
@@ -124,22 +130,49 @@ impl<'a> VizDebugger<'a> {
                     .title("x")
                     .bounds(todo!())
                     .style(Style::default().fg(Color::Gray))
-                    .labels(["todo"])
+                    .labels(["todo"]),
             )
             .y_axis(
                 Axis::default()
                     .title("y")
                     .bounds(todo!())
                     .style(Style::default().fg(Color::Gray))
-                    .labels(["todo"])
+                    .labels(["todo"]),
             )
-                .hidden_legend_constraints((Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)));
+            .hidden_legend_constraints((Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)));
 
         frame.render_widget(chart, area);
     }
 
     fn render_line_chart(&self, frame: &mut Frame, area: Rect) {
+        let datasets = vec![
+            Dataset::default()
+                .name("Loss")
+                .marker(Marker::Braille)
+                .style(Style::default().fg(Color::Yellow))
+                .graph_type(GraphType::Line)
+                .data(&[]),
+        ];
 
+        let chart = Chart::new(datasets)
+            .block(Block::bordered().title(Line::from("Loss").cyan().bold().centered()))
+            .x_axis(
+                Axis::default()
+                    .title("iteration")
+                    .bounds(todo!())
+                    .style(Style::default().fg(Color::Gray))
+                    .labels(["todo"]),
+            )
+            .y_axis(
+                Axis::default()
+                    .title("loss")
+                    .bounds(todo!())
+                    .style(Style::default().fg(Color::Gray))
+                    .labels(["todo"]),
+            )
+            .hidden_legend_constraints((Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)));
+
+        frame.render_widget(chart, area);
     }
 }
 
