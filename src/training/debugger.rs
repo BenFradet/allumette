@@ -62,17 +62,12 @@ impl<'a, B: Backend> Debugger<'a, B> for TerseDebugger {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Point {
-    x: f64,
-    y: f64,
-    label: u8,
-    predicted: u8,
-}
-
 pub struct VizDebugger {
-    points: Vec<Point>,
-    loss: Vec<(usize, f64)>,
+    tps: Vec<(f64, f64)>,
+    tns: Vec<(f64, f64)>,
+    fps: Vec<(f64, f64)>,
+    fns: Vec<(f64, f64)>,
+    loss: Vec<(f64, f64)>,
     x_bounds: [f64; 2],
     x_labels: [String; 3],
     y_bounds: [f64; 2],
@@ -107,7 +102,10 @@ impl VizDebugger {
         let iteration_labels = Self::axis_labels(iteration_bounds[0], iteration_bounds[1]);
 
         Self {
-            points: vec![],
+            tps: vec![],
+            tns: vec![],
+            fps: vec![],
+            fns: vec![],
             loss: vec![],
             x_bounds,
             x_labels,
@@ -130,17 +128,29 @@ impl VizDebugger {
     fn render_scatter(&self, frame: &mut Frame, area: Rect) {
         let datasets = vec![
             Dataset::default()
-                .name("Correct")
-                .marker(Marker::Dot)
+                .name("True Positives")
+                .marker(Marker::XSign)
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().green())
-                .data(&[]),
+                .data(&self.tps),
             Dataset::default()
-                .name("Incorrect")
+                .name("False Negatives")
+                .marker(Marker::XSign)
+                .graph_type(GraphType::Scatter)
+                .style(Style::new().light_red())
+                .data(&self.fns),
+            Dataset::default()
+                .name("True Negatives")
+                .marker(Marker::Dot)
+                .graph_type(GraphType::Scatter)
+                .style(Style::new().light_green())
+                .data(&self.tns),
+            Dataset::default()
+                .name("False Positives")
                 .marker(Marker::Dot)
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().red())
-                .data(&[]),
+                .data(&self.fps),
         ];
 
         let chart = Chart::new(datasets)
@@ -171,7 +181,7 @@ impl VizDebugger {
                 .marker(Marker::Braille)
                 .style(Style::default().fg(Color::Yellow))
                 .graph_type(GraphType::Line)
-                .data(&[]),
+                .data(&self.loss),
         ];
 
         let chart = Chart::new(datasets)
