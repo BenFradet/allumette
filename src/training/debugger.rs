@@ -119,23 +119,30 @@ impl VizDebugger {
     }
 
     pub fn draw(&self, frame: &mut Frame) {
-        let [scatter, line_chart] =
-            Layout::horizontal([Constraint::Fill(1); 2]).areas(frame.area());
+        let horizontal =
+            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]);
+        let vertical = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]);
+        let [scatter, right] = horizontal.areas(frame.area());
+        let [loss, matrix] = vertical.areas(right);
         self.render_scatter(frame, scatter);
-        self.render_line_chart(frame, line_chart);
+        self.render_loss(frame, loss);
+        self.render_matrix(frame, matrix);
+    }
+
+    fn render_matrix(&self, frame: &mut Frame, area: Rect) {
     }
 
     fn render_scatter(&self, frame: &mut Frame, area: Rect) {
         let datasets = vec![
             Dataset::default()
                 .name("True Positives")
-                .marker(Marker::XSign)
+                .marker(Marker::Custom('×'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().green())
                 .data(&self.tps),
             Dataset::default()
                 .name("False Negatives")
-                .marker(Marker::XSign)
+                .marker(Marker::Custom('×'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().light_red())
                 .data(&self.fns),
@@ -174,7 +181,7 @@ impl VizDebugger {
         frame.render_widget(chart, area);
     }
 
-    fn render_line_chart(&self, frame: &mut Frame, area: Rect) {
+    fn render_loss(&self, frame: &mut Frame, area: Rect) {
         let datasets = vec![
             Dataset::default()
                 .name("Loss")
