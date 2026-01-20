@@ -2,10 +2,11 @@ use std::time::Instant;
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::style::palette::tailwind;
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::symbols::Marker;
 use ratatui::text::Line;
-use ratatui::widgets::{Axis, Block, Chart, Dataset, GraphType};
+use ratatui::widgets::{Axis, Block, Cell, Chart, Dataset, GraphType, Row, Table};
 
 use crate::backend::{backend::Backend, mode::Mode};
 use crate::shaping::shape::Shape;
@@ -67,6 +68,9 @@ pub struct VizDebugger {
     tns: Vec<(f64, f64)>,
     fps: Vec<(f64, f64)>,
     fns: Vec<(f64, f64)>,
+    ps: usize,
+    ns: usize,
+    n: usize,
     loss: Vec<(f64, f64)>,
     x_bounds: [f64; 2],
     x_labels: [String; 3],
@@ -101,12 +105,21 @@ impl VizDebugger {
         let iteration_bounds = [0., iterations as f64];
         let iteration_labels = Self::axis_labels(iteration_bounds[0], iteration_bounds[1]);
 
+        let (ps, ns) =
+            d.labels.iter().fold(
+                (0, 0),
+                |(ps, ns), y| if *y == 1 { (ps + 1, ns) } else { (ps, ns + 1) },
+            );
+
         Self {
             tps: vec![],
             tns: vec![],
             fps: vec![],
             fns: vec![],
             loss: vec![],
+            ps,
+            ns,
+            n: d.n,
             x_bounds,
             x_labels,
             y_bounds,
@@ -130,6 +143,62 @@ impl VizDebugger {
     }
 
     fn render_matrix(&self, frame: &mut Frame, area: Rect) {
+        let header_row_style = Style::default()
+            .fg(tailwind::SLATE.c200)
+            .bg(tailwind::EMERALD.c900);
+        let header_col_style = Style::default()
+            .fg(tailwind::SLATE.c200)
+            .bg(tailwind::AMBER.c400);
+        let neutral_style = Style::default().fg(tailwind::SLATE.c200);
+        let green_style = Style::default()
+            .fg(tailwind::SLATE.c200)
+            .bg(tailwind::GREEN.c400);
+        let red_style = Style::default()
+            .fg(tailwind::SLATE.c200)
+            .bg(tailwind::RED.c400);
+
+        let header_row = [
+            Cell::from(format!("Total population = P + N = {}", self.n)).style(neutral_style),
+            Cell::from(format!(
+                "Predicted positive PP = {}",
+                self.tps.len() + self.fps.len()
+            ))
+            .style(header_row_style),
+            Cell::from(format!(
+                "Predicted negative PN = {}",
+                self.fns.len() + self.tns.len()
+            ))
+            .style(header_row_style),
+        ]
+        .into_iter()
+        .collect::<Row>()
+        .height(4);
+        let second_row = [
+            Cell::from(format!("Actual positive P = {}", self.ps)).style(header_col_style),
+            Cell::from(format!("True positive TP = {}", self.tps.len())).style(green_style),
+            Cell::from(format!("False negative FN = {}", self.fns.len())).style(red_style),
+        ]
+        .into_iter()
+        .collect::<Row>()
+        .height(4);
+        let third_row = [
+            Cell::from(format!("Actual negative N = {}", self.ns)).style(header_col_style),
+            Cell::from(format!("False positive FP = {}", self.fps.len())).style(red_style),
+            Cell::from(format!("True negative TN = {}", self.tns.len())).style(green_style),
+        ]
+        .into_iter()
+        .collect::<Row>()
+        .height(4);
+
+        let t = Table::new(
+            [header_row, second_row, third_row],
+            [
+                Constraint::Length(32),
+                Constraint::Min(28),
+                Constraint::Min(28),
+            ],
+        );
+        frame.render_widget(t, area);
     }
 
     fn render_scatter(&self, frame: &mut Frame, area: Rect) {
