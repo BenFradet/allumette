@@ -13,10 +13,12 @@ fn main() {
     let hidden_layer_size = 3;
     let learning_rate = 0.1;
     let iterations = 200;
+    let debugger = TerseDebugger {};
     train::train::<GpuBackend, TerseDebugger>(
         dataset,
         learning_rate,
         iterations,
         hidden_layer_size,
+        debugger,
     );
 }

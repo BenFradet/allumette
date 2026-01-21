@@ -1,6 +1,7 @@
+use std::io::Error;
 use std::time::Instant;
 
-use ratatui::Frame;
+use ratatui::{DefaultTerminal, Frame};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::palette::tailwind;
 use ratatui::style::{Color, Style, Stylize};
@@ -15,6 +16,7 @@ use crate::{math::element::Element, tensor::Tensor};
 
 pub trait Debugger<'a, B: Backend> {
     fn debug(
+        &self,
         loss: &Tensor<'a, B>,
         labels: &Tensor<'a, B>,
         output: &Tensor<'a, B>,
@@ -26,6 +28,7 @@ pub trait Debugger<'a, B: Backend> {
 pub struct ChattyDebugger;
 impl<'a, B: Backend> Debugger<'a, B> for ChattyDebugger {
     fn debug(
+        &self,
         loss: &Tensor<'a, B>,
         labels: &Tensor<'a, B>,
         output: &Tensor<'a, B>,
@@ -46,6 +49,7 @@ impl<'a, B: Backend> Debugger<'a, B> for ChattyDebugger {
 pub struct TerseDebugger;
 impl<'a, B: Backend> Debugger<'a, B> for TerseDebugger {
     fn debug(
+        &self,
         loss: &Tensor<'a, B>,
         labels: &Tensor<'a, B>,
         output: &Tensor<'a, B>,
@@ -128,6 +132,12 @@ impl VizDebugger {
             loss_labels,
             iteration_bounds,
             iteration_labels,
+        }
+    }
+
+    pub fn run(self, mut terminal: DefaultTerminal) -> Result<(), Error> {
+        loop {
+            terminal.draw(|frame| self.draw(frame))?;
         }
     }
 
