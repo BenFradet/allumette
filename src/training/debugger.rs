@@ -1,13 +1,15 @@
 use std::io::Error;
-use std::time::Instant;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
-use ratatui::{DefaultTerminal, Frame};
+use ratatui::crossterm::event::{self, Event, KeyCode};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::palette::tailwind;
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::symbols::Marker;
 use ratatui::text::Line;
 use ratatui::widgets::{Axis, Block, Cell, Chart, Dataset, GraphType, Row, Table};
+use ratatui::{DefaultTerminal, Frame};
 
 use crate::backend::{backend::Backend, mode::Mode};
 use crate::shaping::shape::Shape;
@@ -16,7 +18,7 @@ use crate::{math::element::Element, tensor::Tensor};
 
 pub trait Debugger<'a, B: Backend> {
     fn debug(
-        &self,
+        &mut self,
         loss: &Tensor<'a, B>,
         labels: &Tensor<'a, B>,
         output: &Tensor<'a, B>,
@@ -28,7 +30,7 @@ pub trait Debugger<'a, B: Backend> {
 pub struct ChattyDebugger;
 impl<'a, B: Backend> Debugger<'a, B> for ChattyDebugger {
     fn debug(
-        &self,
+        &mut self,
         loss: &Tensor<'a, B>,
         labels: &Tensor<'a, B>,
         output: &Tensor<'a, B>,
@@ -49,7 +51,7 @@ impl<'a, B: Backend> Debugger<'a, B> for ChattyDebugger {
 pub struct TerseDebugger;
 impl<'a, B: Backend> Debugger<'a, B> for TerseDebugger {
     fn debug(
-        &self,
+        &mut self,
         loss: &Tensor<'a, B>,
         labels: &Tensor<'a, B>,
         output: &Tensor<'a, B>,
@@ -67,15 +69,20 @@ impl<'a, B: Backend> Debugger<'a, B> for TerseDebugger {
     }
 }
 
-pub struct VizDebugger {
+#[derive(Default)]
+pub struct VizState {
     tps: Vec<(f64, f64)>,
     tns: Vec<(f64, f64)>,
     fps: Vec<(f64, f64)>,
     fns: Vec<(f64, f64)>,
+    loss: Vec<(f64, f64)>,
+}
+
+pub struct VizDebugger {
+    state: Arc<Mutex<VizState>>,
     ps: usize,
     ns: usize,
     n: usize,
-    loss: Vec<(f64, f64)>,
     x_bounds: [f64; 2],
     x_labels: [String; 3],
     y_bounds: [f64; 2],
@@ -87,7 +94,7 @@ pub struct VizDebugger {
 }
 
 impl VizDebugger {
-    pub fn new<E: Element>(d: ClassificationDataset<E>, iterations: usize) -> VizDebugger {
+    pub fn new<E: Element>(d: &ClassificationDataset<E>, iterations: usize) -> VizDebugger {
         let (x_bounds, y_bounds) = d.features.iter().fold(
             (
                 [f64::INFINITY, f64::NEG_INFINITY],
@@ -116,11 +123,7 @@ impl VizDebugger {
             );
 
         Self {
-            tps: vec![],
-            tns: vec![],
-            fps: vec![],
-            fns: vec![],
-            loss: vec![],
+            state: Arc::new(Mutex::new(VizState::default())),
             ps,
             ns,
             n: d.n,
@@ -135,9 +138,22 @@ impl VizDebugger {
         }
     }
 
-    pub fn run(self, mut terminal: DefaultTerminal) -> Result<(), Error> {
+    pub fn run(&mut self, mut terminal: DefaultTerminal) -> Result<(), Error> {
+        let tick_rate = Duration::from_millis(250);
+        let mut last_tick = Instant::now();
         loop {
             terminal.draw(|frame| self.draw(frame))?;
+            let timeout = tick_rate.saturating_sub(last_tick.elapsed());
+            if event::poll(timeout)?
+                && let Event::Key(key) = event::read()?
+                && key.code == KeyCode::Char('q')
+            {
+                return Ok(());
+            }
+
+            if last_tick.elapsed() >= tick_rate {
+                last_tick = Instant::now();
+            }
         }
     }
 
@@ -153,6 +169,8 @@ impl VizDebugger {
     }
 
     fn render_matrix(&self, frame: &mut Frame, area: Rect) {
+        let state = self.state.lock().unwrap();
+
         let header_row_style = Style::default()
             .fg(tailwind::SLATE.c200)
             .bg(tailwind::EMERALD.c900);
@@ -171,12 +189,12 @@ impl VizDebugger {
             Cell::from(format!("Total population = P + N = {}", self.n)).style(neutral_style),
             Cell::from(format!(
                 "Predicted positive PP = {}",
-                self.tps.len() + self.fps.len()
+                state.tps.len() + state.fps.len()
             ))
             .style(header_row_style),
             Cell::from(format!(
                 "Predicted negative PN = {}",
-                self.fns.len() + self.tns.len()
+                state.fns.len() + state.tns.len()
             ))
             .style(header_row_style),
         ]
@@ -185,16 +203,16 @@ impl VizDebugger {
         .height(4);
         let second_row = [
             Cell::from(format!("Actual positive P = {}", self.ps)).style(header_col_style),
-            Cell::from(format!("True positive TP = {}", self.tps.len())).style(green_style),
-            Cell::from(format!("False negative FN = {}", self.fns.len())).style(red_style),
+            Cell::from(format!("True positive TP = {}", state.tps.len())).style(green_style),
+            Cell::from(format!("False negative FN = {}", state.fns.len())).style(red_style),
         ]
         .into_iter()
         .collect::<Row>()
         .height(4);
         let third_row = [
             Cell::from(format!("Actual negative N = {}", self.ns)).style(header_col_style),
-            Cell::from(format!("False positive FP = {}", self.fps.len())).style(red_style),
-            Cell::from(format!("True negative TN = {}", self.tns.len())).style(green_style),
+            Cell::from(format!("False positive FP = {}", state.fps.len())).style(red_style),
+            Cell::from(format!("True negative TN = {}", state.tns.len())).style(green_style),
         ]
         .into_iter()
         .collect::<Row>()
@@ -212,31 +230,33 @@ impl VizDebugger {
     }
 
     fn render_scatter(&self, frame: &mut Frame, area: Rect) {
+        let state = self.state.lock().unwrap();
+
         let datasets = vec![
             Dataset::default()
                 .name("True Positives")
                 .marker(Marker::Custom('×'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().green())
-                .data(&self.tps),
+                .data(&state.tps),
             Dataset::default()
                 .name("False Negatives")
                 .marker(Marker::Custom('×'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().light_red())
-                .data(&self.fns),
+                .data(&state.fns),
             Dataset::default()
                 .name("True Negatives")
                 .marker(Marker::Dot)
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().light_green())
-                .data(&self.tns),
+                .data(&state.tns),
             Dataset::default()
                 .name("False Positives")
                 .marker(Marker::Dot)
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().red())
-                .data(&self.fps),
+                .data(&state.fps),
         ];
 
         let chart = Chart::new(datasets)
@@ -261,13 +281,15 @@ impl VizDebugger {
     }
 
     fn render_loss(&self, frame: &mut Frame, area: Rect) {
+        let state = self.state.lock().unwrap();
+
         let datasets = vec![
             Dataset::default()
                 .name("Loss")
                 .marker(Marker::Braille)
                 .style(Style::default().fg(Color::Yellow))
                 .graph_type(GraphType::Line)
-                .data(&self.loss),
+                .data(&state.loss),
         ];
 
         let chart = Chart::new(datasets)
@@ -316,6 +338,43 @@ impl VizDebugger {
     //    let interval = range / n as f64;
     //    (0..n).map(|i| (min + i as f64 * interval).to_string()).collect()
     //}
+}
+
+impl Clone for VizDebugger {
+    fn clone(&self) -> Self {
+        VizDebugger {
+            state: Arc::clone(&self.state),
+            ps: self.ps,
+            ns: self.ns,
+            n: self.n,
+            x_bounds: self.x_bounds,
+            x_labels: self.x_labels.clone(),
+            y_bounds: self.y_bounds,
+            y_labels: self.y_labels.clone(),
+            loss_bounds: self.loss_bounds,
+            loss_labels: self.loss_labels.clone(),
+            iteration_bounds: self.iteration_bounds,
+            iteration_labels: self.iteration_labels.clone(),
+        }
+    }
+}
+
+impl<'a, B: Backend> Debugger<'a, B> for VizDebugger {
+    fn debug(
+        &mut self,
+        loss: &Tensor<'a, B>,
+        labels: &Tensor<'a, B>,
+        output: &Tensor<'a, B>,
+        iterations: (usize, usize),
+        start_time: Instant,
+    ) {
+        let mut state = self.state.lock().unwrap();
+        state.tns.push((1., 1.));
+        state.fps.push((2., 2.));
+        state.fns.push((3., 3.));
+        state.tps.push((4., 4.));
+        state.loss.push((5., 5.));
+    }
 }
 
 fn total_loss<'a, B: Backend>(loss: &Tensor<'a, B>) -> B::Element {

@@ -51,7 +51,11 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
             let y1 = if v.0 < E::fromf(0.5) { 1 } else { 0 };
             y.push(y1);
         }
-        Self { n, features: x, labels: y }
+        Self {
+            n,
+            features: x,
+            labels: y,
+        }
     }
 
     pub fn diag(n: usize) -> Self {
@@ -61,7 +65,11 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
             let y1 = if *x1 + *x2 < E::fromf(0.5) { 1 } else { 0 };
             y.push(y1);
         }
-        Self { n, features: x, labels: y }
+        Self {
+            n,
+            features: x,
+            labels: y,
+        }
     }
 
     pub fn split(n: usize) -> Self {
@@ -75,7 +83,11 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
             };
             y.push(y1);
         }
-        Self { n, features: x, labels: y }
+        Self {
+            n,
+            features: x,
+            labels: y,
+        }
     }
 
     pub fn xor(n: usize) -> Self {
@@ -91,7 +103,11 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
             };
             y.push(y1);
         }
-        Self { n, features: x, labels: y }
+        Self {
+            n,
+            features: x,
+            labels: y,
+        }
     }
 
     pub fn circle(n: usize) -> Self {
@@ -108,7 +124,11 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
             };
             y.push(y1);
         }
-        Self { n, features: x, labels: y }
+        Self {
+            n,
+            features: x,
+            labels: y,
+        }
     }
 
     fn make_points(n: usize) -> Vec<(E, E)> {

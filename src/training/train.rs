@@ -16,7 +16,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     learning_rate: B::Element,
     iterations: usize,
     hidden_layer_size: usize,
-    debugger: D,
+    debugger: &mut D,
 ) {
     let mut network = Network::new(hidden_layer_size);
     let lr_tensor = Tensor::from_scalar(learning_rate);
