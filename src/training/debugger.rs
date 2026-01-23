@@ -2,14 +2,14 @@ use std::io::Error;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use ratatui::Frame;
 use ratatui::crossterm::event::{self, Event, KeyCode};
-use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::palette::tailwind;
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::symbols::Marker;
 use ratatui::text::Line;
 use ratatui::widgets::{Axis, Block, Cell, Chart, Dataset, GraphType, Row, Table};
-use ratatui::Frame;
 
 use crate::backend::{backend::Backend, mode::Mode};
 use crate::shaping::shape::Shape;
@@ -181,7 +181,7 @@ impl VizDebugger {
             .bg(tailwind::EMERALD.c900);
         let header_col_style = Style::default()
             .fg(tailwind::SLATE.c200)
-            .bg(tailwind::AMBER.c400);
+            .bg(tailwind::AMBER.c800);
         let neutral_style = Style::default().fg(tailwind::SLATE.c200);
         let green_style = Style::default()
             .fg(tailwind::SLATE.c200)
@@ -191,37 +191,59 @@ impl VizDebugger {
             .bg(tailwind::RED.c400);
 
         let header_row = [
-            Cell::from(format!("\n\nTotal population = P + N = {}", self.n)).style(neutral_style),
-            Cell::from(format!(
-                "\n\nPredicted positive PP = {}",
+            Cell::from(Self::lines(format!(
+                "Total population = P + N = {}",
+                self.n
+            )))
+            .style(neutral_style),
+            Cell::from(Self::lines(format!(
+                "Predicted positive PP = {}",
                 state.tps.len() + state.fps.len()
-            ))
+            )))
             .style(header_row_style),
-            Cell::from(format!(
-                "\n\nPredicted negative PN = {}",
+            Cell::from(Self::lines(format!(
+                "Predicted negative PN = {}",
                 state.fns.len() + state.tns.len()
-            ))
+            )))
             .style(header_row_style),
         ]
         .into_iter()
         .collect::<Row>()
         .height(5);
         let second_row = [
-            Cell::from(format!("\n\nActual positive P = {}", self.ps)).style(header_col_style),
-            Cell::from(format!("\n\nTrue positive TP = {}", state.tps.len())).style(green_style),
-            Cell::from(format!("\n\nFalse negative FN = {}", state.fns.len())).style(red_style),
+            Cell::from(Self::lines(format!("Actual positive P = {}", self.ps)))
+                .style(header_col_style),
+            Cell::from(Self::lines(format!(
+                "True positive TP = {}",
+                state.tps.len()
+            )))
+            .style(green_style),
+            Cell::from(Self::lines(format!(
+                "False negative FN = {}",
+                state.fns.len()
+            )))
+            .style(red_style),
         ]
         .into_iter()
         .collect::<Row>()
         .height(5);
         let third_row = [
-            Cell::from(format!("\n\nActual negative N = {}", self.ns)).style(header_col_style),
-            Cell::from(format!("\n\nFalse positive FP = {}", state.fps.len())).style(red_style),
-            Cell::from(format!("\n\nTrue negative TN = {}", state.tns.len())).style(green_style),
+            Cell::from(Self::lines(format!("Actual negative N = {}", self.ns)))
+                .style(header_col_style),
+            Cell::from(Self::lines(format!(
+                "False positive FP = {}",
+                state.fps.len()
+            )))
+            .style(red_style),
+            Cell::from(Self::lines(format!(
+                "True negative TN = {}",
+                state.tns.len()
+            )))
+            .style(green_style),
         ]
         .into_iter()
         .collect::<Row>()
-        .height(4);
+        .height(5);
 
         let t = Table::new(
             [header_row, second_row, third_row],
@@ -230,8 +252,13 @@ impl VizDebugger {
                 Constraint::Min(28),
                 Constraint::Min(28),
             ],
-        );
+        )
+        .block(Block::bordered().title(Line::from("Confusion matrix").cyan().bold().centered()));
         frame.render_widget(t, area);
+    }
+
+    fn lines<'a>(s: String) -> Vec<Line<'a>> {
+        vec![Line::default(), Line::default(), Line::from(s).centered()]
     }
 
     fn render_scatter(&self, frame: &mut Frame, area: Rect) {
