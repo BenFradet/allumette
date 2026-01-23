@@ -9,7 +9,7 @@ use ratatui::style::{Color, Style, Stylize};
 use ratatui::symbols::Marker;
 use ratatui::text::Line;
 use ratatui::widgets::{Axis, Block, Cell, Chart, Dataset, GraphType, Row, Table};
-use ratatui::{DefaultTerminal, Frame};
+use ratatui::Frame;
 
 use crate::backend::{backend::Backend, mode::Mode};
 use crate::shaping::shape::Shape;
@@ -138,7 +138,8 @@ impl VizDebugger {
         }
     }
 
-    pub fn run(&mut self, mut terminal: DefaultTerminal) -> Result<(), Error> {
+    pub fn run(&mut self) -> Result<(), Error> {
+        let mut terminal = ratatui::init();
         let tick_rate = Duration::from_millis(250);
         let mut last_tick = Instant::now();
         loop {
@@ -148,13 +149,17 @@ impl VizDebugger {
                 && let Event::Key(key) = event::read()?
                 && key.code == KeyCode::Char('q')
             {
-                return Ok(());
+                break;
             }
 
             if last_tick.elapsed() >= tick_rate {
                 last_tick = Instant::now();
             }
         }
+
+        ratatui::restore();
+
+        Ok(())
     }
 
     pub fn draw(&self, frame: &mut Frame) {
@@ -186,33 +191,33 @@ impl VizDebugger {
             .bg(tailwind::RED.c400);
 
         let header_row = [
-            Cell::from(format!("Total population = P + N = {}", self.n)).style(neutral_style),
+            Cell::from(format!("\n\nTotal population = P + N = {}", self.n)).style(neutral_style),
             Cell::from(format!(
-                "Predicted positive PP = {}",
+                "\n\nPredicted positive PP = {}",
                 state.tps.len() + state.fps.len()
             ))
             .style(header_row_style),
             Cell::from(format!(
-                "Predicted negative PN = {}",
+                "\n\nPredicted negative PN = {}",
                 state.fns.len() + state.tns.len()
             ))
             .style(header_row_style),
         ]
         .into_iter()
         .collect::<Row>()
-        .height(4);
+        .height(5);
         let second_row = [
-            Cell::from(format!("Actual positive P = {}", self.ps)).style(header_col_style),
-            Cell::from(format!("True positive TP = {}", state.tps.len())).style(green_style),
-            Cell::from(format!("False negative FN = {}", state.fns.len())).style(red_style),
+            Cell::from(format!("\n\nActual positive P = {}", self.ps)).style(header_col_style),
+            Cell::from(format!("\n\nTrue positive TP = {}", state.tps.len())).style(green_style),
+            Cell::from(format!("\n\nFalse negative FN = {}", state.fns.len())).style(red_style),
         ]
         .into_iter()
         .collect::<Row>()
-        .height(4);
+        .height(5);
         let third_row = [
-            Cell::from(format!("Actual negative N = {}", self.ns)).style(header_col_style),
-            Cell::from(format!("False positive FP = {}", state.fps.len())).style(red_style),
-            Cell::from(format!("True negative TN = {}", state.tns.len())).style(green_style),
+            Cell::from(format!("\n\nActual negative N = {}", self.ns)).style(header_col_style),
+            Cell::from(format!("\n\nFalse positive FP = {}", state.fps.len())).style(red_style),
+            Cell::from(format!("\n\nTrue negative TN = {}", state.tns.len())).style(green_style),
         ]
         .into_iter()
         .collect::<Row>()
@@ -234,25 +239,25 @@ impl VizDebugger {
 
         let datasets = vec![
             Dataset::default()
-                .name("True Positives")
+                .name("× True Positives")
                 .marker(Marker::Custom('×'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().green())
                 .data(&state.tps),
             Dataset::default()
-                .name("False Negatives")
+                .name("× False Negatives")
                 .marker(Marker::Custom('×'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().light_red())
                 .data(&state.fns),
             Dataset::default()
-                .name("True Negatives")
+                .name("• True Negatives")
                 .marker(Marker::Dot)
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().light_green())
                 .data(&state.tns),
             Dataset::default()
-                .name("False Positives")
+                .name("• False Positives")
                 .marker(Marker::Dot)
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().red())
@@ -315,7 +320,7 @@ impl VizDebugger {
 
     fn axis_labels(min: f64, max: f64) -> [String; 3] {
         let range = max - min;
-        let interval = range / 3.;
+        let interval = range / 2.;
         [
             format!("{min:.2}")
                 .trim_end_matches('0')
@@ -325,7 +330,7 @@ impl VizDebugger {
                 .trim_end_matches('0')
                 .trim_end_matches('.')
                 .to_string(),
-            format!("{:.2}", min + interval * 2.)
+            format!("{max:.2}")
                 .trim_end_matches('0')
                 .trim_end_matches('.')
                 .to_string(),
@@ -403,6 +408,6 @@ mod tests {
     fn test_axis_labels() {
         let labels = VizDebugger::axis_labels(5., 10.);
         //let labels = VizDebugger::axis_labels(4, 5., 10.);
-        assert_eq!(vec!["5", "6.67", "8.33"], labels);
+        assert_eq!(vec!["5", "7.5", "10"], labels);
     }
 }

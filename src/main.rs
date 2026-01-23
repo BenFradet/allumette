@@ -30,9 +30,5 @@ fn main() -> Result<(), Error> {
         );
     });
 
-    let terminal = ratatui::init();
-    let result = debugger.run(terminal);
-    ratatui::restore();
-
-    result
+    debugger.run()
 }
