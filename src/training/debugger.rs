@@ -4,12 +4,12 @@ use std::time::{Duration, Instant};
 
 use ratatui::Frame;
 use ratatui::crossterm::event::{self, Event, KeyCode};
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::palette::tailwind;
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::symbols::Marker;
-use ratatui::text::Line;
-use ratatui::widgets::{Axis, Block, Cell, Chart, Dataset, GraphType, Row, Table};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Axis, Block, Cell, Chart, Dataset, Gauge, GraphType, Row, Table};
 
 use crate::backend::{backend::Backend, mode::Mode};
 use crate::shaping::shape::Shape;
@@ -171,12 +171,36 @@ impl VizDebugger {
     pub fn draw(&self, frame: &mut Frame) {
         let horizontal =
             Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]);
-        let vertical = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]);
+        let vertical = Layout::vertical([
+            Constraint::Percentage(50),
+            Constraint::Percentage(35),
+            Constraint::Percentage(15),
+        ]);
         let [scatter, right] = horizontal.areas(frame.area());
-        let [loss, matrix] = vertical.areas(right);
+        let [loss, matrix, progress] = vertical.areas(right);
         self.render_scatter(frame, scatter);
         self.render_loss(frame, loss);
         self.render_matrix(frame, matrix);
+        self.render_progress(frame, progress);
+    }
+
+    fn render_progress(&self, frame: &mut Frame, area: Rect) {
+        let state = self.state.lock().unwrap();
+        let iteration = state.loss.len();
+        let max_iteration = self.iteration_bounds[1];
+
+        let g = Gauge::default()
+            .block(
+                Block::bordered()
+                    .title(Line::from("Progress").fg(self.font_color).bold().centered()),
+            )
+            .gauge_style(self.green)
+            .ratio(iteration as f64 / max_iteration)
+            .label(Span::styled(
+                format!("{}/{}", iteration, max_iteration),
+                Style::new().bold().fg(self.font_color),
+            ));
+        frame.render_widget(g, area);
     }
 
     fn render_matrix(&self, frame: &mut Frame, area: Rect) {
