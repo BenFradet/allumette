@@ -91,6 +91,9 @@ pub struct VizDebugger {
     loss_labels: [String; 3],
     iteration_bounds: [f64; 2],
     iteration_labels: [String; 3],
+    font_color: Color,
+    green: Color,
+    red: Color,
 }
 
 impl VizDebugger {
@@ -135,6 +138,9 @@ impl VizDebugger {
             loss_labels,
             iteration_bounds,
             iteration_labels,
+            font_color: tailwind::SLATE.c200,
+            green: tailwind::EMERALD.c600,
+            red: tailwind::ROSE.c700,
         }
     }
 
@@ -176,19 +182,9 @@ impl VizDebugger {
     fn render_matrix(&self, frame: &mut Frame, area: Rect) {
         let state = self.state.lock().unwrap();
 
-        let header_row_style = Style::default()
-            .fg(tailwind::SLATE.c200)
-            .bg(tailwind::EMERALD.c900);
-        let header_col_style = Style::default()
-            .fg(tailwind::SLATE.c200)
-            .bg(tailwind::AMBER.c800);
-        let neutral_style = Style::default().fg(tailwind::SLATE.c200);
-        let green_style = Style::default()
-            .fg(tailwind::SLATE.c200)
-            .bg(tailwind::GREEN.c400);
-        let red_style = Style::default()
-            .fg(tailwind::SLATE.c200)
-            .bg(tailwind::RED.c400);
+        let neutral_style = Style::default().fg(self.font_color);
+        let green_style = Style::default().fg(self.font_color).bg(self.green);
+        let red_style = Style::default().fg(self.font_color).bg(self.red);
 
         let header_row = [
             Cell::from(Self::lines(format!(
@@ -200,19 +196,19 @@ impl VizDebugger {
                 "Predicted positive PP = {}",
                 state.tps.len() + state.fps.len()
             )))
-            .style(header_row_style),
+            .style(neutral_style),
             Cell::from(Self::lines(format!(
                 "Predicted negative PN = {}",
                 state.fns.len() + state.tns.len()
             )))
-            .style(header_row_style),
+            .style(neutral_style),
         ]
         .into_iter()
         .collect::<Row>()
         .height(5);
         let second_row = [
             Cell::from(Self::lines(format!("Actual positive P = {}", self.ps)))
-                .style(header_col_style),
+                .style(neutral_style),
             Cell::from(Self::lines(format!(
                 "True positive TP = {}",
                 state.tps.len()
@@ -229,7 +225,7 @@ impl VizDebugger {
         .height(5);
         let third_row = [
             Cell::from(Self::lines(format!("Actual negative N = {}", self.ns)))
-                .style(header_col_style),
+                .style(neutral_style),
             Cell::from(Self::lines(format!(
                 "False positive FP = {}",
                 state.fps.len()
@@ -253,7 +249,15 @@ impl VizDebugger {
                 Constraint::Min(28),
             ],
         )
-        .block(Block::bordered().title(Line::from("Confusion matrix").cyan().bold().centered()));
+        .block(
+            Block::bordered().title(
+                Line::from("Confusion matrix")
+                    .fg(self.font_color)
+                    .bold()
+                    .centered(),
+            ),
+        )
+        .column_spacing(0);
         frame.render_widget(t, area);
     }
 
@@ -292,7 +296,14 @@ impl VizDebugger {
         ];
 
         let chart = Chart::new(datasets)
-            .block(Block::bordered().title(Line::from("Classification").cyan().bold().centered()))
+            .block(
+                Block::bordered().title(
+                    Line::from("Classification")
+                        .fg(self.font_color)
+                        .bold()
+                        .centered(),
+                ),
+            )
             .x_axis(
                 Axis::default()
                     .title("x")
@@ -325,7 +336,9 @@ impl VizDebugger {
         ];
 
         let chart = Chart::new(datasets)
-            .block(Block::bordered().title(Line::from("Loss").cyan().bold().centered()))
+            .block(
+                Block::bordered().title(Line::from("Loss").fg(self.font_color).bold().centered()),
+            )
             .x_axis(
                 Axis::default()
                     .title("iteration")
@@ -345,6 +358,7 @@ impl VizDebugger {
         frame.render_widget(chart, area);
     }
 
+    // ratatui only supports 2 or 3 axis labels
     fn axis_labels(min: f64, max: f64) -> [String; 3] {
         let range = max - min;
         let interval = range / 2.;
@@ -363,13 +377,6 @@ impl VizDebugger {
                 .to_string(),
         ]
     }
-
-    // ratatui only supports 2 or 3 axis labels
-    //fn axis_labels(n: u8, min: f64, max: f64) -> Vec<String> {
-    //    let range = max - min;
-    //    let interval = range / n as f64;
-    //    (0..n).map(|i| (min + i as f64 * interval).to_string()).collect()
-    //}
 }
 
 impl Clone for VizDebugger {
@@ -387,6 +394,9 @@ impl Clone for VizDebugger {
             loss_labels: self.loss_labels.clone(),
             iteration_bounds: self.iteration_bounds,
             iteration_labels: self.iteration_labels.clone(),
+            font_color: self.font_color,
+            green: self.green,
+            red: self.red,
         }
     }
 }
@@ -434,7 +444,6 @@ mod tests {
     #[test]
     fn test_axis_labels() {
         let labels = VizDebugger::axis_labels(5., 10.);
-        //let labels = VizDebugger::axis_labels(4, 5., 10.);
         assert_eq!(vec!["5", "7.5", "10"], labels);
     }
 }
