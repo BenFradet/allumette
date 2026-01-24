@@ -435,11 +435,14 @@ impl<'a, B: Backend> Debugger<'a, B> for VizDebugger {
         start_time: Instant,
     ) {
         let mut state = self.state.lock().unwrap();
+
+        let total_loss = total_loss(loss);
+        state.loss.push((iterations.0 as f64, total_loss.tof()));
+
         state.tns.push((1., 1.));
         state.fps.push((2., 2.));
         state.fns.push((3., 3.));
         state.tps.push((4., 4.));
-        state.loss.push((5., 5.));
     }
 }
 
