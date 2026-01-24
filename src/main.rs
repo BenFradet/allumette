@@ -11,9 +11,9 @@ use allumette::{
 
 fn main() -> Result<(), Error> {
     let pts = 1000;
-    let dataset = Dataset::simple(pts);
+    let dataset = Dataset::diag(pts);
     let hidden_layer_size = 3;
-    let learning_rate = 0.1;
+    let learning_rate = 0.2;
     let iterations = 200;
 
     let mut debugger = VizDebugger::new(&dataset, iterations);

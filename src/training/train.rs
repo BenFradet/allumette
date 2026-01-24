@@ -35,6 +35,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     for iteration in 1..iterations + 1 {
         network.zero();
 
+        // c.f. https://docs.pytorch.org/docs/stable/generated/torch.nn.BCELoss.html
         let out = network.forward(features.clone()).view(&n_shape);
         let prob = (out.clone() * labels.clone())
             + (out.clone() - ones.clone()) * (labels.clone() - ones.clone());

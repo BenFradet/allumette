@@ -81,6 +81,7 @@ pub struct VizState {
 
 pub struct VizDebugger {
     state: Arc<Mutex<VizState>>,
+    features: Vec<(f64, f64)>,
     ps: usize,
     ns: usize,
     n: usize,
@@ -99,14 +100,17 @@ pub struct VizDebugger {
 
 impl VizDebugger {
     pub fn new<E: Element>(d: &ClassificationDataset<E>, iterations: usize) -> VizDebugger {
-        let (x_bounds, y_bounds) = d.features.iter().fold(
+        let (features, x_bounds, y_bounds) = d.features.iter().fold(
             (
+                vec![],
                 [f64::INFINITY, f64::NEG_INFINITY],
                 [f64::INFINITY, f64::NEG_INFINITY],
             ),
-            |([min_x, max_x], [min_y, max_y]), (x, y)| {
+            |(mut feats, [min_x, max_x], [min_y, max_y]), (x, y)| {
                 let (xf, yf) = (x.tof(), y.tof());
+                feats.push((xf, yf));
                 (
+                    feats,
                     [min_x.min(xf), max_x.max(xf)],
                     [min_y.min(yf), max_y.max(yf)],
                 )
@@ -128,6 +132,7 @@ impl VizDebugger {
 
         Self {
             state: Arc::new(Mutex::new(VizState::default())),
+            features,
             ps,
             ns,
             n: d.n,
@@ -199,7 +204,7 @@ impl VizDebugger {
             .ratio(iteration as f64 / max_iteration)
             .label(Span::styled(
                 format!("{}/{}", iteration, max_iteration),
-                Style::new().bold().fg(self.font_color),
+                Style::new().fg(self.font_color),
             ));
         frame.render_widget(g, area);
     }
@@ -298,25 +303,25 @@ impl VizDebugger {
                 .name("× True Positives")
                 .marker(Marker::Custom('×'))
                 .graph_type(GraphType::Scatter)
-                .style(Style::new().green())
+                .style(Style::new().fg(self.green))
                 .data(&state.tps),
             Dataset::default()
                 .name("× False Negatives")
                 .marker(Marker::Custom('×'))
                 .graph_type(GraphType::Scatter)
-                .style(Style::new().light_red())
+                .style(Style::new().fg(self.red))
                 .data(&state.fns),
             Dataset::default()
                 .name("• True Negatives")
                 .marker(Marker::Dot)
                 .graph_type(GraphType::Scatter)
-                .style(Style::new().light_green())
+                .style(Style::new().fg(self.green))
                 .data(&state.tns),
             Dataset::default()
                 .name("• False Positives")
                 .marker(Marker::Dot)
                 .graph_type(GraphType::Scatter)
-                .style(Style::new().red())
+                .style(Style::new().fg(self.red))
                 .data(&state.fps),
         ];
 
@@ -408,6 +413,7 @@ impl Clone for VizDebugger {
     fn clone(&self) -> Self {
         VizDebugger {
             state: Arc::clone(&self.state),
+            features: self.features.clone(),
             ps: self.ps,
             ns: self.ns,
             n: self.n,
@@ -433,7 +439,7 @@ impl<'a, B: Backend> Debugger<'a, B> for VizDebugger {
         labels: &Tensor<'a, B>,
         output: &Tensor<'a, B>,
         iterations: (usize, usize),
-        start_time: Instant,
+        _start_time: Instant,
     ) {
         let mut state = self.state.lock().unwrap();
 
@@ -443,19 +449,20 @@ impl<'a, B: Backend> Debugger<'a, B> for VizDebugger {
         let output = output.data.collect();
         let labels = labels.data.collect();
 
-        let (tps, fps, tns, fns) = output.iter().zip(labels).fold(
+        let (tps, fps, tns, fns) = output.iter().zip(labels).enumerate().fold(
             (vec![], vec![], vec![], vec![]),
-            |(mut tps, mut fps, mut tns, mut fns), (p, l)| {
+            |(mut tps, mut fps, mut tns, mut fns), (i, (p, l))| {
                 let pf = p.tof();
                 let lf = l.tof();
+                let feat = self.features[i];
                 if pf > 0.5 && lf == 1. {
-                    tps.push((0.25, 0.75));
+                    tps.push(feat);
                 } else if pf < 0.5 && lf == 1. {
-                    fps.push((0.25, 0.25));
+                    fns.push(feat);
                 } else if pf < 0.5 && lf == 0. {
-                    tns.push((0.75, 0.25));
+                    tns.push(feat);
                 } else if pf > 0.5 && lf == 0. {
-                    fns.push((0.75, 0.75));
+                    fps.push(feat);
                 }
                 (tps, fps, tns, fns)
             },
@@ -465,6 +472,9 @@ impl<'a, B: Backend> Debugger<'a, B> for VizDebugger {
         state.fps = fps;
         state.tns = tns;
         state.fns = fns;
+
+        // purposefully slow down the training so that learning is visible
+        std::thread::sleep(Duration::from_millis(250));
     }
 }
 
