@@ -12,6 +12,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Axis, Block, Cell, Chart, Dataset, Gauge, GraphType, Row, Table};
 
 use crate::backend::{backend::Backend, mode::Mode};
+use crate::data::tensor_data::TensorData;
 use crate::shaping::shape::Shape;
 use crate::training::dataset::Dataset as ClassificationDataset;
 use crate::{math::element::Element, tensor::Tensor};
@@ -439,10 +440,31 @@ impl<'a, B: Backend> Debugger<'a, B> for VizDebugger {
         let total_loss = total_loss(loss);
         state.loss.push((iterations.0 as f64, total_loss.tof()));
 
-        state.tns.push((1., 1.));
-        state.fps.push((2., 2.));
-        state.fns.push((3., 3.));
-        state.tps.push((4., 4.));
+        let output = output.data.collect();
+        let labels = labels.data.collect();
+
+        let (tps, fps, tns, fns) = output.iter().zip(labels).fold(
+            (vec![], vec![], vec![], vec![]),
+            |(mut tps, mut fps, mut tns, mut fns), (p, l)| {
+                let pf = p.tof();
+                let lf = l.tof();
+                if pf > 0.5 && lf == 1. {
+                    tps.push((0.25, 0.75));
+                } else if pf < 0.5 && lf == 1. {
+                    fps.push((0.25, 0.25));
+                } else if pf < 0.5 && lf == 0. {
+                    tns.push((0.75, 0.25));
+                } else if pf > 0.5 && lf == 0. {
+                    fns.push((0.75, 0.75));
+                }
+                (tps, fps, tns, fns)
+            },
+        );
+
+        state.tps = tps;
+        state.fps = fps;
+        state.tns = tns;
+        state.fns = fns;
     }
 }
 
