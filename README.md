@@ -16,7 +16,7 @@ It is inspired by a small cohort of projects:
 
 ```rust
 use allumette::{
-    backend::backend::{CpuParBackend, CpuSeqBackend, GpuBackend},
+    backend::backend::GpuBackend,
     training::{
         dataset::Dataset,
         debugger::ChattyDebugger,
@@ -40,6 +40,49 @@ fn main() {
 }
 ```
 
+#### Visual debugger
+
+There is also a visual debugger built with ratatui.
+
+```rust
+use std::io::Error;
+
+use allumette::{
+    backend::backend::CpuSeqBackend,
+    training::{
+        dataset::Dataset,
+        debugger::VizDebugger,
+        train,
+    },
+};
+
+fn main() -> Result<(), Error> {
+    let pts = 1000;
+    let dataset = Dataset::diag(pts);
+    let hidden_layer_size = 3;
+    let learning_rate = 0.2;
+    let iterations = 200;
+
+    let mut debugger = VizDebugger::new(&dataset, iterations);
+
+    let mut debugger_thread_clone = debugger.clone();
+
+    std::thread::spawn(move || {
+        train::train::<CpuSeqBackend, _>(
+            dataset,
+            learning_rate,
+            iterations,
+            hidden_layer_size,
+            &mut debugger_thread_clone,
+        );
+    });
+
+    debugger.run()
+}
+```
+
+![img](screenshot.png)
+
 ### Build and dependencies
 
 Part of the codebase makes use of the `generic_const_exprs` and `trait_alias` experimental features
@@ -50,7 +93,7 @@ The set of dependencies is otherwise pretty limited:
 - `rayon` for the parallel CPU runtime
 - `flume` and `futures` for wgpu callbacks
 - `bytemuck` to convert binary buffers copied to/from the GPU
-- `ratatui` for training visualization
+- `ratatui` for visualization
 - `proptest` for property-based testing
 - `rand` for synthetic data generation
 
@@ -59,7 +102,7 @@ The set of dependencies is otherwise pretty limited:
 - [x] parallel backend
 - [x] gpu backend
 - [x] associated types
-- [ ] visualization
+- [x] visualization
 - [ ] convolution
 - [ ] optimizations
 - [ ] const generics for tensor ranks

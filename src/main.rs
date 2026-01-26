@@ -11,7 +11,7 @@ use allumette::{
 
 fn main() -> Result<(), Error> {
     let pts = 1000;
-    let dataset = Dataset::diag(pts);
+    let dataset = Dataset::simple(pts);
     let hidden_layer_size = 3;
     let learning_rate = 0.2;
     let iterations = 200;
