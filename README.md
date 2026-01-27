@@ -1,6 +1,11 @@
-## allumette
+<h2 align="center">
+  <img src="logo.png" alt="log" width="100" height="100"/>
+  <br>
+  allumette
+</h2>
 
-`allumette` is a toy tensor library built for fun to better understand autodifferentiation.
+`allumette`, French for match, is a toy tensor library built for fun to better understand
+tensors and autodifferentiation.
 
 It is inspired by a small cohort of projects:
 
