@@ -114,7 +114,7 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
         let x = Self::make_points(n);
         let mut y = vec![];
         let center = E::fromf(0.5);
-        let radius_sq = E::fromf(0.25);
+        let radius_sq = E::fromf(0.20);
         for (x1, x2) in &x {
             let (x1p, x2p) = (*x1 - center, *x2 - center);
             let y1 = if x1p * x1p + x2p * x2p < radius_sq {

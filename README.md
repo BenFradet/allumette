@@ -17,8 +17,6 @@ It is inspired by a small cohort of projects:
 
 ### Usage
 
-[Dataset](./src/training/dataset.rs) provides a few ways to create synthetic datasets.
-
 ```rust
 use allumette::{
     backend::backend::GpuBackend,
@@ -35,7 +33,10 @@ fn main() {
     let hidden_layer_size = 3;
     let learning_rate = 0.1;
     let iterations = 200;
-    // use CpuParBackend to leverage rayon's parallel iterators on cpu
+    // you have a choice of backend:
+    // - CpuSeqBackend for sequential training
+    // - CpuParBackend to leverage rayon's parallel iterators
+    // - GpuBackend as below
     train::train::<GpuBackend, ChattyDebugger>(
         dataset,
         learning_rate,
@@ -44,6 +45,8 @@ fn main() {
     );
 }
 ```
+
+[Dataset](./src/training/dataset.rs) provides a few ways to create synthetic datasets.
 
 #### Visual debugger
 
@@ -90,8 +93,7 @@ fn main() -> Result<(), Error> {
 
 ### Build and dependencies
 
-Part of the codebase makes use of the `generic_const_exprs` and `trait_alias` experimental features
-so it requires nightly.
+Part of the codebase makes use of the `trait_alias` experimental features so it requires nightly.
 
 The set of dependencies is otherwise pretty limited:
 - `wgpu` for the GPU runtime

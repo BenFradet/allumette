@@ -10,11 +10,11 @@ use allumette::{
 };
 
 fn main() -> Result<(), Error> {
-    let pts = 1000;
-    let dataset = Dataset::simple(pts);
-    let hidden_layer_size = 3;
+    let pts = 400;
+    let dataset = Dataset::circle(pts);
+    let hidden_layer_size = 30;
     let learning_rate = 0.2;
-    let iterations = 200;
+    let iterations = 400;
 
     let mut debugger = VizDebugger::new(&dataset, iterations);
 

@@ -472,9 +472,6 @@ impl<'a, B: Backend> Debugger<'a, B> for VizDebugger {
         state.fps = fps;
         state.tns = tns;
         state.fns = fns;
-
-        // purposefully slow down the training so that learning is visible
-        std::thread::sleep(Duration::from_millis(250));
     }
 }
 
