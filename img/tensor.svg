@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" viewBox="60 -15 544 306">
+ <title>Tensor dimensions</title>
+ <desc>Comparison of the first five orders of tensors by CMG Lee.</desc>
+ <style type="text/css">
+svg   { font-family:'Liberation Sans',Helvetica,Arial,sans-serif; font-size:24px; letter-spacing:-1px; text-anchor:middle; fill:none; stroke:#000; }
+text  { fill:#000; stroke:none; }
+.fmt  { font-family:'Computer Modern','Liberation Serif',Bodoni,serif; }
+.name { font-style:italic; }
+.fade { filter:url(#filter_fade); }
+ </style>
+ <defs>
+  <filter id="filter_fade">
+   <feColorMatrix type="matrix" values="0.8,0,0,0,0.2 0,0.8,0,0,0.2 0,0,0.8,0,0.2 0,0,0,1,0"/>
+  </filter>
+  <pattern id="pattern_grid" patternUnits="userSpaceOnUse" width="10" height="10">
+   <rect width="10" height="10" fill="#96f" stroke="#639"/>
+  </pattern>
+  <g id="grid4">
+   <g class="fade"><g class="fade"><use class="fade" xlink:href="#grid1" transform="translate(15,-15)"/></g></g>
+   <g class="fade"><use class="fade" xlink:href="#grid1" transform="translate(10,-10)"/></g>
+   <use class="fade" xlink:href="#grid1" transform="translate( 5, -5)"/>
+   <rect id="grid1" x="0" y="0" width="30" height="20" fill="url(#pattern_grid)"/>
+  </g>
+  <g id="bracket1r" transform="scale(-1)">
+   <path id="bracket1l" d="M  -8,-30 h -6 v  60 h 6"/>
+  </g>
+  <g id="bracket2r" transform="scale(-1)">
+   <path id="bracket2l" d="M -14,-70 h -6 v 140 h 6"/>
+  </g>
+ </defs>
+ <circle cx="0" cy="0" r="99999" fill="#fff"/>
+ <text transform="translate(590,5)" y="0.7ex" font-size="16"
+  >...<tspan x="-490" dy="200">ALGEBRA</tspan
+  ><tspan x="-445" dy="25">VECTOR &#8201;ALGEBRA</tspan
+  ><tspan x="-395" dy="25">MATRIX &#8201;ALGEBRA</tspan
+  ><tspan x="-255" dy="25">TENSOR &#8201;ALGEBRA</tspan></text>
+ <path d="M 135,190 v 4 h -70 v -4 m 0,25 v 4 h 160 v -4 m 100,25 v 4 h -260 v -4 m 0,25 v 4 h 533 v -4"/>
+ <g transform="translate(100,0)">
+  <text y="0.6ex">Order-0<tspan x="0" dy="20">tensor&#8202;:</tspan
+   ><tspan x="0" dy="25" class="name">Scalar</tspan
+   ><tspan x="0" dy="55" class="fmt" font-style="italic">a</tspan
+   ><tspan x="0" dy="55">1</tspan></text>
+  <rect transform="translate(-5,67)" x="0" y="0" width="10" height="10" fill="url(#pattern_grid)"/>
+ </g>
+ <g transform="translate(195,0)">
+  <text y="0.6ex">Order-1<tspan x="0" dy="20">tensor&#8202;:</tspan
+   ><tspan x="0" dy="25" class="name">Vector</tspan
+   ><tspan x="0" dy="55" class="fmt" font-weight="bold">a</tspan
+   ><tspan x="0" dy="40">1</tspan
+   ><tspan x="0" dy="30">2</tspan></text>
+  <use xlink:href="#bracket1l" transform="translate(0,155)"/>
+  <use xlink:href="#bracket1r" transform="translate(0,155)"/>
+  <rect transform="translate(-5,62)" x="0" y="0" width="10" height="20" fill="url(#pattern_grid)"/>
+ </g>
+ <g transform="translate(290,0)">
+  <text y="0.6ex">Order-2<tspan x="0" dy="20">tensor&#8202;:</tspan
+   ><tspan x="0" dy="25" class="name">Matrix</tspan
+   ><tspan x="0" dy="55" class="fmt" font-weight="bold">A</tspan
+   ><tspan x="-20" dy="40">1</tspan><tspan x="20">3</tspan
+   ><tspan x="-20" dy="30">2</tspan><tspan x="20">4</tspan></text>
+  <use xlink:href="#bracket1l" transform="translate(-20,155)"/>
+  <use xlink:href="#bracket1r" transform="translate( 20,155)"/>
+  <use xlink:href="#grid1"     transform="translate(-15, 62)"/>
+ </g>
+ <g transform="translate(395,0)">
+  <text y="0.6ex">Order-3<tspan x="0" dy="20">tensor</tspan
+   ><tspan x="0" dy="80" class="fmt" font-weight="bold">a, A</tspan
+   ><tspan x="-20" dy="40">1</tspan><tspan x="20">3</tspan
+   ><tspan x="-20" dy="30">5</tspan><tspan x="20">7</tspan
+   ><tspan x="-20" dy="40">2</tspan><tspan x="20">4</tspan
+   ><tspan x="-20" dy="30">6</tspan><tspan x="20">8</tspan></text>
+  <use xlink:href="#bracket1l" transform="translate(-20,155)"/>
+  <use xlink:href="#bracket1r" transform="translate(-20,155)"/>
+  <use xlink:href="#bracket1l" transform="translate( 20,155)"/>
+  <use xlink:href="#bracket1r" transform="translate( 20,155)"/>
+  <use xlink:href="#bracket1l" transform="translate(-20,225)"/>
+  <use xlink:href="#bracket1r" transform="translate(-20,225)"/>
+  <use xlink:href="#bracket1l" transform="translate( 20,225)"/>
+  <use xlink:href="#bracket1r" transform="translate( 20,225)"/>
+  <use xlink:href="#bracket2l" transform="translate(-20,190)"/>
+  <use xlink:href="#bracket2r" transform="translate( 20,190)"/>
+  <use xlink:href="#grid4"     transform="translate(-20, 62)"/>
+ </g>
+ <g transform="translate(515,0)">
+  <text y="0.6ex">Order-4<tspan x="0" dy="20">tensor</tspan
+   ><tspan x="0" dy="80" class="fmt" font-weight="bold">a, A</tspan
+   ><tspan x="-40" dy="40">1,</tspan><tspan x="-12" >9</tspan><tspan x="18">3,</tspan><tspan x="40">11</tspan
+   ><tspan x="-40" dy="30">5,</tspan><tspan x="-18">13</tspan><tspan x="18">7,</tspan><tspan x="40">15</tspan
+   ><tspan x="-40" dy="40">2,</tspan><tspan x="-18">10</tspan><tspan x="18">4,</tspan><tspan x="40">12</tspan
+   ><tspan x="-40" dy="30">6,</tspan><tspan x="-18">14</tspan><tspan x="18">8,</tspan><tspan x="40">16</tspan></text>
+  <text transform="translate(0,75)" y="0.6ex">...</text>
+  <use xlink:href="#bracket1l" transform="translate(-40,155)"/>
+  <use xlink:href="#bracket1r" transform="translate(-15,155)"/>
+  <use xlink:href="#bracket1l" transform="translate( 19,155)"/>
+  <use xlink:href="#bracket1r" transform="translate( 42,155)"/>
+  <use xlink:href="#bracket1l" transform="translate(-40,225)"/>
+  <use xlink:href="#bracket1r" transform="translate(-15,225)"/>
+  <use xlink:href="#bracket1l" transform="translate( 19,225)"/>
+  <use xlink:href="#bracket1r" transform="translate( 42,225)"/>
+  <use xlink:href="#bracket2l" transform="translate(-40,190)"/>
+  <use xlink:href="#bracket2r" transform="translate( 42,190)"/>
+  <use xlink:href="#grid4"     transform="translate(-45, 62)"/>
+  <use xlink:href="#grid4"     transform="translate( 15, 62)"/>
+ </g>
+</svg>

@@ -1,5 +1,5 @@
 <h2 align="center">
-  <img src="logo.png" alt="log" width="100" height="100"/>
+  <img src="img/logo.png" alt="log" width="100" height="100"/>
   <br>
   allumette
 </h2>
@@ -89,7 +89,7 @@ fn main() -> Result<(), Error> {
 }
 ```
 
-![img](screenshot.png)
+![img](img/screenshot.png)
 
 ### Build and dependencies
 
