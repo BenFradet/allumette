@@ -2,6 +2,10 @@
 theme:
   name: catppuccin-macchiato
   override:
+    typst:
+      colors:
+        background: cad3f500
+        foreground: cad3f5
     footer:
       style: template
       left:
