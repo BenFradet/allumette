@@ -13,6 +13,9 @@ theme:
       center: '**allumette**'
       right: "{current_slide} / {total_slides}"
       height: 3
+    code:
+      padding:
+        vertical: 0
 options:
   end_slide_shorthand: true
 ---
@@ -60,20 +63,7 @@ credit: Cmglee, GNU FDL
 What does a tensor look like in rust?
 ===
 
-<!-- column_layout: [1, 1] -->
-
-<!-- column: 0 -->
-```rust
-struct Tensor {
-    data: Vec<f64>,
-    shape: Shape,
-    strides: Strides,
-}
-```
-<!-- pause -->
-
-<!-- column: 1 -->
-```typst +render +width:100%
+```typst +render +width:40%
 #set table(
   stroke: none,
   inset: -1pt,
@@ -102,21 +92,65 @@ struct Tensor {
   [$mat(delim: "[", 11, 12; 13, 14)$], [#cell(dy: 1em)], [], [],
 )
 ```
+<!-- newlines: 1 -->
+<!-- pause -->
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+```rust +no_background
+struct Tensor {
+    data: Vec<f64>,
+    shape: Shape,
+    strides: Strides,
+}
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+```rust +no_background
+let data = vec![
+    11., 12., 13., 14.,
+    21., 22., 23., 24.,
+    31., 32., 33., 34.,
+    41., 42., 43., 44.
+];
+```
 <!-- pause -->
 
 <!-- column: 0 -->
-```rust
+<!-- newlines: 1 -->
+```rust +no_background
 struct Shape {
     data: Vec<usize>,
 }
 ```
-
 <!-- pause -->
 
-```rust
+<!-- column: 1 -->
+```rust +no_background
+let shape = Shape::new(vec![4, 2, 2]);
+```
+<!-- pause -->
+
+<!-- column: 0 -->
+```rust +no_background
 struct Strides {
     data: Vec<usize>,
 }
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+<!-- newlines: 2 -->
+```rust +no_background
+let strides = Strides::new(vec![4, 2, 1]);
+```
+<!-- pause -->
+
+<!-- reset_layout -->
+```rust +no_background
+let tensor = Tensor { data, shape, strides };
 ```
 
 ---
