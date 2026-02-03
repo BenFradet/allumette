@@ -1,9 +1,9 @@
 use crate::{
     autodiff::history::History,
     backend::{backend::Backend, mode::Mode},
-    storage::data::Data,
     math::element::Element,
     shaping::shape::Shape,
+    storage::data::Data,
     tensor::Tensor,
 };
 
@@ -117,8 +117,8 @@ impl<'a, B: Backend> Layer<'a, B> {
 mod tests {
     use crate::{
         backend::backend::{CpuSeqBackend, GpuBackend},
-        storage::{cpu_data::CpuData, gpu_data::GpuData},
         shaping::strides::Strides,
+        storage::{cpu_data::CpuData, gpu_data::GpuData},
         wgpu::wgpu_context::get_wgpu_context,
     };
 

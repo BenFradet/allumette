@@ -4,17 +4,15 @@ use crate::{
         backend::{Backend, GpuBackend},
         mode::Mode,
     },
-    storage::{
-        cpu_data::CpuData, gpu_data::GpuData, data::Data,
-    },
     fns::{
         binary::{Add, All, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
         function::Function,
         unary::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
     math::element::Element,
-    ops::tensor_ops::Ops,
+    ops::ops::Ops,
     shaping::{order::Order, shape::Shape, strides::Strides},
+    storage::{cpu_data::CpuData, data::Data, gpu_data::GpuData},
     util::{tensor_id::TensorId, unsafe_usize_convert::UnsafeUsizeConvert},
     wgpu::wgpu_context::get_wgpu_context,
 };
@@ -75,10 +73,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     pub fn from_scalar(data: B::Element) -> Self {
-        Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_scalar(
-            data,
-        ))
-        .make_constant()
+        Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_scalar(data)).make_constant()
     }
 
     pub fn from_shape(data: &[B::Element], shape: Shape) -> Self {
@@ -340,14 +335,12 @@ impl<'a, B: Backend> Tensor<'a, B> {
         match dim {
             Some(d) => {
                 let d = UnsafeUsizeConvert::unsafe_from(self.data.shape()[d]);
-                let div =
-                    Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_scalar(d));
+                let div = Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_scalar(d));
                 self.sum(dim) / div
             }
             None => {
                 let s = UnsafeUsizeConvert::unsafe_from(self.size());
-                let div =
-                    Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_scalar(s));
+                let div = Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_scalar(s));
                 self.sum(None) / div
             }
         }
@@ -529,12 +522,7 @@ impl<'a> Tensor<'a, GpuBackend> {
                         strides.clone(),
                         get_wgpu_context(),
                     )),
-                    Self::from_data(GpuData::new(
-                        &data2,
-                        shape,
-                        strides,
-                        get_wgpu_context(),
-                    )),
+                    Self::from_data(GpuData::new(&data2, shape, strides, get_wgpu_context())),
                 )
             })
     }
@@ -596,8 +584,8 @@ impl<'a, B: Backend> ops::Neg for Tensor<'a, B> {
 mod tests {
     use crate::{
         backend::backend::{CpuParBackend, CpuSeqBackend},
-        storage::gpu_data::GpuData,
         shaping::idx::Idx,
+        storage::gpu_data::GpuData,
     };
 
     use super::*;

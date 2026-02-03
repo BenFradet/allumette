@@ -1,10 +1,8 @@
 use crate::{
     backend::mode::{Gpu, Par, Seq},
-    storage::{
-        cpu_data::CpuData, gpu_data::GpuData, data::Data,
-    },
     math::element::Element,
-    ops::tensor_ops::Ops,
+    ops::ops::Ops,
+    storage::{cpu_data::CpuData, data::Data, gpu_data::GpuData},
     util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
@@ -14,10 +12,7 @@ use super::mode::Mode;
 pub trait Backend: Clone + std::fmt::Debug {
     type Element: Element + UnsafeUsizeConvert;
     type Mode: Mode;
-    type Storage<'a>: Ops<Self::Element, Self::Mode>
-        + Data<Self::Element>
-        + Clone
-        + std::fmt::Debug
+    type Storage<'a>: Ops<Self::Element, Self::Mode> + Data<Self::Element> + Clone + std::fmt::Debug
     where
         Self: 'a;
 }

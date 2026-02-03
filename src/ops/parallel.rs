@@ -4,9 +4,9 @@ use rayon::prelude::*;
 
 use crate::{
     backend::mode::Par,
-    storage::cpu_data::CpuData,
-    ops::tensor_ops::Ops,
+    ops::ops::Ops,
     shaping::{shape::Shape, strides::Strides},
+    storage::cpu_data::CpuData,
 };
 
 impl Ops<f64, Par> for CpuData {

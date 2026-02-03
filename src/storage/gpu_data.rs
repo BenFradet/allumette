@@ -10,8 +10,8 @@ use wgpu::{
 };
 
 use crate::{
-    storage::data::Data,
     shaping::{order::Order, shape::Shape, strides::Strides},
+    storage::data::Data,
     wgpu::wgpu_context::{WgpuContext, get_wgpu_context},
 };
 

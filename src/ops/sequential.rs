@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     backend::mode::Seq,
-    storage::{cpu_data::CpuData, data::Data},
-    ops::tensor_ops::Ops,
+    ops::ops::Ops,
     shaping::{shape::Shape, strides::Strides},
+    storage::{cpu_data::CpuData, data::Data},
 };
 
 impl Ops<f64, Seq> for CpuData {

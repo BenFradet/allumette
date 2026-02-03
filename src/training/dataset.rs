@@ -1,8 +1,8 @@
 use rand::{Rng, thread_rng};
 
 use crate::backend::backend::Backend;
-use crate::storage::data::Data;
 use crate::shaping::shape::Shape;
+use crate::storage::data::Data;
 use crate::util::unsafe_usize_convert::UnsafeUsizeConvert;
 use crate::{math::element::Element, tensor::Tensor};
 

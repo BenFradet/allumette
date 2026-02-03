@@ -1,8 +1,8 @@
 use wgpu::BufferUsages;
 
 use crate::{
-    backend::mode::Gpu, storage::gpu_data::GpuData, ops::tensor_ops::Ops,
-    shaping::shape::Shape, wgpu::workgroup_info::WorkgroupInfo,
+    backend::mode::Gpu, ops::ops::Ops, shaping::shape::Shape, storage::gpu_data::GpuData,
+    wgpu::workgroup_info::WorkgroupInfo,
 };
 
 // TODO: abstract fn, they're all doing mostly the same

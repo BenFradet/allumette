@@ -2,10 +2,10 @@ use crate::{autodiff::context::Context, backend::backend::Backend};
 
 use crate::{
     backend::mode::Mode,
-    storage::data::Data,
     math::element::Element,
-    ops::tensor_ops::Ops,
+    ops::ops::Ops,
     shaping::{order::Order, shape::Shape},
+    storage::data::Data,
     util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
 
@@ -272,9 +272,10 @@ impl<'a, B: Backend> Binary<'a, B> for Permute {
             .collect();
         let inverse_order_td = <B::Storage<'a> as Data<B::Element>>::from_1d(&inverse_data);
         (
-            d.permute(&inverse_order_td).unwrap_or(
-                <B::Storage<'a> as Data<B::Element>>::ones(d.shape().clone()),
-            ),
+            d.permute(&inverse_order_td)
+                .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
+                    d.shape().clone(),
+                )),
             <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::zero()),
         )
     }

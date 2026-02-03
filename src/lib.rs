@@ -4,6 +4,7 @@ pub mod autodiff;
 pub mod backend;
 pub mod fns;
 pub mod math;
+#[allow(clippy::module_inception)]
 pub mod ops;
 pub mod optim;
 pub mod shaping;

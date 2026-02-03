@@ -12,8 +12,8 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Axis, Block, Cell, Chart, Dataset, Gauge, GraphType, Row, Table};
 
 use crate::backend::{backend::Backend, mode::Mode};
-use crate::storage::data::Data;
 use crate::shaping::shape::Shape;
+use crate::storage::data::Data;
 use crate::training::dataset::Dataset as ClassificationDataset;
 use crate::{math::element::Element, tensor::Tensor};
 
