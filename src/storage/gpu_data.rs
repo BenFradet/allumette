@@ -21,8 +21,6 @@ pub struct GpuData<'a> {
     pub shape: Shape,
     pub strides: Strides,
     pub context: &'a WgpuContext,
-    // TODO: rm, used for debugging
-    init: Vec<f32>,
 }
 
 impl<'a> GpuData<'a> {
@@ -32,13 +30,11 @@ impl<'a> GpuData<'a> {
             contents: bytemuck::cast_slice(data),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         });
-        let init = data.to_vec();
         Self {
             buffer: Arc::new(buffer),
             shape,
             strides,
             context,
-            init,
         }
     }
 
@@ -49,13 +45,11 @@ impl<'a> GpuData<'a> {
             contents: bytemuck::cast_slice(data),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         });
-        let init = data.to_vec();
         Self {
             buffer: Arc::new(buffer),
             shape,
             strides,
             context,
-            init,
         }
     }
 
@@ -70,7 +64,6 @@ impl<'a> GpuData<'a> {
             shape,
             strides,
             context,
-            init: vec![],
         }
     }
 
@@ -80,7 +73,6 @@ impl<'a> GpuData<'a> {
             shape: self.shape.clone(),
             strides: self.strides.clone(),
             context: self.context,
-            init: self.init.clone(),
         }
     }
 
@@ -212,7 +204,6 @@ impl Data<f32> for GpuData<'_> {
             shape,
             strides,
             context: self.context,
-            init: self.init.clone(),
         }
     }
 
@@ -235,7 +226,6 @@ impl Data<f32> for GpuData<'_> {
                 // != (&Shape).into()
                 strides: Strides::new(new_strides),
                 context: self.context,
-                init: self.init.clone(),
             })
         } else {
             None

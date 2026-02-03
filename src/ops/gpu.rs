@@ -138,7 +138,7 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         &self,
         _f: F,
         dim: usize,
-        init: f32,
+        zero: f32,
         tag: &'static str,
     ) -> Option<Self>
     where
@@ -159,7 +159,7 @@ impl Ops<f32, Gpu> for GpuData<'_> {
 
             let pipeline =
                 self.context
-                    .get_or_create_pipeline(tag, workgroup_info, 3, Some(init))?;
+                    .get_or_create_pipeline(tag, workgroup_info, 3, Some(zero))?;
             let bind_group_layout = pipeline.get_bind_group_layout(0);
             let metadata_buffer = self.context.create_metadata_buffer(
                 &[&self.shape, &shape],

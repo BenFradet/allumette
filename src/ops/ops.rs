@@ -19,7 +19,7 @@ pub trait Ops<E: Element, T: Mode> {
         &self,
         f: F,
         dim: usize,
-        init: E,
+        zero: E,
         tag: &'static str,
     ) -> Option<Self>
     where

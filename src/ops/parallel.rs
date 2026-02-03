@@ -76,7 +76,7 @@ impl Ops<f64, Par> for CpuData {
         &self,
         f: F,
         dim: usize,
-        init: f64,
+        zero: f64,
         _tag: &'static str,
     ) -> Option<Self> {
         if dim < self.shape.data().len() {
@@ -90,7 +90,7 @@ impl Ops<f64, Par> for CpuData {
                 .into_par_iter()
                 .map(|i| {
                     let out_idx = strides.idx(i);
-                    let mut tmp = init;
+                    let mut tmp = zero;
                     for j in 0..self.shape[dim] {
                         let mut self_idx = out_idx.clone();
                         self_idx[dim] = j;

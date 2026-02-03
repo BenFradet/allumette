@@ -69,7 +69,7 @@ impl Ops<f64, Seq> for CpuData {
         &self,
         f: F,
         dim: usize,
-        init: f64,
+        zero: f64,
         _tag: &'static str,
     ) -> Option<Self> {
         if dim < self.shape.data().len() {
@@ -78,7 +78,7 @@ impl Ops<f64, Seq> for CpuData {
             let shape = Shape::new(shape_data);
             let strides: Strides = (&shape).into();
             let len = shape.size;
-            let mut out = vec![init; len];
+            let mut out = vec![zero; len];
             for i in 0..len {
                 let out_idx = strides.idx(i);
                 let out_pos = strides.position(&out_idx);
