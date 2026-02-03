@@ -10,13 +10,13 @@ use wgpu::{
 };
 
 use crate::{
-    data::tensor_data::TensorData,
+    storage::data::Data,
     shaping::{order::Order, shape::Shape, strides::Strides},
     wgpu::wgpu_context::{WgpuContext, get_wgpu_context},
 };
 
 #[derive(Clone, Debug)]
-pub struct GpuTensorData<'a> {
+pub struct GpuData<'a> {
     pub buffer: Arc<Buffer>,
     pub shape: Shape,
     pub strides: Strides,
@@ -25,7 +25,7 @@ pub struct GpuTensorData<'a> {
     init: Vec<f32>,
 }
 
-impl<'a> GpuTensorData<'a> {
+impl<'a> GpuData<'a> {
     pub fn new(data: &[f32], shape: Shape, strides: Strides, context: &'a WgpuContext) -> Self {
         let buffer = context.device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Tensor new"),
@@ -168,7 +168,7 @@ impl<'a> GpuTensorData<'a> {
     }
 }
 
-impl TensorData<f32> for GpuTensorData<'_> {
+impl Data<f32> for GpuData<'_> {
     fn shape(&self) -> &Shape {
         &self.shape
     }
@@ -344,7 +344,7 @@ mod tests {
 
     // proptest macro is not picked up
     #[allow(dead_code)]
-    fn assert_tensor_eq(t1: &GpuTensorData, t2: &GpuTensorData) {
+    fn assert_tensor_eq(t1: &GpuData, t2: &GpuData) {
         assert_eq!(t1.shape, t2.shape);
         assert_eq!(t1.strides, t2.strides);
         assert_eq!(t1.to_cpu(), t2.to_cpu());
@@ -353,14 +353,14 @@ mod tests {
     proptest! {
         #[test]
         fn zeros_test(shape in Shape::arbitrary()) {
-            let zeros = GpuTensorData::zeros(shape.clone());
+            let zeros = GpuData::zeros(shape.clone());
             let zeros_cpu = zeros.to_cpu();
             assert_eq!(shape.size, zeros_cpu.len());
             assert!(zeros_cpu.iter().all(|f| *f == 0.));
         }
 
         #[test]
-        fn enumeration_test(tensor_data in GpuTensorData::arbitrary()) {
+        fn enumeration_test(tensor_data in GpuData::arbitrary()) {
             let indices: Vec<_> = tensor_data.indices().collect();
             let count = indices.len();
             assert_eq!(tensor_data.size(), count);
@@ -375,13 +375,13 @@ mod tests {
 
         #[test]
         fn permute_test(
-            tensor_data in Shape::arbitrary_static_size().prop_flat_map(GpuTensorData::arbitrary_with_shape),
+            tensor_data in Shape::arbitrary_static_size().prop_flat_map(GpuData::arbitrary_with_shape),
             idx in Idx::arbitrary_static_size(),
         ) {
             let reversed_index = idx.clone().reverse();
             let pos = tensor_data.strides.position(&idx);
             let order = Order::range(tensor_data.shape.data().len()).reverse();
-            let order_td = TensorData::from_1d(&order.data.iter().map(|u| *u as f32).collect::<Vec<_>>());
+            let order_td = Data::from_1d(&order.data.iter().map(|u| *u as f32).collect::<Vec<_>>());
             let perm_opt = tensor_data.permute(&order_td);
             assert!(perm_opt.is_some());
             let perm = perm_opt.unwrap();
@@ -398,7 +398,7 @@ mod tests {
         let data = vec![0.; 15];
         let shape = Shape::new(vec![3, 5]);
         let strides = Strides::new(vec![5, 1]);
-        let tensor = GpuTensorData::new(&data, shape, strides, get_wgpu_context());
+        let tensor = GpuData::new(&data, shape, strides, get_wgpu_context());
         assert!(tensor.is_contiguous());
         assert_eq!(Shape::new(vec![3, 5]), tensor.shape);
         assert_eq!(5, tensor.strides.position(&Idx::new(vec![1, 0])));
@@ -410,14 +410,14 @@ mod tests {
         let data = vec![0.; 15];
         let shape = Shape::new(vec![5, 3]);
         let strides = Strides::new(vec![1, 5]);
-        let tensor = GpuTensorData::new(&data, shape, strides, get_wgpu_context());
+        let tensor = GpuData::new(&data, shape, strides, get_wgpu_context());
         assert!(!tensor.is_contiguous());
         assert_eq!(Shape::new(vec![5, 3]), tensor.shape);
     }
 
     #[test]
     fn rand_test() {
-        let rand = GpuTensorData::rand(Shape::new(vec![2]));
+        let rand = GpuData::rand(Shape::new(vec![2]));
         let rand_cpu = rand.to_cpu();
         assert!(rand_cpu[0] != rand_cpu[1]);
     }

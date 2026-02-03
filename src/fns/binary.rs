@@ -2,7 +2,7 @@ use crate::{autodiff::context::Context, backend::backend::Backend};
 
 use crate::{
     backend::mode::Mode,
-    data::tensor_data::TensorData,
+    storage::data::Data,
     math::element::Element,
     ops::tensor_ops::Ops,
     shaping::{order::Order, shape::Shape},
@@ -23,7 +23,7 @@ pub struct Add;
 impl<'a, B: Backend> Binary<'a, B> for Add {
     fn forward(&self, a: &B::Storage<'a>, b: &B::Storage<'a>) -> B::Storage<'a> {
         a.zip(b, |e1, e2| e1 + e2, <Add as Binary<'a, B>>::tag(self))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 a.shape().clone(),
             ))
     }
@@ -45,7 +45,7 @@ pub struct Mul;
 impl<'a, B: Backend> Binary<'a, B> for Mul {
     fn forward(&self, a: &B::Storage<'a>, b: &B::Storage<'a>) -> B::Storage<'a> {
         a.zip(b, |e1, e2| e1 * e2, <Mul as Binary<'a, B>>::tag(self))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 a.shape().clone(),
             ))
     }
@@ -59,13 +59,13 @@ impl<'a, B: Backend> Binary<'a, B> for Mul {
             ctx.snd
                 .as_ref()
                 .and_then(|b| b.zip(d, |e1, e2| e1 * e2, <Mul as Binary<'a, B>>::tag(self)))
-                .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+                .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                     d.shape().clone(),
                 )),
             ctx.fst
                 .as_ref()
                 .and_then(|a| a.zip(d, |e1, e2| e1 * e2, <Mul as Binary<'a, B>>::tag(self)))
-                .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+                .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                     d.shape().clone(),
                 )),
         )
@@ -90,7 +90,7 @@ impl<'a, B: Backend> Binary<'a, B> for Lt {
             },
             <Lt as Binary<'a, B>>::tag(self),
         )
-        .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+        .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
             a.shape().clone(),
         ))
     }
@@ -101,8 +101,8 @@ impl<'a, B: Backend> Binary<'a, B> for Lt {
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
-            <B::Storage<'a> as TensorData<B::Element>>::zeros(d.shape().clone()),
-            <B::Storage<'a> as TensorData<B::Element>>::zeros(d.shape().clone()),
+            <B::Storage<'a> as Data<B::Element>>::zeros(d.shape().clone()),
+            <B::Storage<'a> as Data<B::Element>>::zeros(d.shape().clone()),
         )
     }
 
@@ -125,7 +125,7 @@ impl<'a, B: Backend> Binary<'a, B> for Eq {
             },
             <Eq as Binary<'a, B>>::tag(self),
         )
-        .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+        .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
             a.shape().clone(),
         ))
     }
@@ -136,8 +136,8 @@ impl<'a, B: Backend> Binary<'a, B> for Eq {
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
-            <B::Storage<'a> as TensorData<B::Element>>::zeros(d.shape().clone()),
-            <B::Storage<'a> as TensorData<B::Element>>::zeros(d.shape().clone()),
+            <B::Storage<'a> as Data<B::Element>>::zeros(d.shape().clone()),
+            <B::Storage<'a> as Data<B::Element>>::zeros(d.shape().clone()),
         )
     }
 
@@ -160,7 +160,7 @@ impl<'a, B: Backend> Binary<'a, B> for IsClose {
             },
             <IsClose as Binary<'a, B>>::tag(self),
         )
-        .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+        .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
             a.shape().clone(),
         ))
     }
@@ -171,8 +171,8 @@ impl<'a, B: Backend> Binary<'a, B> for IsClose {
         _d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
-            <B::Storage<'a> as TensorData<B::Element>>::from_scalar(B::Element::zero()),
-            <B::Storage<'a> as TensorData<B::Element>>::from_scalar(B::Element::zero()),
+            <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::zero()),
+            <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::zero()),
         )
     }
 
@@ -190,7 +190,7 @@ impl<'a, B: Backend> Binary<'a, B> for Sum {
             B::Element::zero(),
             <Sum as Binary<'a, B>>::tag(self),
         )
-        .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+        .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
             a.shape().clone(),
         ))
     }
@@ -202,7 +202,7 @@ impl<'a, B: Backend> Binary<'a, B> for Sum {
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
             d.clone(),
-            <B::Storage<'a> as TensorData<B::Element>>::from_scalar(B::Element::zero()),
+            <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::zero()),
         )
     }
 
@@ -220,7 +220,7 @@ impl<'a, B: Backend> Binary<'a, B> for All {
             B::Element::one(),
             <All as Binary<'a, B>>::tag(self),
         )
-        .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+        .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
             a.shape().clone(),
         ))
     }
@@ -231,8 +231,8 @@ impl<'a, B: Backend> Binary<'a, B> for All {
         _d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
-            <B::Storage<'a> as TensorData<B::Element>>::from_scalar(B::Element::zero()),
-            <B::Storage<'a> as TensorData<B::Element>>::from_scalar(B::Element::zero()),
+            <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::zero()),
+            <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::zero()),
         )
     }
 
@@ -246,7 +246,7 @@ impl<'a, B: Backend> Binary<'a, B> for Permute {
     fn forward(&self, a: &B::Storage<'a>, order: &B::Storage<'a>) -> B::Storage<'a> {
         let a_shape = a.shape().clone();
         a.permute(order)
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(a_shape))
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(a_shape))
     }
 
     fn backward(
@@ -270,12 +270,12 @@ impl<'a, B: Backend> Binary<'a, B> for Permute {
             .iter()
             .map(|u| B::Element::unsafe_from(*u))
             .collect();
-        let inverse_order_td = <B::Storage<'a> as TensorData<B::Element>>::from_1d(&inverse_data);
+        let inverse_order_td = <B::Storage<'a> as Data<B::Element>>::from_1d(&inverse_data);
         (
             d.permute(&inverse_order_td).unwrap_or(
-                <B::Storage<'a> as TensorData<B::Element>>::ones(d.shape().clone()),
+                <B::Storage<'a> as Data<B::Element>>::ones(d.shape().clone()),
             ),
-            <B::Storage<'a> as TensorData<B::Element>>::from_scalar(B::Element::zero()),
+            <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::zero()),
         )
     }
 
@@ -304,7 +304,7 @@ impl<'a, B: Backend> Binary<'a, B> for View {
             .unwrap_or(d.shape().clone());
         (
             d.reshape(shape),
-            <B::Storage<'a> as TensorData<B::Element>>::from_scalar(B::Element::zero()),
+            <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::zero()),
         )
     }
 
@@ -318,7 +318,7 @@ pub struct MatMul;
 impl<'a, B: Backend> Binary<'a, B> for MatMul {
     fn forward(&self, lhs: &B::Storage<'a>, rhs: &B::Storage<'a>) -> B::Storage<'a> {
         lhs.matmul(rhs)
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::zeros(
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::zeros(
                 lhs.shape().clone(),
             ))
     }
@@ -333,14 +333,14 @@ impl<'a, B: Backend> Binary<'a, B> for MatMul {
                 .as_ref()
                 .and_then(|b| b.transpose())
                 .and_then(|b| d.matmul(&b))
-                .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+                .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                     d.shape().clone(),
                 )),
             ctx.fst
                 .as_ref()
                 .and_then(|a| a.transpose())
                 .and_then(|a| a.matmul(d))
-                .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+                .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                     d.shape().clone(),
                 )),
         )

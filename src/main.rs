@@ -1,12 +1,8 @@
 use std::io::Error;
 
 use allumette::{
-    backend::backend::{CpuParBackend, CpuSeqBackend, GpuBackend},
-    training::{
-        dataset::Dataset,
-        debugger::{ChattyDebugger, TerseDebugger, VizDebugger},
-        train,
-    },
+    backend::backend::CpuSeqBackend,
+    training::{dataset::Dataset, debugger::VizDebugger, train},
 };
 
 fn main() -> Result<(), Error> {

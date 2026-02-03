@@ -4,8 +4,8 @@ use crate::{
         backend::{Backend, GpuBackend},
         mode::Mode,
     },
-    data::{
-        cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
+    storage::{
+        cpu_data::CpuData, gpu_data::GpuData, data::Data,
     },
     fns::{
         binary::{Add, All, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
@@ -71,28 +71,28 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     pub fn ones(shape: Shape) -> Self {
-        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::ones(shape))
+        Self::from_data(<B::Storage<'a> as Data<B::Element>>::ones(shape))
     }
 
     pub fn from_scalar(data: B::Element) -> Self {
-        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_scalar(
+        Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_scalar(
             data,
         ))
         .make_constant()
     }
 
     pub fn from_shape(data: &[B::Element], shape: Shape) -> Self {
-        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_shape(
+        Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_shape(
             data, shape,
         ))
     }
 
     pub fn from_1d(data: &[B::Element]) -> Self {
-        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_1d(data))
+        Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_1d(data))
     }
 
     pub fn from_2d(data: &[&[B::Element]]) -> Option<Self> {
-        <B::Storage<'a> as TensorData<B::Element>>::from_2d(data).map(Self::from_data)
+        <B::Storage<'a> as Data<B::Element>>::from_2d(data).map(Self::from_data)
     }
 
     pub fn from_tuples(data: &[(B::Element, B::Element)]) -> Self {
@@ -104,7 +104,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         });
         let shape = Shape::new(vec![len, 2]);
         let strides = (&shape).into();
-        Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from(
+        Self::from_data(<B::Storage<'a> as Data<B::Element>>::from(
             &d, shape, strides,
         ))
     }
@@ -341,13 +341,13 @@ impl<'a, B: Backend> Tensor<'a, B> {
             Some(d) => {
                 let d = UnsafeUsizeConvert::unsafe_from(self.data.shape()[d]);
                 let div =
-                    Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_scalar(d));
+                    Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_scalar(d));
                 self.sum(dim) / div
             }
             None => {
                 let s = UnsafeUsizeConvert::unsafe_from(self.size());
                 let div =
-                    Self::from_data(<B::Storage<'a> as TensorData<B::Element>>::from_scalar(s));
+                    Self::from_data(<B::Storage<'a> as Data<B::Element>>::from_scalar(s));
                 self.sum(None) / div
             }
         }
@@ -403,14 +403,14 @@ impl<'a, B: Backend> Tensor<'a, B> {
 // TODO: find a way to make this drier
 impl<'a, B> Tensor<'a, B>
 where
-    B: Backend<Storage<'a> = CpuTensorData>,
+    B: Backend<Storage<'a> = CpuData>,
 {
     pub fn arbitrary() -> impl Strategy<Value = Self> {
-        CpuTensorData::arbitrary().prop_map(Self::from_data)
+        CpuData::arbitrary().prop_map(Self::from_data)
     }
 
     pub fn arbitrary_no_zero() -> impl Strategy<Value = Self> {
-        CpuTensorData::arbitrary_no_zero().prop_map(Self::from_data)
+        CpuData::arbitrary_no_zero().prop_map(Self::from_data)
     }
 
     pub fn arbitrary_matmul_tuple() -> impl Strategy<Value = (Self, Self)> {
@@ -426,7 +426,7 @@ where
     }
 
     pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
-        CpuTensorData::arbitrary_with_shape(shape).prop_map(Self::from_data)
+        CpuData::arbitrary_with_shape(shape).prop_map(Self::from_data)
     }
 
     pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
@@ -455,8 +455,8 @@ where
             .prop_map(|(data1, data2, shape)| {
                 let strides: Strides = (&shape).into();
                 (
-                    Self::from_data(CpuTensorData::new(data1, shape.clone(), strides.clone())),
-                    Self::from_data(CpuTensorData::new(data2, shape, strides)),
+                    Self::from_data(CpuData::new(data1, shape.clone(), strides.clone())),
+                    Self::from_data(CpuData::new(data2, shape, strides)),
                 )
             })
     }
@@ -474,11 +474,11 @@ where
 
 impl<'a> Tensor<'a, GpuBackend> {
     pub fn arbitrary() -> impl Strategy<Value = Self> {
-        GpuTensorData::arbitrary().prop_map(Self::from_data)
+        GpuData::arbitrary().prop_map(Self::from_data)
     }
 
     pub fn arbitrary_no_zero() -> impl Strategy<Value = Self> {
-        GpuTensorData::arbitrary_no_zero().prop_map(Self::from_data)
+        GpuData::arbitrary_no_zero().prop_map(Self::from_data)
     }
 
     pub fn arbitrary_matmul_tuple() -> impl Strategy<Value = (Self, Self)> {
@@ -494,7 +494,7 @@ impl<'a> Tensor<'a, GpuBackend> {
     }
 
     pub fn arbitrary_with_shape(shape: Shape) -> impl Strategy<Value = Self> {
-        GpuTensorData::arbitrary_with_shape(shape).prop_map(Self::from_data)
+        GpuData::arbitrary_with_shape(shape).prop_map(Self::from_data)
     }
 
     pub fn arbitrary_tuple() -> impl Strategy<Value = (Self, Self)> {
@@ -523,13 +523,13 @@ impl<'a> Tensor<'a, GpuBackend> {
             .prop_map(|(data1, data2, shape)| {
                 let strides: Strides = (&shape).into();
                 (
-                    Self::from_data(GpuTensorData::new(
+                    Self::from_data(GpuData::new(
                         &data1,
                         shape.clone(),
                         strides.clone(),
                         get_wgpu_context(),
                     )),
-                    Self::from_data(GpuTensorData::new(
+                    Self::from_data(GpuData::new(
                         &data2,
                         shape,
                         strides,
@@ -596,7 +596,7 @@ impl<'a, B: Backend> ops::Neg for Tensor<'a, B> {
 mod tests {
     use crate::{
         backend::backend::{CpuParBackend, CpuSeqBackend},
-        data::gpu_tensor_data::GpuTensorData,
+        storage::gpu_data::GpuData,
         shaping::idx::Idx,
     };
 
@@ -613,7 +613,7 @@ mod tests {
         F: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
     {
         let shape = tensor.data.shape().clone();
-        let up = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::epsilon(
+        let up = Tensor::from_data(<B::Storage<'a> as Data<B::Element>>::epsilon(
             shape, index, eps,
         ));
         let add = tensor.clone() + up.clone();
@@ -640,7 +640,7 @@ mod tests {
         } else {
             tensor2.data.shape().clone()
         };
-        let up = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::epsilon(
+        let up = Tensor::from_data(<B::Storage<'a> as Data<B::Element>>::epsilon(
             shape, index, eps,
         ));
         let (add1, add2) = if first {
@@ -1222,7 +1222,7 @@ mod tests {
         fn test_reduce_forward_one_dim() {
             let shape = Shape::new(vec![3, 2]);
             let strides = (&shape).into();
-            let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
+            let td = CpuData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
 
             let t_seq: Tensor<CpuSeqBackend> = Tensor::from_data(td.clone());
             reduce_forward_one_dim_test(t_seq);
@@ -1253,7 +1253,7 @@ mod tests {
         fn test_reduce_forward_one_dim_2() {
             let shape = Shape::new(vec![3, 2]);
             let strides = (&shape).into();
-            let td = CpuTensorData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
+            let td = CpuData::new(vec![2., 3., 4., 6., 5., 7.], shape, strides);
 
             let t_seq: Tensor<CpuSeqBackend> = Tensor::from_data(td.clone());
             reduce_forward_one_dim_2_test(t_seq);
@@ -1655,7 +1655,7 @@ mod tests {
         fn test_reduce_forward_one_dim() {
             let shape = Shape::new(vec![3, 2]);
             let strides = (&shape).into();
-            let td = GpuTensorData::new(
+            let td = GpuData::new(
                 &[2., 3., 4., 6., 5., 7.],
                 shape,
                 strides,
@@ -1675,7 +1675,7 @@ mod tests {
         fn test_reduce_forward_one_dim_2() {
             let shape = Shape::new(vec![3, 2]);
             let strides = (&shape).into();
-            let td = GpuTensorData::new(
+            let td = GpuData::new(
                 &[2., 3., 4., 6., 5., 7.],
                 shape,
                 strides,
@@ -1695,7 +1695,7 @@ mod tests {
         fn test_reduce_forward_all_dim() {
             let shape = Shape::new(vec![3, 2]);
             let strides = (&shape).into();
-            let td = GpuTensorData::new(
+            let td = GpuData::new(
                 &[2., 3., 4., 6., 5., 7.],
                 shape,
                 strides,
@@ -1712,7 +1712,7 @@ mod tests {
             let shape = Shape::new(vec![3, 1]);
             let strides: Strides = (&shape).into();
 
-            let tdg = GpuTensorData::new(
+            let tdg = GpuData::new(
                 &[1., 2., 3.],
                 shape.clone(),
                 strides.clone(),
@@ -1732,7 +1732,7 @@ mod tests {
                     .collect()
             );
 
-            let tdc = CpuTensorData::new(vec![1., 2., 3.], shape.clone(), strides.clone());
+            let tdc = CpuData::new(vec![1., 2., 3.], shape.clone(), strides.clone());
             let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
             let cs = c.clone().view(&Shape::new(vec![3])).sum(None);
             let cres = cs.backward();

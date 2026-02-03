@@ -1,7 +1,7 @@
 use crate::{
     autodiff::history::History,
     backend::{backend::Backend, mode::Mode},
-    data::tensor_data::TensorData,
+    storage::data::Data,
     math::element::Element,
     shaping::shape::Shape,
     tensor::Tensor,
@@ -65,7 +65,7 @@ impl<'a, B: Backend> Layer<'a, B> {
     pub fn weights_gpu(name: &str, in_size: usize, out_size: usize) -> Tensor<'a, B> {
         let id = Self::weights_key(name);
         let shape = Shape::new(vec![in_size, out_size]);
-        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::rand_with_seed(
+        let t = Tensor::from_data(<B::Storage<'a> as Data<B::Element>>::rand_with_seed(
             shape, 1234,
         ));
         (t - Tensor::from_scalar(B::Element::fromf(0.5)))
@@ -81,14 +81,14 @@ impl<'a, B: Backend> Layer<'a, B> {
     pub fn biases_gpu(name: &str, out_size: usize) -> Tensor<'a, B> {
         let id = Self::biases_key(name);
         let shape = Shape::new(vec![out_size]);
-        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::zeros(shape));
+        let t = Tensor::from_data(<B::Storage<'a> as Data<B::Element>>::zeros(shape));
         (t + Tensor::from_scalar(B::Element::fromf(0.1)))
             .history(History::default())
             .id(id)
     }
 
     fn param(shape: Shape) -> Tensor<'a, B> {
-        let t = Tensor::from_data(<B::Storage<'a> as TensorData<B::Element>>::rand_with_seed(
+        let t = Tensor::from_data(<B::Storage<'a> as Data<B::Element>>::rand_with_seed(
             shape, 1234,
         ));
         ((t - Tensor::from_scalar(B::Element::fromf(0.5)))
@@ -117,7 +117,7 @@ impl<'a, B: Backend> Layer<'a, B> {
 mod tests {
     use crate::{
         backend::backend::{CpuSeqBackend, GpuBackend},
-        data::{cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData},
+        storage::{cpu_data::CpuData, gpu_data::GpuData},
         shaping::strides::Strides,
         wgpu::wgpu_context::get_wgpu_context,
     };
@@ -129,7 +129,7 @@ mod tests {
         let shape = Shape::new(vec![2, 3]);
         let strides: Strides = (&shape).into();
 
-        let tdg = GpuTensorData::new(
+        let tdg = GpuData::new(
             &[1., 2., 3., 4., 5., 6.],
             shape.clone(),
             strides.clone(),
@@ -151,7 +151,7 @@ mod tests {
                 .collect()
         );
 
-        let tdc = CpuTensorData::new(vec![1., 2., 3., 4., 5., 6.], shape.clone(), strides.clone());
+        let tdc = CpuData::new(vec![1., 2., 3., 4., 5., 6.], shape.clone(), strides.clone());
         let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
         let clayer = Layer::new("layer", 2, 2);
         let cout = clayer.forward(c.clone());

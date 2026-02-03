@@ -58,7 +58,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 mod tests {
     use crate::{
         backend::backend::{CpuSeqBackend, GpuBackend},
-        data::tensor_data::TensorData,
+        storage::data::Data,
     };
 
     use super::*;

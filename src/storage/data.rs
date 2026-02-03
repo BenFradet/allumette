@@ -3,7 +3,7 @@ use crate::{
     shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides},
 };
 
-pub trait TensorData<E: Element> {
+pub trait Data<E: Element> {
     fn shape(&self) -> &Shape;
     fn strides(&self) -> &Strides;
     fn size(&self) -> usize;

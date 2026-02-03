@@ -1,12 +1,12 @@
 use wgpu::BufferUsages;
 
 use crate::{
-    backend::mode::Gpu, data::gpu_tensor_data::GpuTensorData, ops::tensor_ops::Ops,
+    backend::mode::Gpu, storage::gpu_data::GpuData, ops::tensor_ops::Ops,
     shaping::shape::Shape, wgpu::workgroup_info::WorkgroupInfo,
 };
 
 // TODO: abstract fn, they're all doing mostly the same
-impl Ops<f32, Gpu> for GpuTensorData<'_> {
+impl Ops<f32, Gpu> for GpuData<'_> {
     // TODO: rm unwraps
     fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
         let workgroup_info = (&self.shape).into();
@@ -266,7 +266,7 @@ mod tests {
         let shape = Shape::new(vec![2, 4]);
         let strides = (&shape).into();
         let input: Vec<_> = (1..9).map(|u| u as f32).collect();
-        let td = GpuTensorData::new(&input, shape, strides, get_wgpu_context());
+        let td = GpuData::new(&input, shape, strides, get_wgpu_context());
         let res = td.map_broadcast(&td, |f| -f, "neg");
         let cpu_data = res.unwrap().to_cpu();
         assert_eq!(vec![-1., -2., -3., -4., -5., -6., -7., -8.], cpu_data);

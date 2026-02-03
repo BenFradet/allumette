@@ -1,6 +1,6 @@
 use crate::{autodiff::context::Context, backend::backend::Backend};
 use crate::{
-    backend::mode::Mode, data::tensor_data::TensorData, math::element::Element,
+    backend::mode::Mode, storage::data::Data, math::element::Element,
     ops::tensor_ops::Ops,
 };
 
@@ -52,7 +52,7 @@ impl<'a, B: Backend> Unary<'a, B> for Inv {
             .and_then(|a| a.zip(a, |e1, e2| e1 * e2, "mul"))
             .map(|a2| <Inv as Unary<'a, B>>::forward(self, &a2))
             .and_then(|a2_inv| d_neg.zip(&a2_inv, |e1, e2| e1 * e2, "mul"))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
     }
@@ -93,7 +93,7 @@ impl<'a, B: Backend> Unary<'a, B> for Ln {
                     "ln_diff",
                 )
             })
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
     }
@@ -116,14 +116,14 @@ impl<'a, B: Backend> Unary<'a, B> for Sig {
             .and_then(|t| {
                 let sig = <Sig as Unary<'a, B>>::forward(self, t);
                 let minus_sig = sig.map(|e| -e, "neg");
-                let one_minus_sig = <B::Storage<'a> as TensorData<B::Element>>::from_scalar(
+                let one_minus_sig = <B::Storage<'a> as Data<B::Element>>::from_scalar(
                     B::Element::one(),
                 )
                 .zip(&minus_sig, |e1, e2| e1 + e2, "add");
                 one_minus_sig.and_then(|oms| sig.zip(&oms, |e1, e2| e1 * e2, "mul"))
             })
             .and_then(|deriv| d.zip(&deriv, |e1, e2| e1 * e2, "mul"))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
     }
@@ -143,7 +143,7 @@ impl<'a, B: Backend> Unary<'a, B> for Relu {
         ctx.fst
             .as_ref()
             .and_then(|a| a.zip(d, |e1, e2| e1.relu_diff(e2), "relu_diff"))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
     }
@@ -164,7 +164,7 @@ impl<'a, B: Backend> Unary<'a, B> for Exp {
             .as_ref()
             .map(|t| <Exp as Unary<'a, B>>::forward(self, t))
             .and_then(|exp| exp.zip(d, |e1, e2| e1 * e2, "mul"))
-            .unwrap_or(<B::Storage<'a> as TensorData<B::Element>>::ones(
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
     }
@@ -179,7 +179,7 @@ pub struct Copy;
 impl<'a, B: Backend> Unary<'a, B> for Copy {
     fn forward(&self, a: &B::Storage<'a>) -> B::Storage<'a> {
         a.map_broadcast(
-            &<B::Storage<'a> as TensorData<B::Element>>::zeros(a.shape().clone()),
+            &<B::Storage<'a> as Data<B::Element>>::zeros(a.shape().clone()),
             |f| f,
             <Copy as Unary<'a, B>>::tag(self),
         )

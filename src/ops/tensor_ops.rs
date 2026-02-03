@@ -1,5 +1,5 @@
 use crate::{
-    backend::mode::Mode, data::tensor_data::TensorData, math::element::Element,
+    backend::mode::Mode, storage::data::Data, math::element::Element,
     shaping::shape::Shape,
 };
 
@@ -31,14 +31,14 @@ pub trait Ops<E: Element, T: Mode> {
 
     fn expand(&self, other: Self) -> Option<Self>
     where
-        Self: Sized + TensorData<E>,
+        Self: Sized + Data<E>,
     {
         if self.shape() == other.shape() {
             return Some(other);
         }
 
         let bc_shape = self.shape().broadcast(other.shape())?;
-        let buf = TensorData::zeros(bc_shape);
+        let buf = Data::zeros(bc_shape);
         let mut out = other.map_broadcast(&buf, |f| f, "id")?;
         if self.shape() == out.shape() {
             return Some(out);

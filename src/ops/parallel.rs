@@ -4,12 +4,12 @@ use rayon::prelude::*;
 
 use crate::{
     backend::mode::Par,
-    data::cpu_tensor_data::CpuTensorData,
+    storage::cpu_data::CpuData,
     ops::tensor_ops::Ops,
     shaping::{shape::Shape, strides::Strides},
 };
 
-impl Ops<f64, Par> for CpuTensorData {
+impl Ops<f64, Par> for CpuData {
     fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F, _tag: &str) -> Self {
         let out: Vec<_> = self.data.par_iter().map(|d| f(*d)).collect();
         Self {
@@ -150,21 +150,21 @@ impl Ops<f64, Par> for CpuTensorData {
 mod tests {
     use proptest::proptest;
 
-    use crate::data::tensor_data::TensorData;
+    use crate::storage::data::Data;
 
     use super::*;
 
     #[test]
     fn expand_test() {
-        let input = CpuTensorData::from_scalar(0.);
-        let deriv = CpuTensorData::from_1d(&[1., 1.]);
+        let input = CpuData::from_scalar(0.);
+        let deriv = CpuData::from_1d(&[1., 1.]);
         let res = Ops::<f64, Par>::expand(&input, deriv)
             .map(|d| d.data)
             .unwrap();
         assert_eq!(vec![2.], *res);
     }
 
-    fn assert_tensor_eq(t1: &CpuTensorData, t2: &CpuTensorData) {
+    fn assert_tensor_eq(t1: &CpuData, t2: &CpuData) {
         assert_eq!(t1.shape, t2.shape);
         assert_eq!(t1.strides, t2.strides);
         assert_eq!(t1.data, t2.data);
@@ -172,7 +172,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce_test_sum(t1 in CpuTensorData::arbitrary()) {
+        fn reduce_test_sum(t1 in CpuData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
                 t1p = Ops::<f64, Par>::reduce(&t1p, |a, b| a + b, i, 0., "sum").unwrap();
@@ -183,7 +183,7 @@ mod tests {
         }
 
         #[test]
-        fn reduce_test_mul(t1 in CpuTensorData::arbitrary()) {
+        fn reduce_test_mul(t1 in CpuData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
                 t1p = Ops::<f64, Par>::reduce(&t1p, |a, b| a * b, i, 1., "all").unwrap();
@@ -194,7 +194,7 @@ mod tests {
         }
 
         #[test]
-        fn zip_commutative_test(t1 in CpuTensorData::arbitrary(), t2 in CpuTensorData::arbitrary()) {
+        fn zip_commutative_test(t1 in CpuData::arbitrary(), t2 in CpuData::arbitrary()) {
             // this works if f is commutative
             let res1 = Ops::<f64, Par>::zip(&t1, &t2, |a, b| a + b, "plus");
             let res2 = Ops::<f64, Par>::zip(&t2, &t1, |a, b| a + b, "plus");
@@ -206,19 +206,19 @@ mod tests {
         }
 
         #[test]
-        fn map_identity_test(t in CpuTensorData::arbitrary()) {
+        fn map_identity_test(t in CpuData::arbitrary()) {
             assert_tensor_eq(&t, &Ops::<f64, Par>::map(&t, |f| f, "id"));
         }
 
         #[test]
-        fn map_broadcast_identity_test(t in CpuTensorData::arbitrary()) {
+        fn map_broadcast_identity_test(t in CpuData::arbitrary()) {
             let bc = Ops::<f64, Par>::map_broadcast(&t, &t, |f| f, "id");
             assert!(bc.is_some());
             assert_tensor_eq(&t, bc.as_ref().unwrap());
         }
 
         #[test]
-        fn map_composition_test(t in CpuTensorData::arbitrary()) {
+        fn map_composition_test(t in CpuData::arbitrary()) {
             let f = |a: f64| a * 2.;
             let g = |a: f64| a.powf(2.);
             let fg = |a: f64| g(f(a));
@@ -229,7 +229,7 @@ mod tests {
         }
 
         #[test]
-        fn map_broadcast_composition_test(t in CpuTensorData::arbitrary()) {
+        fn map_broadcast_composition_test(t in CpuData::arbitrary()) {
             let f = |a: f64| a * 2.;
             let g = |a: f64| a.powf(2.);
             let fg = |a: f64| g(f(a));
@@ -243,14 +243,14 @@ mod tests {
 
         #[test]
         fn map_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
-            let map = Ops::<f64, Par>::map(&CpuTensorData::zeros(shape.clone()), |z| z + f, "tag");
+            let map = Ops::<f64, Par>::map(&CpuData::zeros(shape.clone()), |z| z + f, "tag");
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
         }
 
         #[test]
         fn map_broadcast_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
-            let t = CpuTensorData::zeros(shape.clone());
+            let t = CpuData::zeros(shape.clone());
             let res = Ops::<f64, Par>::map_broadcast(&t, &t, |z| z + f, "tag");
             assert!(res.is_some());
             let map = res.unwrap();

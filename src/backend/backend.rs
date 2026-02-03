@@ -1,7 +1,7 @@
 use crate::{
     backend::mode::{Gpu, Par, Seq},
-    data::{
-        cpu_tensor_data::CpuTensorData, gpu_tensor_data::GpuTensorData, tensor_data::TensorData,
+    storage::{
+        cpu_data::CpuData, gpu_data::GpuData, data::Data,
     },
     math::element::Element,
     ops::tensor_ops::Ops,
@@ -15,7 +15,7 @@ pub trait Backend: Clone + std::fmt::Debug {
     type Element: Element + UnsafeUsizeConvert;
     type Mode: Mode;
     type Storage<'a>: Ops<Self::Element, Self::Mode>
-        + TensorData<Self::Element>
+        + Data<Self::Element>
         + Clone
         + std::fmt::Debug
     where
@@ -27,7 +27,7 @@ pub struct CpuSeqBackend;
 impl Backend for CpuSeqBackend {
     type Element = f64;
     type Mode = Seq;
-    type Storage<'a> = CpuTensorData;
+    type Storage<'a> = CpuData;
 }
 
 #[derive(Clone, Debug)]
@@ -35,7 +35,7 @@ pub struct CpuParBackend;
 impl Backend for CpuParBackend {
     type Element = f64;
     type Mode = Par;
-    type Storage<'a> = CpuTensorData;
+    type Storage<'a> = CpuData;
 }
 
 #[derive(Clone, Debug)]
@@ -43,5 +43,5 @@ pub struct GpuBackend;
 impl Backend for GpuBackend {
     type Element = f32;
     type Mode = Gpu;
-    type Storage<'a> = GpuTensorData<'a>;
+    type Storage<'a> = GpuData<'a>;
 }

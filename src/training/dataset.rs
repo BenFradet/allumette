@@ -1,7 +1,7 @@
 use rand::{Rng, thread_rng};
 
 use crate::backend::backend::Backend;
-use crate::data::tensor_data::TensorData;
+use crate::storage::data::Data;
 use crate::shaping::shape::Shape;
 use crate::util::unsafe_usize_convert::UnsafeUsizeConvert;
 use crate::{math::element::Element, tensor::Tensor};
@@ -19,7 +19,7 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
     }
 
     pub fn labels<'a, B: Backend<Element = E>>(&self) -> Tensor<'a, B> {
-        let label_data = <B::Storage<'a> as TensorData<E>>::from_1d(
+        let label_data = <B::Storage<'a> as Data<E>>::from_1d(
             &self
                 .labels
                 .iter()

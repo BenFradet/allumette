@@ -6,16 +6,16 @@ use crate::shaping::{idx::Idx, order::Order, shape::Shape, strides::Strides};
 
 use rand::{Rng, SeedableRng, rngs::StdRng};
 
-use super::tensor_data::TensorData;
+use super::data::Data;
 
 #[derive(Clone, Debug)]
-pub struct CpuTensorData {
+pub struct CpuData {
     pub data: Arc<Vec<f64>>,
     pub shape: Shape,
     pub strides: Strides,
 }
 
-impl CpuTensorData {
+impl CpuData {
     pub fn new(data: Vec<f64>, shape: Shape, strides: Strides) -> Self {
         Self {
             data: Arc::new(data),
@@ -65,7 +65,7 @@ impl CpuTensorData {
     }
 }
 
-impl Index<Idx> for CpuTensorData {
+impl Index<Idx> for CpuData {
     type Output = f64;
 
     fn index(&self, index: Idx) -> &Self::Output {
@@ -73,7 +73,7 @@ impl Index<Idx> for CpuTensorData {
     }
 }
 
-impl TensorData<f64> for CpuTensorData {
+impl Data<f64> for CpuData {
     fn shape(&self) -> &Shape {
         &self.shape
     }
@@ -276,7 +276,7 @@ mod tests {
 
     // proptest macro is not picked up
     #[allow(dead_code)]
-    fn assert_tensor_eq(t1: &CpuTensorData, t2: &CpuTensorData) {
+    fn assert_tensor_eq(t1: &CpuData, t2: &CpuData) {
         assert_eq!(t1.shape, t2.shape);
         assert_eq!(t1.strides, t2.strides);
         assert_eq!(t1.data, t2.data);
@@ -285,13 +285,13 @@ mod tests {
     proptest! {
         #[test]
         fn zeros_test(shape in Shape::arbitrary()) {
-            let zeros = CpuTensorData::zeros(shape.clone());
+            let zeros = CpuData::zeros(shape.clone());
             assert_eq!(shape.size, zeros.data.len());
             assert!(zeros.data.iter().all(|f| *f == 0.));
         }
 
         #[test]
-        fn enumeration_test(tensor_data in CpuTensorData::arbitrary()) {
+        fn enumeration_test(tensor_data in CpuData::arbitrary()) {
             let indices: Vec<_> = tensor_data.indices().collect();
             let count = indices.len();
             assert_eq!(tensor_data.size(), count);
@@ -306,13 +306,13 @@ mod tests {
 
         #[test]
         fn permute_test(
-            tensor_data in Shape::arbitrary_static_size().prop_flat_map(CpuTensorData::arbitrary_with_shape),
+            tensor_data in Shape::arbitrary_static_size().prop_flat_map(CpuData::arbitrary_with_shape),
             idx in Idx::arbitrary_static_size(),
         ) {
             let reversed_index = idx.clone().reverse();
             let pos = tensor_data.strides.position(&idx);
             let order = Order::range(tensor_data.shape.data().len()).reverse();
-            let order_td = TensorData::from_1d(&order.data.iter().map(|u| *u as f64).collect::<Vec<_>>());
+            let order_td = Data::from_1d(&order.data.iter().map(|u| *u as f64).collect::<Vec<_>>());
             let perm_opt = tensor_data.permute(&order_td);
             assert!(perm_opt.is_some());
             let perm = perm_opt.unwrap();
@@ -340,7 +340,7 @@ mod tests {
         let data = vec![0.; 15];
         let shape = Shape::new(vec![3, 5]);
         let strides = Strides::new(vec![5, 1]);
-        let tensor = CpuTensorData::new(data, shape, strides);
+        let tensor = CpuData::new(data, shape, strides);
         assert!(tensor.is_contiguous());
         assert_eq!(Shape::new(vec![3, 5]), tensor.shape);
         assert_eq!(5, tensor.strides.position(&Idx::new(vec![1, 0])));
@@ -352,14 +352,14 @@ mod tests {
         let data = vec![0.; 15];
         let shape = Shape::new(vec![5, 3]);
         let strides = Strides::new(vec![1, 5]);
-        let tensor = CpuTensorData::new(data, shape, strides);
+        let tensor = CpuData::new(data, shape, strides);
         assert!(!tensor.is_contiguous());
         assert_eq!(Shape::new(vec![5, 3]), tensor.shape);
     }
 
     #[test]
     fn rand_test() {
-        let rand = CpuTensorData::rand(Shape::new(vec![2]));
+        let rand = CpuData::rand(Shape::new(vec![2]));
         assert!(rand.data[0] != rand.data[1]);
     }
 }
