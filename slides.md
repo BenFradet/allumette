@@ -155,6 +155,67 @@ let tensor = Tensor { data, shape, strides };
 
 ---
 
+What can be done with a tensor?
+===
+
+<!-- newlines: 5 -->
+<!-- column_layout: [3, 2] -->
+
+<!-- column: 0 -->
+```rust +no_background
+pub trait Ops<E: Element> {
+    fn map<F: Fn(E) -> E>(&self, f: F) -> Self;
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+```typst +render +width:80%
+$\{\ln(x), e^x, -x, frac(1, x), ...\}$
+```
+<!-- pause -->
+
+<!-- column: 0 -->
+```rust +no_background
+
+      fn zip<F: Fn(E, E) -> E>(
+          &self, other: &Self, f: F) -> Option<Self>;
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+```typst +render +width:80%
+$\{x + y, x dot y, x = y, ...\}$
+```
+<!-- pause -->
+
+<!-- column: 0 -->
+```rust +no_background
+
+   fn reduce<F: Fn(E, E) -> E>(
+       &self,
+       f: F,
+       dim: usize,
+       zero: E,
+   ) -> Option<Self>;
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+```typst +render +width:80%
+$\{sum(x), product(x)\}$
+```
+<!-- pause -->
+
+<!-- column: 0 -->
+```rust +no_background
+
+      fn matmul(&self, other: &Self) -> Option<Self>;
+  }
+```
+
+
+---
+
 What's a tensor?
 ===
 
