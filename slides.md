@@ -212,15 +212,68 @@ $\{sum(x), product(x)\}$
       fn matmul(&self, other: &Self) -> Option<Self>;
   }
 ```
-
-
 ---
 
-What's a tensor?
+Map
 ===
 
-<!-- column_layout: [1, 2] -->
+<!-- newlines: 6 -->
+```rust +no_background {all|2-3|4-6|7-11|all}
+fn map<F: Fn(f64) -> f64>(&self, f: F) -> Self {
+    let len = self.size();
+    let mut out = vec![0.; len];
+    for (i, d) in self.data.iter().enumerate() {
+        out[i] = f(*d);
+    }
+    Self {
+        data: out,
+        shape: self.shape.clone(),
+        strides: self.strides.clone(),
+    }
+}
+```
+---
+
+Map - parallel using rayon
+===
+
+<!-- newlines: 4 -->
+<!-- column_layout: [3, 1] -->
 
 <!-- column: 0 -->
-<!-- newlines: 8 -->
-... you will remember there are rules
+```rust +no_background {all|1|3|4|2-5|7|all}
+fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F) -> Self {
+    let out: Vec<_> = self.data
+        .par_iter()
+        .map(|d| f(*d))
+        .collect();
+    Self {
+        data: Arc::new(out),
+        shape: self.shape.clone(),
+        strides: self.strides.clone(),
+    }
+}
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+`Sync` => safe to share references between threads
+<!-- newlines: 2 -->
+`Arc`  => thread-safe reference-counting pointer
+<!-- pause -->
+
+<!-- column: 0 -->
+<!-- newlines: 2 -->
+```rust +no_background
+pub struct Tensor {
+    pub data: Arc<Vec<f64>>,
+    pub shape: Shape,
+    pub strides: Strides,
+}
+```
+---
+
+Map - gpu using wgpu
+===
+
+<!-- column_layout: [2, 2] -->
