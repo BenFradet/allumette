@@ -2,6 +2,9 @@
 theme:
   name: catppuccin-macchiato
   override:
+    default:
+      margin:
+        percent: 0
     typst:
       colors:
         background: cad3f500
@@ -16,6 +19,9 @@ theme:
     code:
       padding:
         vertical: 0
+        horizontal: 0
+      minimum_margin:
+        percent: 0
 options:
   end_slide_shorthand: true
 ---
@@ -163,12 +169,14 @@ What can be done with a tensor?
 
 <!-- column: 0 -->
 ```rust +no_background
-pub trait Ops<E: Element> {
-    fn map<F: Fn(E) -> E>(&self, f: F) -> Self;
+  pub trait Ops<E: Element> {
+
+      fn map<F: Fn(E) -> E>(&self, f: F) -> Self;
 ```
 <!-- pause -->
 
 <!-- column: 1 -->
+<!-- newlines: 1 -->
 ```typst +render +width:80%
 $\{\ln(x), e^x, -x, frac(1, x), ...\}$
 ```
@@ -177,8 +185,9 @@ $\{\ln(x), e^x, -x, frac(1, x), ...\}$
 <!-- column: 0 -->
 ```rust +no_background
 
-      fn zip<F: Fn(E, E) -> E>(
-          &self, other: &Self, f: F) -> Option<Self>;
+     fn zip<F: Fn(E, E) -> E>(
+         &self, other: &Self, f: F
+     ) -> Option<Self>;
 ```
 <!-- pause -->
 
@@ -191,16 +200,17 @@ $\{x + y, x dot y, x = y, ...\}$
 <!-- column: 0 -->
 ```rust +no_background
 
-   fn reduce<F: Fn(E, E) -> E>(
-       &self,
-       f: F,
-       dim: usize,
-       zero: E,
-   ) -> Option<Self>;
+     fn reduce<F: Fn(E, E) -> E>(
+         &self,
+         f: F,
+         dim: usize,
+         zero: E,
+     ) -> Option<Self>;
 ```
 <!-- pause -->
 
 <!-- column: 1 -->
+<!-- newlines: 2 -->
 ```typst +render +width:80%
 $\{sum(x), product(x)\}$
 ```
@@ -209,8 +219,11 @@ $\{sum(x), product(x)\}$
 <!-- column: 0 -->
 ```rust +no_background
 
-      fn matmul(&self, other: &Self) -> Option<Self>;
-  }
+     fn matmul(
+         &self, other: &Self
+     ) -> Option<Self>;
+
+}
 ```
 ---
 
@@ -218,8 +231,10 @@ Map
 ===
 
 <!-- newlines: 6 -->
-```rust +no_background {all|2-3|4-6|7-11|all}
-fn map<F: Fn(f64) -> f64>(&self, f: F) -> Self {
+```rust +no_background {all|4-5|6-8|9-13|all}
+fn map<F: Fn(f64) -> f64>(
+    &self, f: F
+) -> Self {
     let len = self.size();
     let mut out = vec![0.; len];
     for (i, d) in self.data.iter().enumerate() {
@@ -241,8 +256,10 @@ Map - parallel using rayon
 <!-- column_layout: [3, 1] -->
 
 <!-- column: 0 -->
-```rust +no_background {all|1|3|4|2-5|7|all}
-fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F) -> Self {
+```rust +no_background {all|1|5|7|4-7|9|all}
+fn map<F: Fn(f64) -> f64 + Sync>(
+    &self, f: F
+) -> Self {
     let out: Vec<_> = self.data
         .par_iter()
         .map(|d| f(*d))
@@ -265,7 +282,7 @@ fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F) -> Self {
 <!-- column: 0 -->
 <!-- newlines: 2 -->
 ```rust +no_background
-pub struct Tensor {
+struct Tensor {
     pub data: Arc<Vec<f64>>,
     pub shape: Shape,
     pub strides: Strides,
@@ -276,4 +293,67 @@ pub struct Tensor {
 Map - gpu using wgpu
 ===
 
-<!-- column_layout: [2, 2] -->
+```rust +no_background +line_numbers {all|1-4|6-8|10|11|12|13|14|all}
+@group(0) @binding(0)
+var<storage, read> input: array<f32>;
+@group(0) @binding(1)
+var<storage, read_write> output: array<f32>;
+
+fn neg(in: f32) -> f32 {
+    return -in;
+} // etc.
+
+@compute
+@workgroup_size(x, y, z)
+fn call(@builtin(global_invocation_id) id: vec3<u32>) {
+    let i = id.x;
+    output[i] = replace_me(input[i]);
+}
+```
+
+// workgroup size
+
+---
+
+Map - orchestrating gpu code
+===
+
+<!-- column_layout: [3, 3] -->
+
+<!-- column: 0 -->
+```rust +no_background +line_numbers {all|2-5|7-9|11-14|15-19|20|22|all}
+fn map(&self, f: &'static str) -> Self {
+    let output_buffer = create_output_buffer(
+        self.shape.gpu_byte_size(),
+        BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+    );
+    
+    let workgroup_info = (&self.shape).into();
+    let pipeline = get_or_create_pipeline(f, workgroup_info);
+
+    let bind_group = create_bind_group(
+        &[&self.buffer, &output_buffer],
+        &pipeline.get_bind_group_layout(0),
+    );
+
+    let command = encode_command(
+        &workgroup_info,
+        &pipeline,
+        &bind_group
+    );
+    submit_command(command);
+
+    self.with_buffer(output_buffer)
+}
+```
+
+<!-- column: 1 -->
+```rust +no_background
+// workgroup count
+struct Tensor<'a> {
+    pub buffer: Arc<Buffer>,
+    pub shape: Shape,
+    pub strides: Strides,
+    pub context: &'a WgpuContext,
+}
+```
