@@ -4,7 +4,7 @@ theme:
   override:
     default:
       margin:
-        percent: 0
+        percent: 1
     typst:
       colors:
         background: cad3f500
@@ -13,7 +13,7 @@ theme:
       style: template
       left:
         image: img/logo.png
-      center: '**allumette**'
+      #center: '**allumette**'
       right: "{current_slide} / {total_slides}"
       height: 3
     code:
@@ -54,14 +54,12 @@ What's a tensor?
 
 <!-- column: 0 -->
 <!-- newlines: 8 -->
-<!-- font_size: 7 -->
 if you recall your algebra classes...
 
 <!-- column: 1 -->
 <!-- newlines: 3 -->
 ![](img/tensor.png)
 <!-- alignment: center -->
-<!-- font_size: 1 -->
 credit: Cmglee, GNU FDL
 
 ---
@@ -253,7 +251,7 @@ Map - parallel using rayon
 ===
 
 <!-- newlines: 4 -->
-<!-- column_layout: [3, 1] -->
+<!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
 ```rust +no_background {all|1|5|7|4-7|9|all}
@@ -275,12 +273,13 @@ fn map<F: Fn(f64) -> f64 + Sync>(
 
 <!-- column: 1 -->
 `Sync` => safe to share references between threads
-<!-- newlines: 2 -->
+<!-- pause -->
+<!-- newlines: 5 -->
 `Arc`  => thread-safe reference-counting pointer
 <!-- pause -->
 
-<!-- column: 0 -->
-<!-- newlines: 2 -->
+<!-- reset_layout -->
+<!-- newlines: 1 -->
 ```rust +no_background
 struct Tensor {
     pub data: Arc<Vec<f64>>,
@@ -293,6 +292,7 @@ struct Tensor {
 Map - gpu using wgpu
 ===
 
+<!-- newlines: 4 -->
 ```rust +no_background +line_numbers {all|1-4|6-8|10|11|12|13|14|all}
 @group(0) @binding(0)
 var<storage, read> input: array<f32>;
@@ -311,45 +311,34 @@ fn call(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 ```
 
-// workgroup size
-
 ---
 
 Map - orchestrating gpu code
 ===
 
-<!-- column_layout: [3, 3] -->
-
-<!-- column: 0 -->
-```rust +no_background +line_numbers {all|2-5|7-9|11-14|15-19|20|22|all}
+```rust +no_background +line_numbers {all|1|2|4-5|7-10|4,12|14|16|all}
 fn map(&self, f: &'static str) -> Self {
-    let output_buffer = create_output_buffer(
-        self.shape.gpu_byte_size(),
-        BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-    );
+    let output_buffer = create_output_buffer(self.shape.gpu_byte_size());
     
-    let workgroup_info = (&self.shape).into();
-    let pipeline = get_or_create_pipeline(f, workgroup_info);
+    let workgroups = (&self.shape).into();
+    let pipeline = get_or_create_pipeline(f, workgroups.size);
 
     let bind_group = create_bind_group(
         &[&self.buffer, &output_buffer],
         &pipeline.get_bind_group_layout(0),
     );
 
-    let command = encode_command(
-        &workgroup_info,
-        &pipeline,
-        &bind_group
-    );
+    let command = encode_command(&workgroups.count, &pipeline, &bind_group);
+
     submit_command(command);
 
     self.with_buffer(output_buffer)
 }
 ```
 
-<!-- column: 1 -->
+<!-- pause -->
+<!-- newlines: 1 -->
 ```rust +no_background
-// workgroup count
 struct Tensor<'a> {
     pub buffer: Arc<Buffer>,
     pub shape: Shape,
@@ -357,3 +346,8 @@ struct Tensor<'a> {
     pub context: &'a WgpuContext,
 }
 ```
+---
+
+Map - gpu parallelism
+===
+
