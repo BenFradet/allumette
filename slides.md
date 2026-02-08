@@ -351,3 +351,53 @@ struct Tensor<'a> {
 Map - gpu parallelism
 ===
 
+<!-- alignment: center -->
+workgroups are collections of threads that execute together and share local memory
+<!-- pause -->
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+![](img/wg.png)
+<!-- alignment: center -->
+credit: CubeCL, Apache 2.0
+<!-- pause -->
+
+<!-- column: 1 -->
+identifiers
+```typst +render +width:100%
+$vec("global_inv_id.x", "global_inv_id.y", "global_inv_id.z") = vec("local_inv_id.x" times "workgroup_id.x", "local_inv_id.y" times "workgroup_id.y", "local_inv_id.z" times "workgroup_id.z")$
+```
+<!-- pause -->
+total invocations
+```typst +render +width:80%
+$vec("workgroup_size.x", "workgroup_size.y", "workgroup_size.z") dot vec("num_workgroups.x", "num_workgroups.y", "num_workgroups.z")$
+```
+<!-- pause -->
+
+<!-- column: 0 -->
+<!-- newlines: 1 -->
+```rust +no_background {all|2|6-7|8|all}
+@compute
+@workgroup_size(wsx, wsy, wsz)
+fn call(@builtin(global_invocation_id)
+    id: vec3<u32>
+) {
+    // (id.x, id.y, id.z) unique thread id
+    let i = id.x; 
+    output[i] = input[i];
+}
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+<!-- newlines: 2 -->
+```rust +no_background {all|6|all}
+// encode_command explained
+let mut encoder = create_command_encoder();
+let mut pass = encoder.begin_compute_pass();
+pass.set_pipeline(pipeline);
+pass.set_bind_group(0, Some(bind_group));
+pass.dispatch_workgroups(nwx, nwy, nwz);
+encoder.finish()
+```
