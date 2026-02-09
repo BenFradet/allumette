@@ -50,14 +50,8 @@ options:
 What's a tensor?
 ===
 
-<!-- column_layout: [1, 2] -->
-
-<!-- column: 0 -->
-<!-- newlines: 8 -->
 if you recall your algebra classes...
-
-<!-- column: 1 -->
-<!-- newlines: 3 -->
+<!-- newlines: 1 -->
 ![](img/tensor.png)
 <!-- alignment: center -->
 credit: Cmglee, GNU FDL
@@ -401,3 +395,12 @@ pass.set_bind_group(0, Some(bind_group));
 pass.dispatch_workgroups(nwx, nwy, nwz);
 encoder.finish()
 ```
+
+---
+
+Zip
+===
+
+...you'll remember there are rules for element-wise operations...
+
+![](img/element-wise-product.png)
