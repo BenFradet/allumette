@@ -47,50 +47,25 @@ impl Shape {
 
     #[inline(always)]
     pub fn broadcast(&self, other: &Shape) -> Option<Shape> {
-        let n = self.data.len();
-        let m = other.data.len();
+        let (n, m) = (self.data.len(), other.data.len());
         let max = m.max(n);
-        let padded_n = self.pad_left(max, 1);
-        let padded_m = other.pad_left(max, 1);
-        let mut res = vec![0; max];
-        let mut flag = false;
+
+        let mut out = Vec::with_capacity(max);
 
         for i in 0..max {
-            let n = padded_n[i];
-            let m = padded_m[i];
-            if n == 1 {
-                // ∀ x, f(1, x) = x
-                res[i] = m;
-            } else if m == 1 {
-                // ∀ x, f(x, 1) = x
-                res[i] = n;
-            } else if m == n {
-                // ∀ x, f(x, x) = x
-                res[i] = n;
-            } else {
-                // ∀ x != 1, ¬∃ y != x, f(x, y) = z
-                flag = true;
-                break;
+            let self_i = if i < n { self.data[n - 1 - i] } else { 1 };
+            let other_i = if i < m { other.data[m - 1 - i] } else { 1 };
+
+            match (self_i, other_i) {
+                (1, o) => out.push(o),
+                (s, 1) => out.push(s),
+                (s, o) if s == o => out.push(s),
+                _ => return None,
             }
         }
 
-        if flag { None } else { Some(Shape::new(res)) }
-    }
-
-    #[inline(always)]
-    pub fn pad_left(&self, m: usize, cnst: usize) -> Shape {
-        let n = self.data.len();
-        let mut res = vec![cnst; m];
-        if n < m {
-            let offset = m - n;
-            for (i, item) in res.iter_mut().enumerate().take(m).skip(offset) {
-                let ni = i - offset;
-                *item = self.data[ni];
-            }
-        } else {
-            res[..m].copy_from_slice(&self.data[..m]);
-        }
-        Shape::new(res)
+        out.reverse();
+        Some(Shape::new(out))
     }
 
     pub fn sample_idx(&self) -> Idx {
@@ -197,24 +172,5 @@ mod tests {
         let s1 = Shape::new(vec![2, 5]);
         let s2 = Shape::new(vec![5]);
         assert_eq!(Some(Shape::new(vec![2, 5])), s1.broadcast(&s2));
-    }
-
-    #[test]
-    fn pad_left_test() {
-        let s = Shape::new(vec![1, 2, 1, 2]);
-        let pad = s.pad_left(6, 0);
-        assert_eq!(vec![0, 0, 1, 2, 1, 2], pad.data);
-
-        let s = Shape::new(vec![]);
-        let pad = s.pad_left(6, 0);
-        assert_eq!(vec![0, 0, 0, 0, 0, 0], pad.data);
-
-        let s = Shape::new(vec![1, 2, 1, 2]);
-        let pad = s.pad_left(0, 0);
-        assert_eq!(vec![0; 0], pad.data);
-
-        let s = Shape::new(vec![1, 2, 3, 4]);
-        let pad = s.pad_left(2, 0);
-        assert_eq!(vec![1, 2], pad.data);
     }
 }
