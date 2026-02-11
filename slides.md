@@ -47,6 +47,16 @@ options:
 
 ---
 
+Summary
+===
+
+<!-- newlines: 5 -->
+# What's a tensor?
+# What can we do with a tensor?
+# etc
+
+---
+
 What's a tensor?
 ===
 
@@ -98,9 +108,9 @@ What does a tensor look like in rust?
 <!-- column: 0 -->
 ```rust +no_background
 struct Tensor {
-    data: Vec<f64>,
-    shape: Shape,
-    strides: Strides,
+  data: Vec<f64>,
+  shape: Shape,
+  strides: Strides,
 }
 ```
 <!-- pause -->
@@ -108,10 +118,10 @@ struct Tensor {
 <!-- column: 1 -->
 ```rust +no_background
 let data = vec![
-    11., 12., 13., 14.,
-    21., 22., 23., 24.,
-    31., 32., 33., 34.,
-    41., 42., 43., 44.
+  11., 12., 13., 14.,
+  21., 22., 23., 24.,
+  31., 32., 33., 34.,
+  41., 42., 43., 44.
 ];
 ```
 <!-- pause -->
@@ -120,7 +130,7 @@ let data = vec![
 <!-- newlines: 1 -->
 ```rust +no_background
 struct Shape {
-    data: Vec<usize>,
+  data: Vec<usize>,
 }
 ```
 <!-- pause -->
@@ -134,7 +144,7 @@ let shape = Shape::new(vec![4, 2, 2]);
 <!-- column: 0 -->
 ```rust +no_background
 struct Strides {
-    data: Vec<usize>,
+  data: Vec<usize>,
 }
 ```
 <!-- pause -->
@@ -150,6 +160,14 @@ let strides = Strides::new(vec![4, 2, 1]);
 ```rust +no_background
 let tensor = Tensor { data, shape, strides };
 ```
+---
+
+Summary
+===
+
+<!-- newlines: 5 -->
+# What's a tensor?
+# What can we do with a tensor?
 
 ---
 
@@ -161,9 +179,9 @@ What can be done with a tensor?
 
 <!-- column: 0 -->
 ```rust +no_background
-  pub trait Ops<E: Element> {
+pub trait Ops<E: Element> {
 
-      fn map<F: Fn(E) -> E>(&self, f: F) -> Self;
+  fn map<F: Fn(E) -> E>(&self, f: F) -> Self;
 ```
 <!-- pause -->
 
@@ -177,9 +195,9 @@ $\{\ln(x), e^x, -x, frac(1, x), ...\}$
 <!-- column: 0 -->
 ```rust +no_background
 
-     fn zip<F: Fn(E, E) -> E>(
-         &self, other: &Self, f: F
-     ) -> Option<Self>;
+  fn zip<F: Fn(E, E) -> E>(
+    &self, other: &Self, f: F
+  ) -> Option<Self>;
 ```
 <!-- pause -->
 
@@ -192,12 +210,12 @@ $\{x + y, x dot y, x = y, ...\}$
 <!-- column: 0 -->
 ```rust +no_background
 
-     fn reduce<F: Fn(E, E) -> E>(
-         &self,
-         f: F,
-         dim: usize,
-         zero: E,
-     ) -> Option<Self>;
+  fn reduce<F: Fn(E, E) -> E>(
+    &self,
+    f: F,
+    dim: usize,
+    zero: E,
+  ) -> Option<Self>;
 ```
 <!-- pause -->
 
@@ -211,9 +229,9 @@ $\{sum(x), product(x)\}$
 <!-- column: 0 -->
 ```rust +no_background
 
-     fn matmul(
-         &self, other: &Self
-     ) -> Option<Self>;
+  fn matmul(
+    &self, other: &Self
+  ) -> Option<Self>;
 
 }
 ```
@@ -225,18 +243,18 @@ Map
 <!-- newlines: 6 -->
 ```rust +no_background {all|4-5|6-8|9-13|all}
 fn map<F: Fn(f64) -> f64>(
-    &self, f: F
+  &self, f: F
 ) -> Self {
-    let len = self.size();
-    let mut out = vec![0.; len];
-    for (i, d) in self.data.iter().enumerate() {
-        out[i] = f(*d);
-    }
-    Self {
-        data: out,
-        shape: self.shape.clone(),
-        strides: self.strides.clone(),
-    }
+  let len = self.size();
+  let mut out = vec![0.; len];
+  for (i, d) in self.data.iter().enumerate() {
+    out[i] = f(*d);
+  }
+  Self {
+    data: out,
+    shape: self.shape.clone(),
+    strides: self.strides.clone(),
+  }
 }
 ```
 ---
@@ -250,17 +268,17 @@ Map - parallel using rayon
 <!-- column: 0 -->
 ```rust +no_background {all|1|5|7|4-7|9|all}
 fn map<F: Fn(f64) -> f64 + Sync>(
-    &self, f: F
+  &self, f: F
 ) -> Self {
-    let out: Vec<_> = self.data
-        .par_iter()
-        .map(|d| f(*d))
-        .collect();
-    Self {
-        data: Arc::new(out),
-        shape: self.shape.clone(),
-        strides: self.strides.clone(),
-    }
+  let out: Vec<_> = self.data
+    .par_iter()
+    .map(|d| f(*d))
+    .collect();
+  Self {
+    data: Arc::new(out),
+    shape: self.shape.clone(),
+    strides: self.strides.clone(),
+  }
 }
 ```
 <!-- pause -->
@@ -276,9 +294,9 @@ fn map<F: Fn(f64) -> f64 + Sync>(
 <!-- newlines: 1 -->
 ```rust +no_background
 struct Tensor {
-    pub data: Arc<Vec<f64>>,
-    pub shape: Shape,
-    pub strides: Strides,
+  data: Arc<Vec<f64>>,
+  shape: Shape,
+  strides: Strides,
 }
 ```
 ---
@@ -287,21 +305,21 @@ Map - gpu using wgpu
 ===
 
 <!-- newlines: 4 -->
-```rust +no_background +line_numbers {all|1-4|6-8|10|11|12|13|14|all}
+```rust +no_background {all|1-4|6-8|10|11|12|13|14|all}
 @group(0) @binding(0)
 var<storage, read> input: array<f32>;
 @group(0) @binding(1)
 var<storage, read_write> output: array<f32>;
 
 fn neg(in: f32) -> f32 {
-    return -in;
+  return -in;
 } // etc.
 
 @compute
 @workgroup_size(x, y, z)
 fn call(@builtin(global_invocation_id) id: vec3<u32>) {
-    let i = id.x;
-    output[i] = replace_me(input[i]);
+  let i = id.x;
+  output[i] = replace_me(input[i]);
 }
 ```
 
@@ -310,23 +328,23 @@ fn call(@builtin(global_invocation_id) id: vec3<u32>) {
 Map - orchestrating gpu code
 ===
 
-```rust +no_background +line_numbers {all|1|2|4-5|7-10|4,12|14|16|all}
+```rust +no_background {all|1|2|4-5|7-10|4,12|14|16|all}
 fn map(&self, f: &'static str) -> Self {
-    let output_buffer = create_output_buffer(self.shape.gpu_byte_size());
-    
-    let workgroups = (&self.shape).into();
-    let pipeline = get_or_create_pipeline(f, workgroups.size);
+  let output_buffer = create_output_buffer(self.shape.gpu_byte_size());
+  
+  let workgroups = (&self.shape).into();
+  let pipeline = get_or_create_pipeline(f, workgroups.size);
 
-    let bind_group = create_bind_group(
-        &[&self.buffer, &output_buffer],
-        &pipeline.get_bind_group_layout(0),
-    );
+  let bind_group = create_bind_group(
+    &[&self.buffer, &output_buffer],
+    &pipeline.get_bind_group_layout(0),
+  );
 
-    let command = encode_command(&workgroups.count, &pipeline, &bind_group);
+  let command = encode_command(&workgroups.count, &pipeline, &bind_group);
 
-    submit_command(command);
+  submit_command(command);
 
-    self.with_buffer(output_buffer)
+  self.with_buffer(output_buffer)
 }
 ```
 
@@ -334,10 +352,10 @@ fn map(&self, f: &'static str) -> Self {
 <!-- newlines: 1 -->
 ```rust +no_background
 struct Tensor<'a> {
-    pub buffer: Arc<Buffer>,
-    pub shape: Shape,
-    pub strides: Strides,
-    pub context: &'a WgpuContext,
+  buffer: Arc<Buffer>,
+  shape: Shape,
+  strides: Strides,
+  context: &'a WgpuContext,
 }
 ```
 ---
@@ -375,11 +393,11 @@ $vec("workgroup_size.x", "workgroup_size.y", "workgroup_size.z") dot vec("num_wo
 @compute
 @workgroup_size(wsx, wsy, wsz)
 fn call(@builtin(global_invocation_id)
-    id: vec3<u32>
+  id: vec3<u32>
 ) {
-    // (id.x, id.y, id.z) unique thread id
-    let i = id.x; 
-    output[i] = input[i];
+  // (id.x, id.y, id.z) unique thread id
+  let i = id.x; 
+  output[i] = input[i];
 }
 ```
 <!-- pause -->
@@ -395,12 +413,246 @@ pass.set_bind_group(0, Some(bind_group));
 pass.dispatch_workgroups(nwx, nwy, nwz);
 encoder.finish()
 ```
+---
+
+Summary
+===
+
+<!-- newlines: 5 -->
+# What's a tensor?
+# What can we do with a tensor?
+## Map
+## Zip
 
 ---
 
 Zip
 ===
 
+<!-- alignment: center -->
 ...you'll remember there are rules for element-wise operations...
+<!-- pause -->
+<!-- newlines: 1 -->
 
-![](img/element-wise-product.png)
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+<!-- alignment: center -->
+<span style="color:#a6da95">do's 👍</span>
+<!-- pause -->
+
+```typst +render +width:60%
+$
+1
++
+underbrace(
+  mat(
+    1, ..., 2;
+    dots.v, dots.down, dots.v;
+    3, ..., 4;
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+=
+underbrace(
+  mat(
+    2, ..., 3;
+    dots.v, dots.down, dots.v;
+    4, ..., 5;
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+$
+```
+<!-- pause -->
+```typst +render +width:70%
+$
+m lr(size: #3em, brace.l) vec(
+  1, dots.v, 2
+) 
++
+underbrace(
+  mat(
+    1, ..., 2;
+    dots.v, dots.down, dots.v;
+    3, ..., 4;
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+=
+underbrace(
+  mat(
+   2, ..., 3;
+   dots.v, dots.down, dots.v;
+   5, ..., 6;
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+$
+```
+<!-- pause -->
+```typst +render +width:70%
+$
+underbrace(
+  (1 ... 2),
+  n
+) 
++
+underbrace(
+  mat(
+    1, ..., 2;
+    dots.v, dots.down, dots.v;
+    3, ..., 4;
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+=
+underbrace(
+  mat(
+   2, ..., 4;
+   dots.v, dots.down, dots.v;
+   4, ..., 6;
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+$
+```
+<!-- pause -->
+```typst +render +width:70%
+$
+m lr(size: #3em, brace.l) underbrace(
+  mat(
+    1, ..., 2;
+    dots.v, dots.down, dots.v;
+    3, ..., 4;
+  ),
+  n,
+) 
++
+underbrace(
+  mat(
+    1, ..., 2;
+    dots.v, dots.down, dots.v;
+    3, ..., 4;
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+=
+underbrace(
+  mat(
+   2, ..., 4;
+   dots.v, dots.down, dots.v;
+   6, ..., 8;
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+$
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+<!-- alignment: center -->
+<span style="color:#ed8796">dont's 👎</span>
+
+<!-- pause -->
+```typst +render +width:80%
+$
+p != m, #h(0.5em)
+p lr(size: #3em, brace.l) vec(
+  a_1, dots.v, a_p
+) 
++
+underbrace(
+  mat(
+    b_11, ..., b(1n);
+    dots.v, dots.down, dots.v;
+    b_(m 1), ..., b_(m n);
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+$
+```
+<!-- pause -->
+```typst +render +width:80%
+$
+q != n, #h(0.5em)
+underbrace(
+  (a_1 ... a_q),
+  q
+) 
++
+underbrace(
+  mat(
+    b_11, ..., b_(1n);
+    dots.v, dots.down, dots.v;
+    b_(m 1), ..., b_(m n);
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+$
+```
+<!-- pause -->
+```typst +render +width:100%
+$
+p != m, #h(0.5em) q != n, #h(0.5em)
+p lr(size: #3em, brace.l) underbrace(
+  mat(
+    a_11, ..., a_(1q);
+    dots.v, dots.down, dots.v;
+    a_(p 1), ..., a_(p q);
+  ),
+  q,
+) 
++
+underbrace(
+  mat(
+    b_11, ..., b_(1n);
+    dots.v, dots.down, dots.v;
+    b_(m 1), ..., b_(m n);
+  ),
+  n,
+) lr(size: #3em, brace.r) m
+$
+```
+
+---
+
+Zip cont'd
+===
+
+```rust +no_background
+fn broadcast(&self, b: &Shape) -> Option<Shape> {
+  let (n, m) = (self.len(), b.len());
+  let max = m.max(n);
+
+  let mut out = Vec::with_capacity(max);
+
+  for i in (0..max).rev() {
+    let si =
+      if i < n { self[n - 1 - i] } else { 1 };
+    let bi =
+      if i < m { b[m - 1 - i] } else { 1 };
+
+    match (si, bi) {
+      (1, b) => out.push(b),
+      (s, 1) => out.push(s),
+      (s, b) if s == b => out.push(s),
+      _ => return None,
+    }
+  }
+
+  Some(Shape::new(out))
+}
+```
+
+---
+
+Summary
+===
+
+<!-- newlines: 5 -->
+# What's a tensor?
+# What can we do with a tensor?
+## Map
+## Zip
+## Reduce

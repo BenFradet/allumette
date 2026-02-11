@@ -52,7 +52,7 @@ impl Shape {
 
         let mut out = Vec::with_capacity(max);
 
-        for i in 0..max {
+        for i in (0..max).rev() {
             let self_i = if i < n { self.data[n - 1 - i] } else { 1 };
             let other_i = if i < m { other.data[m - 1 - i] } else { 1 };
 
@@ -64,7 +64,6 @@ impl Shape {
             }
         }
 
-        out.reverse();
         Some(Shape::new(out))
     }
 
