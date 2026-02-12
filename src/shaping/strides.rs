@@ -16,18 +16,13 @@ impl Strides {
         &self.data
     }
 
-    #[allow(clippy::needless_range_loop)]
     #[inline(always)]
-    pub fn idx(&self, pos: usize) -> Idx {
-        let n = self.data.len();
-        let mut res = vec![1; n];
-        let mut mut_pos = pos;
-        for i in 0..n {
-            let s = self[i];
-            let idx = mut_pos / s;
-            mut_pos -= idx * s;
-            res[i] = idx;
-        }
+    pub fn idx(&self, mut pos: usize) -> Idx {
+        let res = self.data.iter().map(|&s| {
+            let idx = pos / s;
+            pos %= s;
+            idx
+        }).collect();
         Idx::new(res)
     }
 

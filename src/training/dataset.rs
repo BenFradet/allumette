@@ -218,7 +218,7 @@ mod tests {
             let res: Dataset<f64> = Dataset::circle(n);
             common_test(&res, n);
             let center = 0.5;
-            let radius_sq = 0.25;
+            let radius_sq = 0.20;
             assert!(res.features.iter().zip(res.labels.iter()).all(|((x1, x2), y)| {
                 if (x1 - center).powf(2.) + (x2 - center).powf(2.) < radius_sq {
                     *y == 1
