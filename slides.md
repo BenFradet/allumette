@@ -108,9 +108,9 @@ What does a tensor look like in rust?
 <!-- column: 0 -->
 ```rust +no_background
 struct Tensor {
-  data: Vec<f64>,
-  shape: Shape,
-  strides: Strides,
+    data: Vec<f64>,
+    shape: Shape,
+    strides: Strides,
 }
 ```
 <!-- pause -->
@@ -118,10 +118,10 @@ struct Tensor {
 <!-- column: 1 -->
 ```rust +no_background
 let data = vec![
-  11., 12., 13., 14.,
-  21., 22., 23., 24.,
-  31., 32., 33., 34.,
-  41., 42., 43., 44.
+    11., 12., 13., 14.,
+    21., 22., 23., 24.,
+    31., 32., 33., 34.,
+    41., 42., 43., 44.
 ];
 ```
 <!-- pause -->
@@ -130,7 +130,7 @@ let data = vec![
 <!-- newlines: 1 -->
 ```rust +no_background
 struct Shape {
-  data: Vec<usize>,
+    data: Vec<usize>,
 }
 ```
 <!-- pause -->
@@ -144,7 +144,7 @@ let shape = Shape::new(vec![4, 2, 2]);
 <!-- column: 0 -->
 ```rust +no_background
 struct Strides {
-  data: Vec<usize>,
+    data: Vec<usize>,
 }
 ```
 <!-- pause -->
@@ -181,7 +181,7 @@ What can be done with a tensor?
 ```rust +no_background
 pub trait Ops<E: Element> {
 
-  fn map<F: Fn(E) -> E>(&self, f: F) -> Self;
+    fn map<F: Fn(E) -> E>(&self, f: F) -> Self;
 ```
 <!-- pause -->
 
@@ -195,9 +195,9 @@ $\{\ln(x), e^x, -x, frac(1, x), ...\}$
 <!-- column: 0 -->
 ```rust +no_background
 
-  fn zip<F: Fn(E, E) -> E>(
-    &self, other: &Self, f: F
-  ) -> Option<Self>;
+    fn zip<F: Fn(E, E) -> E>(
+        &self, other: &Self, f: F
+    ) -> Option<Self>;
 ```
 <!-- pause -->
 
@@ -210,12 +210,12 @@ $\{x + y, x dot y, x = y, ...\}$
 <!-- column: 0 -->
 ```rust +no_background
 
-  fn reduce<F: Fn(E, E) -> E>(
-    &self,
-    f: F,
-    dim: usize,
-    zero: E,
-  ) -> Option<Self>;
+    fn reduce<F: Fn(E, E) -> E>(
+        &self,
+        f: F,
+        dim: usize,
+        zero: E,
+    ) -> Option<Self>;
 ```
 <!-- pause -->
 
@@ -229,9 +229,9 @@ $\{sum(x), product(x)\}$
 <!-- column: 0 -->
 ```rust +no_background
 
-  fn matmul(
-    &self, other: &Self
-  ) -> Option<Self>;
+    fn matmul(
+        &self, other: &Self
+    ) -> Option<Self>;
 
 }
 ```
@@ -243,18 +243,18 @@ Map
 <!-- newlines: 6 -->
 ```rust +no_background {all|4-5|6-8|9-13|all}
 fn map<F: Fn(f64) -> f64>(
-  &self, f: F
+    &self, f: F
 ) -> Self {
-  let len = self.size();
-  let mut out = vec![0.; len];
-  for (i, d) in self.data.iter().enumerate() {
-    out[i] = f(*d);
-  }
-  Self {
-    data: out,
-    shape: self.shape.clone(),
-    strides: self.strides.clone(),
-  }
+    let len = self.size();
+    let mut out = vec![0.; len];
+    for (i, d) in self.data.iter().enumerate() {
+        out[i] = f(*d);
+    }
+    Self {
+        data: out,
+        shape: self.shape.clone(),
+        strides: self.strides.clone(),
+    }
 }
 ```
 ---
@@ -268,17 +268,17 @@ Map - parallel using rayon
 <!-- column: 0 -->
 ```rust +no_background {all|1|5|7|4-7|9|all}
 fn map<F: Fn(f64) -> f64 + Sync>(
-  &self, f: F
+    &self, f: F
 ) -> Self {
-  let out: Vec<_> = self.data
-    .par_iter()
-    .map(|d| f(*d))
-    .collect();
-  Self {
-    data: Arc::new(out),
-    shape: self.shape.clone(),
-    strides: self.strides.clone(),
-  }
+    let out: Vec<_> = self.data
+        .par_iter()
+        .map(|d| f(*d))
+        .collect();
+    Self {
+        data: Arc::new(out),
+        shape: self.shape.clone(),
+        strides: self.strides.clone(),
+    }
 }
 ```
 <!-- pause -->
@@ -294,14 +294,14 @@ fn map<F: Fn(f64) -> f64 + Sync>(
 <!-- newlines: 1 -->
 ```rust +no_background
 struct Tensor {
-  data: Arc<Vec<f64>>,
-  shape: Shape,
-  strides: Strides,
+    data: Arc<Vec<f64>>,
+    shape: Shape,
+    strides: Strides,
 }
 ```
 ---
 
-Map - gpu using wgpu
+Map - gpu using wgpu and wgsl
 ===
 
 <!-- newlines: 4 -->
@@ -312,14 +312,14 @@ var<storage, read> input: array<f32>;
 var<storage, read_write> output: array<f32>;
 
 fn neg(in: f32) -> f32 {
-  return -in;
+    return -in;
 } // etc.
 
 @compute
 @workgroup_size(x, y, z)
 fn call(@builtin(global_invocation_id) id: vec3<u32>) {
-  let i = id.x;
-  output[i] = replace_me(input[i]);
+    let i = id.x;
+    output[i] = replace_me(input[i]);
 }
 ```
 
@@ -330,21 +330,21 @@ Map - orchestrating gpu code
 
 ```rust +no_background {all|1|2|4-5|7-10|4,12|14|16|all}
 fn map(&self, f: &'static str) -> Self {
-  let output_buffer = create_output_buffer(self.shape.gpu_byte_size());
-  
-  let workgroups = (&self.shape).into();
-  let pipeline = get_or_create_pipeline(f, workgroups.size);
+    let output_buffer = create_output_buffer(self.shape.gpu_byte_size());
+    
+    let workgroups = (&self.shape).into();
+    let pipeline = get_or_create_pipeline(f, workgroups.size);
 
-  let bind_group = create_bind_group(
-    &[&self.buffer, &output_buffer],
-    &pipeline.get_bind_group_layout(0),
-  );
+    let bind_group = create_bind_group(
+        &[&self.buffer, &output_buffer],
+        &pipeline.get_bind_group_layout(0),
+    );
 
-  let command = encode_command(&workgroups.count, &pipeline, &bind_group);
+    let command = encode_command(&workgroups.count, &pipeline, &bind_group);
 
-  submit_command(command);
+    submit_command(command);
 
-  self.with_buffer(output_buffer)
+    self.with_buffer(output_buffer)
 }
 ```
 
@@ -352,10 +352,10 @@ fn map(&self, f: &'static str) -> Self {
 <!-- newlines: 1 -->
 ```rust +no_background
 struct Tensor<'a> {
-  buffer: Arc<Buffer>,
-  shape: Shape,
-  strides: Strides,
-  context: &'a WgpuContext,
+    buffer: Arc<Buffer>,
+    shape: Shape,
+    strides: Strides,
+    context: &'a WgpuContext,
 }
 ```
 ---
@@ -393,11 +393,11 @@ $vec("workgroup_size.x", "workgroup_size.y", "workgroup_size.z") dot vec("num_wo
 @compute
 @workgroup_size(wsx, wsy, wsz)
 fn call(@builtin(global_invocation_id)
-  id: vec3<u32>
+    id: vec3<u32>
 ) {
-  // (id.x, id.y, id.z) unique thread id
-  let i = id.x; 
-  output[i] = input[i];
+    // (id.x, id.y, id.z) unique thread id
+    let i = id.x; 
+    output[i] = input[i];
 }
 ```
 <!-- pause -->
@@ -426,7 +426,7 @@ Summary
 
 ---
 
-Zip
+Zip - broadcasting
 ===
 
 <!-- alignment: center -->
@@ -617,33 +617,128 @@ $
 
 ---
 
-Zip cont'd
+Zip - broadcasting cont'd
 ===
 
-```rust +no_background
+<!-- column_layout: [6, 3] -->
+
+<!-- column: 0 -->
+<!-- newlines: 3 -->
+```rust +no_background {all|1|2-3|5|7|8-9|11-16|19|all}
 fn broadcast(&self, b: &Shape) -> Option<Shape> {
-  let (n, m) = (self.len(), b.len());
-  let max = m.max(n);
+    let (n, m) = (self.len(), b.len());
+    let max = m.max(n);
 
-  let mut out = Vec::with_capacity(max);
+    let mut out = Vec::with_capacity(max);
 
-  for i in (0..max).rev() {
-    let si =
-      if i < n { self[n - 1 - i] } else { 1 };
-    let bi =
-      if i < m { b[m - 1 - i] } else { 1 };
+    for i in (0..max).rev() {
+        let si = if i < n { self[n - 1 - i] } else { 1 };
+        let bi = if i < m { b[m - 1 - i] } else { 1 };
 
-    match (si, bi) {
-      (1, b) => out.push(b),
-      (s, 1) => out.push(s),
-      (s, b) if s == b => out.push(s),
-      _ => return None,
+        match (si, bi) {
+            (1, b) => out.push(b),
+            (s, 1) => out.push(s),
+            (s, b) if s == b => out.push(s),
+            _ => return None,
+        }
     }
-  }
 
-  Some(Shape::new(out))
+    Some(Shape::new(out))
 }
 ```
+<!-- pause -->
+
+<!-- column: 1 -->
+```typst +render +width:70%
+$vec(1) #h(0.5em) "bc" #h(0.5em) vec(2, 3) = vec(2, 3)$
+```
+<!-- pause -->
+```typst +render +width:70%
+$vec(5) #h(0.5em) "bc" #h(0.5em) vec(2, 5) = vec(2, 5)$
+```
+<!-- pause -->
+```typst +render +width:85%
+$vec(2, 3, 1) #h(0.5em) "bc" #h(0.5em) vec(7, 2, 3, 5) = vec(7, 2, 3, 5)$
+```
+<!-- pause -->
+```typst +render +width:55%
+$vec(5) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) vec(5, 2)$
+```
+<!-- pause -->
+```typst +render +width:65%
+$vec(5, 7, 5, 1) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) vec(1, 5, 1, 5)$
+```
+
+---
+
+Zip - impl
+===
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+```rust +no_background {all|1-5|6-10|11|13-14|16-26|17|18-19|20-21|22-23|24|25|28|all}
+fn zip<F: Fn(f64, f64) -> f64>(
+    &self,
+    other: &Self,
+    f: F
+) -> Option<Self> {
+    let shape = if self.shape == other.shape {
+        self.shape.clone()
+    } else {
+        self.shape.broadcast(&other.shape)?
+    };
+    let strides: Strides = (&shape).into();
+
+    let len = shape.size;
+    let mut out = vec![0.; len];
+
+    for i in 0..len {
+        let idx = strides.idx(i);
+        let idxa = idx.broadcast(&self.shape);
+        let idxb = idx.broadcast(&other.shape);
+        let posa = self.strides.position(&idxa);
+        let posb = other.strides.position(&idxb);
+        let va = self.data[posa];
+        let vb = other.data[posb];
+        let pos = strides.position(&idx);
+        out[pos] = f(va, vb);
+    }
+
+    Some(Self::new(out, shape, strides))
+}
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+```typst +render +width:50%
+$(1 #h(0.5em) 2) + mat(1, 2; 3, 4)$
+```
+<!-- pause -->
+<!-- newlines: 2 -->
+```rust +no_background
+[2].broadcast([2, 2]) = [2, 2];
+```
+<!-- pause -->
+<!-- newlines: 1 -->
+```rust +no_background
+[2, 2].into() = [2, 1];
+```
+<!-- pause -->
+<!-- newlines: 3 -->
+```rust +no_background
+i = 2
+idx = [1, 0]
+idxa = [0]
+idxb = [1, 0]
+posa = 0
+posb = 2
+va = 1
+vb = 3
+pos = 2
+out[2] = 1 + 3 = 4
+```
+
 
 ---
 
