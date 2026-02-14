@@ -62,9 +62,13 @@ What's a tensor?
 
 if you recall your algebra classes...
 <!-- newlines: 1 -->
-![](img/tensor.png)
+![image:width:70%](img/tensor.png)
 <!-- alignment: center -->
 credit: Cmglee, GNU FDL
+
+<!-- newlines: 1 -->
+<!-- alignment: center -->
+multi-dimensional array of arbitrary dimensions
 
 ---
 
@@ -157,9 +161,12 @@ let strides = Strides::new(vec![4, 2, 1]);
 <!-- pause -->
 
 <!-- reset_layout -->
-```rust +no_background
-let tensor = Tensor { data, shape, strides };
-```
+<!-- alignment: center -->
+- transposition (permutation)
+- adding / removing dimensions (viewing)
+
+=> don't require touching data
+
 ---
 
 Summary
@@ -711,34 +718,39 @@ fn zip<F: Fn(f64, f64) -> f64>(
 <!-- pause -->
 
 <!-- column: 1 -->
-```typst +render +width:50%
-$(1 #h(0.5em) 2) + mat(1, 2; 3, 4)$
+```typst +render +width:80%
+$
+    1 lr(size: #1em, brace.l) underbrace((1 #h(0.5em) 2), 2) +
+    underbrace(vec(3, 4), 1) lr(size: #2em, brace.r) 2 =
+    mat(4, 5; 5, 6)
+$
 ```
 <!-- pause -->
-<!-- newlines: 2 -->
 ```rust +no_background
-[2].broadcast([2, 2]) = [2, 2];
+[2, 2]
+```
+<!-- pause -->
+```rust +no_background
+[2, 1]
 ```
 <!-- pause -->
 <!-- newlines: 1 -->
 ```rust +no_background
-[2, 2].into() = [2, 1];
+out = [0, 0, 0, 0]
 ```
 <!-- pause -->
-<!-- newlines: 3 -->
 ```rust +no_background
-i = 2
-idx = [1, 0]
-idxa = [0]
-idxb = [1, 0]
-posa = 0
-posb = 2
-va = 1
-vb = 3
-pos = 2
-out[2] = 1 + 3 = 4
+i = 3
+idx = [1, 1]  // 1D => nD: 3 / 2 => (3 % 2) / 1
+idxa = [0, 1] // [1, 1] bc [1, 2]
+idxb = [1, 0] // [1, 1] bc [2, 1]
+posa = 1      // nD => 1D: [1, 2] pos [0, 1]
+posb = 1      // nD => 1D: [2, 1] pos [1, 0]
+va = 2
+vb = 4
+pos = 3       // nD => 1D: [2, 1] pos [1, 1]
+out[3] = 2 + 4 = 6
 ```
-
 
 ---
 
