@@ -89,12 +89,11 @@ impl Ops<f64, Par> for CpuData {
             let out = (0..len)
                 .into_par_iter()
                 .map(|i| {
-                    let out_idx = strides.idx(i);
+                    let mut out_idx = strides.idx(i);
                     let mut tmp = zero;
                     for j in 0..self.shape[dim] {
-                        let mut self_idx = out_idx.clone();
-                        self_idx[dim] = j;
-                        let self_pos = self.strides.position(&self_idx);
+                        out_idx[dim] = j;
+                        let self_pos = self.strides.position(&out_idx);
                         tmp = f(tmp, self.data[self_pos]);
                     }
                     tmp
