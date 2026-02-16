@@ -763,3 +763,72 @@ Summary
 ## Map
 ## Zip
 ## Reduce
+
+---
+
+Reduce
+===
+
+<!-- newlines: 3 -->
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+```typst +render +width:80%
+$
+    sum_(d=0) mat(1, 2, 3; 4, 5, 6) = #h(0.5em) ?
+$
+```
+<!-- pause -->
+```typst +render +width:50%
+$
+    (5 #h(0.5em) 7 #h(0.5em) 9)
+$
+```
+<!-- pause -->
+
+<!-- column: 1 -->
+```typst +render +width:80%
+$
+    sum_(d=1) mat(1, 2, 3; 4, 5, 6) = #h(0.5em) ?
+$
+```
+<!-- pause -->
+```typst +render +width:40%
+$
+    vec(6, 15)
+$
+```
+
+---
+
+Reduce - impl
+===
+
+```rust +no_background
+fn reduce<F: Fn(f64, f64) -> f64>(
+    &self,
+    f: F,
+    dim: usize,
+    zero: f64,
+) -> Self {
+    let mut shape_data = self.shape.to_vec();
+    shape_data[dim] = 1;
+    let shape = Shape::new(shape_data);
+    let strides: Strides = (&shape).into();
+
+    let len = shape.size;
+    let mut out = vec![zero; len];
+
+    for i in 0..len {
+        let mut idx = strides.idx(i);
+        let out_pos = strides.position(&out_idx);
+        for j in 0..self.shape[dim] {
+            idx[dim] = j;
+            let pos = self.strides.position(&idx);
+            let v_out = out[out_pos];
+            let v_self = self.data[pos];
+            out[out_pos] = f(v_out, v_self);
+        }
+    }
+    Self::new(out, shape, strides)
+}
