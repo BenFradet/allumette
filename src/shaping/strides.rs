@@ -76,28 +76,27 @@ mod tests {
     #[ignore = "dbg"]
     #[test]
     fn slide_test() {
-        let shape_a = Shape::new(vec![1, 2]);
-        let strides_a: Strides = (&shape_a).into();
-        println!("strides a {strides_a:?}");
-        let shape_b = Shape::new(vec![2, 1]);
-        let strides_b: Strides = (&shape_b).into();
-        println!("strides b {strides_b:?}");
-        let bc = shape_a.broadcast(&shape_b).unwrap();
-        println!("{bc:?}");
-        let strides: Strides = (&bc).into();
-        println!("{strides:?}");
-        let idx = strides.idx(3);
-        println!("idx {idx:?}");
-        let idxa = idx.broadcast(&shape_a).unwrap();
-        println!("idxa {idxa:?}");
-        let idxb = idx.broadcast(&shape_b).unwrap();
-        println!("idxb {idxb:?}");
-        let posa = strides_a.position(&idxa);
-        println!("posa {posa:?}");
-        let posb = strides_b.position(&idxb);
-        println!("posb {posb:?}");
-        let pos = strides.position(&idx);
-        println!("pos {pos:?}");
+        let shape = Shape::new(vec![3, 3]);
+        println!("shape {shape:?}");
+        let strides: Strides = (&shape).into();
+        println!("strides {strides:?}");
+        let shape_reduced = Shape::new(vec![3, 1]);
+        println!("shape reduced {shape_reduced:?}");
+        let strides_reduced: Strides = (&shape_reduced).into();
+        println!("strides_reduced {strides_reduced:?}");
+        let dim = 1;
+        let mut idx = strides_reduced.idx(2);
+        let out_pos = strides_reduced.position(&idx);
+        println!("out pos {out_pos:?}\n");
+        println!("idx {idx:?}\n");
+        for j in 0..3 {
+            println!("j {j:?}");
+            idx[dim] = j;
+            println!("idx {idx:?}");
+            let pos = strides.position(&idx);
+            println!("pos {pos:?}");
+        }
+        assert!(false)
     }
 
     // TODO: reintroduce

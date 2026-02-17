@@ -804,7 +804,10 @@ $
 Reduce - impl
 ===
 
-```rust +no_background
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+```rust +no_background {all|1-6|7-9|10|12-13|15-25|16|17|18-24|19|20|21-22|23|all}
 fn reduce<F: Fn(f64, f64) -> f64>(
     &self,
     f: F,
@@ -821,14 +824,47 @@ fn reduce<F: Fn(f64, f64) -> f64>(
 
     for i in 0..len {
         let mut idx = strides.idx(i);
-        let out_pos = strides.position(&out_idx);
+        let out_pos = strides.position(&idx);
         for j in 0..self.shape[dim] {
             idx[dim] = j;
             let pos = self.strides.position(&idx);
-            let v_out = out[out_pos];
             let v_self = self.data[pos];
-            out[out_pos] = f(v_out, v_self);
+            out[out_pos] = f(out[out_pos], v_self);
         }
     }
     Self::new(out, shape, strides)
 }
+```
+
+<!-- pause -->
+
+<!-- column: 1 -->
+```typst +render +width:55%
+$
+    product_(d=1) mat(1, 2, 3; 4, 5, 6; 7, 8, 9) = vec(6, 120, 504)
+$
+```
+<!-- pause -->
+```rust +no_background
+[3, 1]
+```
+<!-- pause -->
+```rust +no_background
+[1, 1]
+```
+<!-- pause -->
+<!-- newlines: 1 -->
+```rust +no_background
+out = [1, 1, 1]
+```
+<!-- pause -->
+```rust +no_background
+i = 2
+idx = [2, 0]      // 1D => nD: 2 / 1 => (2 % 1) / 1
+out_pos = 2       // [1, 1] pos [2, 0]
+j = {0, 1, 2}
+idx = {[2, 0], [2, 1], [2, 2]}
+pos = {6, 7, 8}   // nD => 1D: [3, 1] pos idx
+v_self = {7, 8, 9}
+out[2] = {1 * 7, 7 * 8, 56 * 9}
+```
