@@ -868,3 +868,101 @@ pos = {6, 7, 8}   // nD => 1D: [3, 1] pos idx
 v_self = {7, 8, 9}
 out[2] = {1 * 7, 7 * 8, 56 * 9}
 ```
+
+---
+
+Summary
+===
+
+<!-- newlines: 5 -->
+# What's a tensor?
+# What can we do with a tensor?
+## Map
+## Zip
+## Reduce
+## Matmul
+
+---
+
+Matmul
+===
+
+<!-- alignment: center -->
+...you'll also remember there are rules for matrix multiplication...
+
+
+```typst +render +width:55%
+#let hlp(x) = text(fill: rgb("#f5a97f"))[$#x$]
+#let hlm(x) = text(fill: rgb("#c6a0f6"))[$#x$]
+
+#let hll(x) = {
+  set text(fill: gradient.linear(rgb("#c6a0f6"), rgb("#f5a97f")))
+  box($#x$)
+}
+#let hlr(x) = {
+  set text(fill: gradient.linear(rgb("#f5a97f"), rgb("#c6a0f6")))
+  box($#x$)
+}
+
+#grid(
+  columns: 2,
+  column-gutter: 0.5em,
+  row-gutter: 0.3em,
+  align: (right + bottom, left + bottom),
+  [],
+  $ mat(hlm(1), hlp(2); hlm(3), hlp(4); hlm(5), hlp(6)) $,
+  $ mat(hlm(1), hlm(2), hlm(3); hlp(4), hlp(5), hlp(6)) $,
+  $ mat(hlm(22), hll(28); hlr(49), hlp(64)) $,
+)
+```
+
+---
+
+Matmul - impl
+===
+
+```rust +no_background
+fn matmul(&self, other: &Self) -> Option<Self> {
+    let self_shape_len = self.shape.len();
+    let other_shape_len = other.shape.len();
+    (self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]).then_some(0)?;
+
+    let self_shape = self.shape.clone().drop_right(2);
+    let other_shape = other.shape.clone().drop_right(2);
+
+    let mut shape = self_shape.broadcast(&other_shape)?;
+    shape.push(self.shape[self_shape_len - 2]);
+    shape.push(other.shape[other_shape_len - 1]);
+    let len = shape.size;
+    let strides: Strides = (&shape).into();
+
+    let mut out = vec![0.; len];
+```
+
+---
+
+Matmul - impl cont'd
+===
+
+```rust +no_background
+    for (i, out_i) in out.iter_mut().enumerate() {
+        let index = shape.idx(i);
+        let mut self_idx = index.broadcast(&self.shape)?;
+        let self_idx_len = self_idx.len();
+        let mut other_idx = index.broadcast(&other.shape)?;
+        let other_idx_len = other_idx.len();
+
+        let mut tmp = 0.;
+        for position in 0..self.shape[self_shape_len - 1] {
+            self_idx[self_idx_len - 1] = position;
+            other_idx[other_idx_len - 2] = position;
+            let self_pos = self.strides.position(&self_idx);
+            let other_pos = other.strides.position(&other_idx);
+            tmp += self.data[self_pos] * other.data[other_pos];
+        }
+        *out_i = tmp;
+    }
+
+    Some(Self::new(out, shape, strides))
+}
+```
