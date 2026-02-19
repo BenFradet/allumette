@@ -114,14 +114,12 @@ impl Ops<f64, Seq> for CpuData {
         for (i, out_i) in out.iter_mut().enumerate() {
             let index = shape.idx(i);
             let mut self_idx = index.broadcast(&self.shape)?;
-            let self_idx_len = self_idx.len();
             let mut other_idx = index.broadcast(&other.shape)?;
-            let other_idx_len = other_idx.len();
 
             let mut tmp = 0.;
             for position in 0..self.shape[self_shape_len - 1] {
-                self_idx[self_idx_len - 1] = position;
-                other_idx[other_idx_len - 2] = position;
+                self_idx[self_shape_len - 1] = position;
+                other_idx[other_shape_len - 2] = position;
                 let self_pos = self.strides.position(&self_idx);
                 let other_pos = other.strides.position(&other_idx);
                 tmp += self.data[self_pos] * other.data[other_pos];
