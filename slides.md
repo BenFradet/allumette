@@ -910,9 +910,9 @@ Matmul
   row-gutter: 0.3em,
   align: (right + bottom, left + bottom),
   [],
-  $ mat(hlm(1), hlp(2); hlm(3), hlp(4); hlm(5), hlp(6)) $,
-  $ mat(hlm(1), hlm(2), hlm(3); hlp(4), hlp(5), hlp(6)) $,
-  $ mat(hlm(22), hll(28); hlr(49), hlp(64)) $,
+  $ n lr(size: #3em, brace.l) overbrace(mat(hlm(1), hlp(2); hlm(3), hlp(4); hlm(5), hlp(6)), p) $,
+  $ m lr(size: #2em, brace.l) underbrace(mat(hlm(1), hlm(2), hlm(3); hlp(4), hlp(5), hlp(6)), n) $,
+  $ m lr(size: #2em, brace.l) underbrace(mat(hlm(22), hll(28); hlr(49), hlp(64)), p) $,
 )
 ```
 
@@ -921,22 +921,58 @@ Matmul
 Matmul - impl
 ===
 
-```rust +no_background
-fn matmul(&self, other: &Self) -> Option<Self> {
-    let self_shape_len = self.shape.len();
-    let other_shape_len = other.shape.len();
-    (self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]).then_some(0)?;
+<!-- column_layout: [1, 1] -->
 
-    let self_shape = self.shape.clone().drop_right(2);
-    let other_shape = other.shape.clone().drop_right(2);
+<!-- column: 0 -->
+<!-- newlines: 5 -->
+```rust +no_background {all|5-7|9-10|12-13|15-16|17-18|all}
+fn matmul(&self, rhs: &Self) -> Option<Self> {
+    let lhs_rank = self.shape.len();
+    let rhs_rank = rhs.shape.len();
+    
+    let n1 = self.shape[lhs_rank - 1];
+    let n2 = rhs.shape[rhs_rank - 2];
+    (n1 == n2).then_some(())?;
 
-    let mut shape = self_shape.broadcast(&other_shape)?;
-    shape.push(self.shape[self_shape_len - 2]);
-    shape.push(other.shape[other_shape_len - 1]);
+    let m = self.shape[lhs_rank - 2];
+    let p = rhs.shape[rhs_rank - 1];
+
+    let lhs_shape = self.shape.drop_right(2);
+    let rhs_shape = rhs.shape.drop_right(2);
+
+    let mut shape =
+        lhs_shape.broadcast(&rhs_shape)?;
+    shape.push(m);
+    shape.push(p);
     let len = shape.size;
     let strides: Strides = (&shape).into();
 
     let mut out = vec![0.; len];
+
+    // to be continued ...
+```
+
+<!-- pause -->
+
+<!-- column: 1 -->
+```typst +render +width:80%
+#let hlp(x) = text(fill: rgb("#f5a97f"))[$#x$]
+#let hlm(x) = text(fill: rgb("#c6a0f6"))[$#x$]
+
+#let hll(x) = {
+  set text(fill: gradient.linear(rgb("#c6a0f6"), rgb("#f5a97f")))
+  box($#x$)
+}
+#let hlr(x) = {
+  set text(fill: gradient.linear(rgb("#f5a97f"), rgb("#c6a0f6")))
+  box($#x$)
+}
+
+$
+n lr(size: #3em, brace.l) underbrace(mat(hlm(1), hlp(2); hlm(3), hlp(4); hlm(5), hlp(6)), p) times
+underbrace(mat(hlm(1), hlm(2), hlm(3); hlp(4), hlp(5), hlp(6)), n) lr(size: #2em, brace.r) m=
+m lr(size: #2em, brace.l) underbrace(mat(hlm(22), hll(28); hlr(49), hlp(64)), p)
+$
 ```
 
 ---
@@ -947,9 +983,9 @@ Matmul - impl cont'd
 ```rust +no_background
     for (i, out_i) in out.iter_mut().enumerate() {
         let index = shape.idx(i);
-        let mut self_idx = index.broadcast(&self.shape)?;
+        let mut lhs_idx = index.broadcast(&self.shape);
         let self_idx_len = self_idx.len();
-        let mut other_idx = index.broadcast(&other.shape)?;
+        let mut other_idx = index.broadcast(&other.shape);
         let other_idx_len = other_idx.len();
 
         let mut tmp = 0.;
