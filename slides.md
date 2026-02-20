@@ -955,24 +955,38 @@ fn matmul(&self, rhs: &Self) -> Option<Self> {
 <!-- pause -->
 
 <!-- column: 1 -->
-```typst +render +width:80%
-#let hlp(x) = text(fill: rgb("#f5a97f"))[$#x$]
-#let hlm(x) = text(fill: rgb("#c6a0f6"))[$#x$]
-
-#let hll(x) = {
-  set text(fill: gradient.linear(rgb("#c6a0f6"), rgb("#f5a97f")))
-  box($#x$)
-}
-#let hlr(x) = {
-  set text(fill: gradient.linear(rgb("#f5a97f"), rgb("#c6a0f6")))
-  box($#x$)
-}
-
+```typst +render +width:90%
 $
-n lr(size: #3em, brace.l) underbrace(mat(hlm(1), hlp(2); hlm(3), hlp(4); hlm(5), hlp(6)), p) times
-underbrace(mat(hlm(1), hlm(2), hlm(3); hlp(4), hlp(5), hlp(6)), n) lr(size: #2em, brace.r) m=
-m lr(size: #2em, brace.l) underbrace(mat(hlm(22), hll(28); hlr(49), hlp(64)), p)
+m lr(size: #2em, brace.l) underbrace(mat(1, 2, 3; 4, 5, 6), n)  times
+underbrace(mat(1, 2; 3, 4; 5, 6), p) lr(size: #3em, brace.r) n =
+underbrace(mat(22, 28; 49, 64), p) lr(size: #2em, brace.r) m
 $
+```
+
+<!-- pause -->
+
+```rust +no_background
+n1 = 3 // nb cols A
+n2 = 3 // nb rows B
+```
+<!-- pause -->
+<!-- newlines: 1 -->
+```rust +no_background
+m = 2 // nb rows A
+p = 2 // nb cols B
+```
+<!-- pause -->
+<!-- newlines: 4 -->
+```rust +no_background
+[]
+[2]
+[2, 2]
+
+[2, 1]
+```
+<!-- pause -->
+```rust +no_background
+[0, 0, 0, 0]
 ```
 
 ---
@@ -980,21 +994,28 @@ $
 Matmul - impl cont'd
 ===
 
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+<!-- newlines: 5 -->
 ```rust +no_background
+    // ... continuing
+
     for (i, out_i) in out.iter_mut().enumerate() {
         let index = shape.idx(i);
         let mut lhs_idx = index.broadcast(&self.shape);
-        let self_idx_len = self_idx.len();
-        let mut other_idx = index.broadcast(&other.shape);
-        let other_idx_len = other_idx.len();
+        let mut rhs_idx = index.broadcast(&rhs.shape);
 
         let mut tmp = 0.;
-        for position in 0..self.shape[self_shape_len - 1] {
-            self_idx[self_idx_len - 1] = position;
-            other_idx[other_idx_len - 2] = position;
-            let self_pos = self.strides.position(&self_idx);
-            let other_pos = other.strides.position(&other_idx);
-            tmp += self.data[self_pos] * other.data[other_pos];
+        for position in 0..n {
+            lhs_idx[lhs_rank - 1] = position;
+            rhs_idx[rhs_rank - 2] = position;
+            let lhs_pos =
+                self.strides.position(&lhs_idx);
+            let rhs_pos =
+                rhs.strides.position(&rhs_idx);
+            tmp +=
+                self.data[lhs_pos] * rhs.data[rhs_pos];
         }
         *out_i = tmp;
     }
