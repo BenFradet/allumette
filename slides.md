@@ -847,9 +847,6 @@ $
 <!-- pause -->
 ```rust +no_background
 [3, 1]
-```
-<!-- pause -->
-```rust +no_background
 [1, 1]
 ```
 <!-- pause -->
@@ -997,19 +994,20 @@ Matmul - impl cont'd
 <!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
-<!-- newlines: 5 -->
+<!-- newlines: 7 -->
 ```rust +no_background
     // ... continuing
 
     for (i, out_i) in out.iter_mut().enumerate() {
-        let index = shape.idx(i);
-        let mut lhs_idx = index.broadcast(&self.shape);
-        let mut rhs_idx = index.broadcast(&rhs.shape);
+
+        let idx = strides.idx(i);
+        let mut lhs_idx = idx.broadcast(&self.shape);
+        let mut rhs_idx = idx.broadcast(&rhs.shape);
 
         let mut tmp = 0.;
-        for position in 0..n {
-            lhs_idx[lhs_rank - 1] = position;
-            rhs_idx[rhs_rank - 2] = position;
+        for pos in 0..n {
+            lhs_idx[lhs_rank - 1] = pos;
+            rhs_idx[rhs_rank - 2] = pos;
             let lhs_pos =
                 self.strides.position(&lhs_idx);
             let rhs_pos =
@@ -1022,4 +1020,39 @@ Matmul - impl cont'd
 
     Some(Self::new(out, shape, strides))
 }
+```
+
+<!-- pause -->
+
+<!-- column: 1 -->
+```typst +render +width:90%
+$
+m lr(size: #2em, brace.l) underbrace(mat(1, 2, 3; 4, 5, 6), n)  times
+underbrace(mat(1, 2; 3, 4; 5, 6), p) lr(size: #3em, brace.r) n =
+underbrace(mat(22, 28; 49, 64), p) lr(size: #2em, brace.r) m
+$
+```
+
+<!-- pause -->
+
+```rust +no_background
+i = 3
+```
+<!-- pause -->
+```rust +no_background
+idx = [1, 1] // [2, 1] idx 3, 3 / 2 => (3 % 2) / 1
+lhs_idx = [1, 1] // [1, 1] bc [2, 3]
+rhs_idx = [1, 1] // [1, 1] bc [3, 2]
+```
+<!-- pause -->
+```rust +no_background
+
+pos = {0, 1, 2}
+lhs_idx = {[1, 0], [1, 1], [1, 2]}
+rhs_idx = {[0, 1], [1, 1], [2, 1]}
+
+lhs_pos = {3, 4, 5} // nD => 1D: [3, 1] pos lhs_idx
+rhs_pos = {1, 3, 5} // nD => 1D: [2, 1] pos rhs_idx
+
+tmp = {4 * 2, 8 + 5 * 4, 28 + 6 * 6} => 64
 ```

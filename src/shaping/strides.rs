@@ -76,25 +76,35 @@ mod tests {
     #[ignore = "dbg"]
     #[test]
     fn slide_test() {
-        let shape = Shape::new(vec![3, 3]);
+        let self_shape = Shape::new(vec![2, 3]);
+        let self_strides: Strides = (&self_shape).into();
+        println!("self_strides {self_strides:?}");
+        let rhs_shape = Shape::new(vec![3, 2]);
+        let rhs_strides: Strides = (&rhs_shape).into();
+        println!("rhs_strides {rhs_strides:?}");
+        let shape = Shape::new(vec![2, 2]);
         println!("shape {shape:?}");
         let strides: Strides = (&shape).into();
         println!("strides {strides:?}");
-        let shape_reduced = Shape::new(vec![3, 1]);
-        println!("shape reduced {shape_reduced:?}");
-        let strides_reduced: Strides = (&shape_reduced).into();
-        println!("strides_reduced {strides_reduced:?}");
-        let dim = 1;
-        let mut idx = strides_reduced.idx(2);
-        let out_pos = strides_reduced.position(&idx);
-        println!("out pos {out_pos:?}\n");
-        println!("idx {idx:?}\n");
-        for j in 0..3 {
-            println!("j {j:?}");
-            idx[dim] = j;
-            println!("idx {idx:?}");
-            let pos = strides.position(&idx);
-            println!("pos {pos:?}");
+        let idx = strides.idx(3);
+        println!("idx {idx:?}");
+        let mut lhs_idx = idx.broadcast(&self_shape).unwrap();
+        println!("lhs idx {lhs_idx:?}");
+        let mut rhs_idx = idx.broadcast(&rhs_shape).unwrap();
+        println!("rhs idx {rhs_idx:?}");
+        println!();
+        for pos in 0..3 {
+            dbg!(pos);
+            lhs_idx[1] = pos;
+            println!("lhs idx {lhs_idx:?}");
+            rhs_idx[0] = pos;
+            println!("rhs idx {rhs_idx:?}");
+            let lhs_pos =
+                self_strides.position(&lhs_idx);
+            dbg!(lhs_pos);
+            let rhs_pos =
+                rhs_strides.position(&rhs_idx);
+            dbg!(rhs_pos);
         }
         assert!(false)
     }
