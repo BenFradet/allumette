@@ -51,9 +51,10 @@ Summary
 ===
 
 <!-- newlines: 5 -->
-# What's a tensor?
-# What can we do with a tensor?
-# etc
+# Part 1
+## What's a tensor?
+## What can we do with a tensor?
+# Part 2
 
 ---
 
@@ -1055,4 +1056,52 @@ lhs_pos = {3, 4, 5} // nD => 1D: [3, 1] pos lhs_idx
 rhs_pos = {1, 3, 5} // nD => 1D: [2, 1] pos rhs_idx
 
 tmp = {4 * 2, 8 + 5 * 4, 28 + 6 * 6} => 64
+```
+
+---
+
+Part 2
+===
+
+---
+
+What are tensors useful for?
+===
+
+<!-- newlines: 3 -->
+<!-- pause -->
+Neural networks!
+
+<!-- pause -->
+=> function approximators parameterized by ... tensors
+
+<!-- pause -->
+parameters (i.e. tensors) are updated during training
+
+<!-- pause -->
+input / output ...
+
+<!-- pause -->
+![image:width:80%](img/tensors.jpg)
+
+---
+
+What's a neural network anyway?
+===
+
+```typst +render +width:60%
+$
+K subset.eq RR^n, #h(0.5em) forall f in C(K), #h(0.5em) forall epsilon.alt >= 0, #h(0.5em)  forall x in K, #h(0.5em) exists accent(f, hat)
+$
+```
+```typst +render +width:25%
+$
+abs(f(x) - accent(f, hat)(x)) < epsilon.alt
+$
+```
+<!-- pause -->
+```typst +render +width:40%
+$
+accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
+$
 ```
