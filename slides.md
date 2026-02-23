@@ -1089,19 +1089,25 @@ input / output ...
 What's a neural network anyway?
 ===
 
-```typst +render +width:60%
+```typst +render +width:40%
 $
-K subset.eq RR^n, #h(0.5em) forall f in C(K), #h(0.5em) forall epsilon.alt >= 0, #h(0.5em)  forall x in K, #h(0.5em) exists accent(f, hat)
+forall f in C(RR^n), #h(0.5em) forall epsilon.alt >= 0, #h(0.5em)  forall x in RR^n,
 $
 ```
-```typst +render +width:25%
+```typst +render +width:30%
 $
-abs(f(x) - accent(f, hat)(x)) < epsilon.alt
+exists accent(f, hat), #h(0.5em) abs(f(x) - accent(f, hat)(x)) < epsilon.alt
 $
 ```
 <!-- pause -->
-```typst +render +width:40%
+```typst +render +width:35%
 $
 accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
 $
 ```
+
+<!-- alignment: center -->
+universal approximation theorem 🔥
+
+![image:width:70%](img/weierstrass.gif)
+credit: Doleron, CC BY-SA 3.0
