@@ -1120,7 +1120,14 @@ accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
 $
 ```
 
-![image:width:50%](img/nn_training.png)
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+![image:width:100%](img/nn_training.png)
+
+<!-- column: 1 -->
+<!-- newlines: 2 -->
+![image:width:100%](img/sig.png)
 
 ---
 
