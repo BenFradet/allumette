@@ -1073,13 +1073,10 @@ What are tensors useful for?
 Neural networks!
 
 <!-- pause -->
-=> function approximators parameterized by ... tensors
+- function approximators parameterized by ... tensors
 
 <!-- pause -->
-parameters (i.e. tensors) are updated during training
-
-<!-- pause -->
-input / output ...
+- input / output ...
 
 <!-- pause -->
 ![image:width:80%](img/tensors.jpg)
@@ -1111,3 +1108,23 @@ universal approximation theorem 🔥
 
 ![image:width:70%](img/weierstrass.gif)
 credit: Doleron, CC BY-SA 3.0
+
+---
+
+But like, really, what's a neural network?
+===
+
+```typst +render +width:35%
+$
+accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
+$
+```
+
+![image:width:50%](img/nn_training.png)
+
+---
+
+In Rust please!?
+===
+
+![image:width:50%](img/enough.gif)
