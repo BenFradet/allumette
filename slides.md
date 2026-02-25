@@ -1114,7 +1114,7 @@ credit: Doleron, CC BY-SA 3.0
 But like, really, what's a neural network?
 ===
 
-```typst +render +width:35%
+```typst +render +width:30%
 $
 accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
 $
@@ -1126,8 +1126,42 @@ $
 ![image:width:100%](img/nn_training.png)
 
 <!-- column: 1 -->
-<!-- newlines: 2 -->
+```typst +render +width:40%
+$
+sigma(x) = (1 + e^x)^(-1)
+$
+```
 ![image:width:100%](img/sig.png)
+
+---
+
+To recap
+===
+
+```typst +render +width:30%
+$
+accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
+$
+```
+
+<!-- incremental_lists: true -->
+We need:
+
+- neurons
+- weights: connections between neurons
+  - `wi` input -> hidden: the feature extracted by the neuron from the input
+  - `ci` hidden -> output: how important is this feature
+- `bi` biases: how much of the feature is needed for the neuron to activate
+- layers: input, hidden, output
+- `σ` activation function: yes/no detectors, making `wx + b` non-linear
+- a way to convert the result:
+
+```typst +render +width:50%
+$
+accent(p, hat)(y = "starfish" | x) = sigma(accent(f, hat)(x)) \
+accent(p, hat)(y = "urchin" | x) = 1 - accent(p, hat)(y = "starfish" | x) 
+$
+```
 
 ---
 
