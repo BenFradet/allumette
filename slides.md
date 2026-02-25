@@ -56,6 +56,12 @@ Summary
 ## What can we do with a tensor?
 # Part 2
 
+todo:
+- line nrs in rust code and rm selective highlights
+- sort out summary slides
+- change demo icons to star and rounds
+- benchmarks
+
 ---
 
 What's a tensor?
@@ -1165,7 +1171,83 @@ $
 
 ---
 
-In Rust please!?
+In Rust please!? - layer
 ===
 
-![image:width:50%](img/enough.gif)
+<!-- column_layout: [1, 2] -->
+
+<!-- column: 0 -->
+![image:width:100%](img/enough.gif)
+<!-- newlines: 3 -->
+<!-- pause -->
+```rust +no_background
+struct Layer<'a, B: Backend> {
+    name: &'a str,
+    weights: Tensor<'a, B>,
+    biases: Tensor<'a, B>,
+}
+```
+
+<!-- pause -->
+<!-- column: 1 -->
+```rust +no_background {all|2-6|9-10|11-12|16|17-19|20-23|all}
+impl<'a, B: Backend> Layer<'a, B> {
+    pub fn new(
+        name: &'a str,
+        in_size: usize,
+        out_size: usize,
+    ) -> Self {
+        Self {
+            name,
+            // shape [in_size, out_size]
+            weights: Self::weights(name, in_size, out_size),
+            // shape [out_size]
+            biases: Self::biases(name, out_size),
+        }
+    }
+
+    fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
+        let n_inputs = x.shape()[0];
+        let in_size = x.shape()[1];
+        let shape = Shape::new(vec![n_inputs, in_size]);
+        // weights is shape [in_size, out_size]
+        // result is shape [n_inputs, out_size]
+        x.view(&shape).matmul(self.weights) +
+            self.biases
+    }
+}
+```
+
+---
+
+In Rust please!? - network
+===
+
+```rust +no_background
+struct Network<'a, B: Backend> {
+    input_layer: Layer<'a, B>,
+    hidden_layer: Layer<'a, B>,
+    output_layer: Layer<'a, B>,
+}
+```
+<!-- pause -->
+```rust +no_background {all|2-11|13-17|14|15|16|all}
+impl<'a, B: Backend> Network<'a, B> {
+    fn new(n_features: usize, hidden_layer_size: usize) -> Self {
+        let input_layer = Layer::new("input", n_features, hidden_layer_size);
+        let hidden_layer = Layer::new("hidden", hidden_layer_size, hidden_layer_size);
+        let output_layer = Layer::new("output", hidden_layer_size, 1);
+        Self {
+            input_layer,
+            hidden_layer,
+            output_layer,
+        }
+    }
+
+    fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
+        let il = self.input_layer.forward(x).sigmoid();
+        let hl = self.hidden_layer.forward(il).sigmoid();
+        self.output_layer.forward(hl).sigmoid()
+    }
+}
+```
