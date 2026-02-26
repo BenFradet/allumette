@@ -59,7 +59,7 @@ Summary
 todo:
 - line nrs in rust code and rm selective highlights
 - sort out summary slides
-- change demo icons to star and rounds
+- roll up summaries
 - benchmarks
 
 ---
@@ -1231,23 +1231,44 @@ struct Network<'a, B: Backend> {
 }
 ```
 <!-- pause -->
-```rust +no_background {all|2-11|13-17|14|15|16|all}
+```rust +no_background {all|2-7|9-13|10|11|12|all}
 impl<'a, B: Backend> Network<'a, B> {
     fn new(n_features: usize, hidden_layer_size: usize) -> Self {
         let input_layer = Layer::new("input", n_features, hidden_layer_size);
         let hidden_layer = Layer::new("hidden", hidden_layer_size, hidden_layer_size);
         let output_layer = Layer::new("output", hidden_layer_size, 1);
-        Self {
-            input_layer,
-            hidden_layer,
-            output_layer,
-        }
+        Self { input_layer, hidden_layer, output_layer }
     }
 
     fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
-        let il = self.input_layer.forward(x).sigmoid();
-        let hl = self.hidden_layer.forward(il).sigmoid();
-        self.output_layer.forward(hl).sigmoid()
+        let i = self.input_layer.forward(x).sigmoid();
+        let h = self.hidden_layer.forward(i).sigmoid();
+        self.output_layer.forward(h).sigmoid()
     }
-}
 ```
+<!-- pause -->
+<!-- column_layout: [4, 1] -->
+<!-- column: 0 -->
+```rust +no_background
+       fn forward_uat(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
+           let h = self.hidden_layer.forward(x).sigmoid();
+           self.output_layer.forward(h)
+       }
+   }
+```
+
+---
+
+Summary
+===
+
+# Part 1
+## What's a tensor?
+## What can we do with a tensor?
+### Map
+### Zip
+### Reduce
+### Matmul
+# Part 2
+## What's a neural network?
+## Training
