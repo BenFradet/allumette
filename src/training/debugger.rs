@@ -300,26 +300,26 @@ impl VizDebugger {
 
         let datasets = vec![
             Dataset::default()
-                .name("× True Positives")
-                .marker(Marker::Custom('×'))
+                .name("★ True Positives")
+                .marker(Marker::Custom('★'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().fg(self.green))
                 .data(&state.tps),
             Dataset::default()
-                .name("× False Negatives")
-                .marker(Marker::Custom('×'))
+                .name("★ False Negatives")
+                .marker(Marker::Custom('★'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().fg(self.red))
                 .data(&state.fns),
             Dataset::default()
-                .name("• True Negatives")
-                .marker(Marker::Dot)
+                .name("⚬ True Negatives")
+                .marker(Marker::Custom('⚬'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().fg(self.green))
                 .data(&state.tns),
             Dataset::default()
-                .name("• False Positives")
-                .marker(Marker::Dot)
+                .name("⚬ False Positives")
+                .marker(Marker::Custom('⚬'))
                 .graph_type(GraphType::Scatter)
                 .style(Style::new().fg(self.red))
                 .data(&state.fps),
