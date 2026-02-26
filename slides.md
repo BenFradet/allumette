@@ -1258,7 +1258,6 @@ impl<'a, B: Backend> Network<'a, B> {
 ```
 
 ---
-
 Summary
 ===
 
@@ -1272,3 +1271,20 @@ Summary
 # Part 2
 ## What's a neural network?
 ## Training
+
+---
+
+Training
+===
+
+<!-- newlines: 2 -->
+<!-- column_layout: [1, 1] -->
+<!-- column: 0 -->
+how do we get to this ...
+<!-- newlines: 1 -->
+![image:width:100%](img/nn_training.png)
+<!-- pause -->
+<!-- column: 1 -->
+from this ...
+<!-- newlines: 1 -->
+![image:width:100%](img/nn_untrained.png)
