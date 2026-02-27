@@ -6,9 +6,9 @@ use allumette::{
 };
 
 fn main() -> Result<(), Error> {
-    let pts = 400;
-    let dataset = Dataset::circle(pts);
-    let hidden_layer_size = 30;
+    let pts = 800;
+    let dataset = Dataset::star(pts);
+    let hidden_layer_size = 50;
     let learning_rate = 0.2;
     let iterations = 400;
 

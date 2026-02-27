@@ -61,6 +61,7 @@ todo:
 - sort out summary slides
 - roll up summaries
 - benchmarks
+- change colours for tps, tns, etc
 
 ---
 
@@ -1285,6 +1286,6 @@ how do we get to this ...
 ![image:width:100%](img/nn_training.png)
 <!-- pause -->
 <!-- column: 1 -->
-from this ...
+... from this
 <!-- newlines: 1 -->
 ![image:width:100%](img/nn_untrained.png)
