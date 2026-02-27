@@ -1289,3 +1289,30 @@ how do we get to this ...
 ... from this
 <!-- newlines: 1 -->
 ![image:width:100%](img/nn_untrained.png)
+
+---
+
+How does the network learn?
+===
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+
+<!-- list_item_newlines: 3 -->
+- gather a lot of inputs
+<!-- pause -->
+- forward pass: feed input through the network
+<!-- pause -->
+- backward pass:
+  - compute loss
+  - determine where to go with the loss' gradient
+  - propagate the gradient backward in the network
+  - update weights and biases
+- rinse and repeat for `n` iterations
+
+
+---
+
+<!-- newlines: 2 -->
+![image:width:70%](img/thatsallfolks.gif)
