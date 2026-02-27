@@ -131,6 +131,62 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
         }
     }
 
+    pub fn star(n: usize) -> Self {
+        let x = Self::make_points(n);
+        let mut y = vec![];
+        // all .x5 are wrong
+        let star = [
+            (E::fromf(0.5), E::fromf(1.)),
+            (E::fromf(0.6), E::fromf(0.67)),
+            (E::fromf(1.), E::fromf(0.67)),
+            (E::fromf(0.67), E::fromf(0.45)),
+            (E::fromf(0.85), E::fromf(0.)),
+            (E::fromf(0.5), E::fromf(0.25)),
+            (E::fromf(0.15), E::fromf(0.)),
+            (E::fromf(0.33), E::fromf(0.45)),
+            (E::fromf(0.), E::fromf(0.67)),
+            (E::fromf(0.4), E::fromf(0.67)),
+        ];
+        for (x1, x2) in &x {
+            let y1 = if Self::in_polygon(*x1, *x2, &star) { 1 } else { 0 };
+            y.push(y1);
+        }
+        Self {
+            n,
+            features: x,
+            labels: y,
+        }
+    }
+
+    fn in_polygon(x: E, y: E, polygon: &[(E, E)]) -> bool {
+        let num_vertices = polygon.len();
+        let mut inside = false;
+        let mut p1 = polygon[0];
+
+        for i in 1..=num_vertices {
+            let p2 = polygon[i % num_vertices];
+
+            // the point is above the min y
+            if y > p1.1.min(p2.1) &&
+                // the point is below the max y
+                y <= p1.1.max(p2.1) &&
+                // the point is to the left of the max x
+                x <= p1.0.max(p2.0)
+            {
+                // intersection of the line connecting (x, y) to the edge
+                let x_intersection = (y - p1.1) * (p2.0 - p1.0) / (p2.1 - p1.1) + p1.0;
+
+                // the point is on the same line as the edge or to the left of x_intersection
+                if p1.0 == p2.0 || x <= x_intersection {
+                    inside = !inside;
+                }
+            }
+            p1 = p2;
+        }
+
+        inside
+    }
+
     fn make_points(n: usize) -> Vec<(E, E)> {
         let mut res = vec![];
         let mut rng = thread_rng();

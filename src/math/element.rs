@@ -26,6 +26,9 @@ where
     fn tof(self) -> f64;
     fn is_close(self, rhs: Self) -> bool;
 
+    fn min(self, rhs: Self) -> Self;
+    fn max(self, rhs: Self) -> Self;
+
     fn powf(self, exp: Self) -> Self;
 
     fn exp(self) -> Self;
@@ -80,6 +83,14 @@ impl Element for f32 {
         (self - rhs).abs() < 1e-2
     }
 
+    fn min(self, rhs: Self) -> Self {
+        self.min(rhs)
+    }
+
+    fn max(self, rhs: Self) -> Self {
+        self.max(rhs)
+    }
+
     fn exp(self) -> Self {
         self.exp()
     }
@@ -116,6 +127,14 @@ impl Element for f64 {
 
     fn is_close(self, rhs: Self) -> bool {
         (self - rhs).abs() < 1e-4
+    }
+
+    fn min(self, rhs: Self) -> Self {
+        self.min(rhs)
+    }
+
+    fn max(self, rhs: Self) -> Self {
+        self.max(rhs)
     }
 
     fn exp(self) -> Self {
