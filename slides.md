@@ -1295,21 +1295,56 @@ how do we get to this ...
 How does the network learn?
 ===
 
+<!-- pause -->
 <!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
 
 <!-- list_item_newlines: 3 -->
 - gather a lot of inputs
+
+<!-- column: 1 -->
+![image:width:70%](img/training_data.png)
+
+<!-- column: 0 -->
 <!-- pause -->
 - forward pass: feed input through the network
+
+<!-- column: 1 -->
+![image:width:70%](img/training_data_scored.png)
+
+<!-- column: 0 -->
 <!-- pause -->
+<!-- list_item_newlines: 2 -->
 - backward pass:
-  - compute loss
+  - compute network performance / loss
+
+<!-- column: 1 -->
+<!-- pause -->
+<!-- newlines: 1 -->
+```typst +render +width:50%
+$"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
+```
+
+<!-- column: 0 -->
+<!-- pause -->
   - determine where to go with the loss' gradient
+
+<!-- column: 1 -->
+<!-- newlines: 1 -->
+```typst +render +width:15%
+$"loss"^'$
+```
+<!-- column: 0 -->
+<!-- pause -->
   - propagate the gradient backward in the network
+<!-- pause -->
   - update weights and biases
+<!-- pause -->
 - rinse and repeat for `n` iterations
+
+<!-- column: 1 -->
+![image:width:70%](img/desire.gif)
 
 
 ---
