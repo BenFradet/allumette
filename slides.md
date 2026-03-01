@@ -1131,6 +1131,8 @@ $
 
 <!-- column: 0 -->
 ![image:width:100%](img/nn_training.png)
+<!-- alignment: center -->
+credit: Mikael Häggström, CC0
 
 <!-- column: 1 -->
 ```typst +render +width:40%
@@ -1259,16 +1261,13 @@ impl<'a, B: Backend> Network<'a, B> {
 ```
 
 ---
+
 Summary
 ===
 
 # Part 1
 ## What's a tensor?
 ## What can we do with a tensor?
-### Map
-### Zip
-### Reduce
-### Matmul
 # Part 2
 ## What's a neural network?
 ## Training
@@ -1328,7 +1327,7 @@ $"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 
 <!-- column: 0 -->
 <!-- pause -->
-  - determine where to go with the loss' gradient
+  - determine where to go with the loss' gradient (aka derivative)
 
 <!-- column: 1 -->
 <!-- newlines: 1 -->
@@ -1346,8 +1345,60 @@ $"loss"^'$
 <!-- column: 1 -->
 ![image:width:70%](img/desire.gif)
 
+---
+
+Summary
+===
+
+# Part 1
+## What's a tensor?
+## What can we do with a tensor?
+# Part 2
+## What's a neural network?
+## Training
+### Loss function
 
 ---
+
+Loss function
+===
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+
+<!-- newlines: 2 -->
+
+Well, we're not gonna use
+```typst +render +width:60%
+$"L1" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
+```
+
+<!-- pause -->
+
+but rather
+```typst +render +width:100%
+$"BCE" = -frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
+```
+
+why ?
+
+<!-- pause -->
+
+it's not differentaible at y = p, but also
+
+<!-- pause -->
+
+<!-- column: 1 -->
+
+<!-- newlines: 2 -->
+
+![image:width:100%](img/loss.png)
+
+
+---
+
+END
 
 <!-- newlines: 2 -->
 ![image:width:70%](img/thatsallfolks.gif)
