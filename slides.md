@@ -1367,8 +1367,6 @@ Loss function
 
 <!-- column: 0 -->
 
-<!-- newlines: 2 -->
-
 Well, we're not gonna use
 ```typst +render +width:60%
 $"L1" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
@@ -1385,7 +1383,9 @@ why ?
 
 <!-- pause -->
 
-it's not differentaible at y = p, but also
+![image:width:100%](img/abs.png)
+
+&nbsp; and we want to compute its derivative / gradient
 
 <!-- pause -->
 
@@ -1393,8 +1393,23 @@ it's not differentaible at y = p, but also
 
 <!-- newlines: 2 -->
 
+and also
+
 ![image:width:100%](img/loss.png)
 
+---
+
+Summary
+===
+
+# Part 1
+## What's a tensor?
+## What can we do with a tensor?
+# Part 2
+## What's a neural network?
+## Training
+### Loss function
+### Gradient
 
 ---
 
