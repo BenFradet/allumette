@@ -1316,7 +1316,7 @@ How does the network learn?
 <!-- pause -->
 <!-- list_item_newlines: 2 -->
 - backward pass:
-  - compute network performance / loss
+  - compute network performance <=> loss
 
 <!-- column: 1 -->
 <!-- pause -->
@@ -1413,7 +1413,45 @@ Summary
 
 ---
 
+How to get the loss' gradient? - numerical method
+===
+
+```typst +render +width:50%
+derivative definition: #h(0.5em) $f: RR -> RR, #h(0.5em) frac(diff f, diff x) = lim_(h -> 0) frac(f(x + h) - f(x), h)$
+```
+
+<!-- pause -->
+
+```typst +render +width:50%
+using Taylor's theorem: #h(0.5em) $f: RR -> RR, #h(0.5em) frac(diff f, diff x) approx frac(f(x + h) - f(x), h) + O(h)$
+```
+<!-- incremental_lists: true -->
+- `O` is the truncation error
+- we're mis-approximating the derivative with some error dependent on `h`
+- as `h` goes down, the truncation error goes down 👌
+- but ... as `h` is nearing 0, we introduce a round-off error: underflow to 0
+- round-off error worsens as floating point precision decreases
+- max for gpu is f32, lower and lower are used
+
+there is another problem however...
+<!-- pause -->
+
+```typst +render +width:50%
+for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = frac(f_j (x_i + h) - f_j (x_i), h) + O(h) $
+```
+
+- this is `O(mn)` complexity
+- we could have millions of parameters
+- => won't work
+
+TODO: add picture of derivative + error
+
+---
+
 END
 
 <!-- newlines: 2 -->
 ![image:width:70%](img/thatsallfolks.gif)
+
+Sources:
+- https://huggingface.co/blog/andmholm/what-is-automatic-differentiation

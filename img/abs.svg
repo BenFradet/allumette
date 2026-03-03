@@ -21,9 +21,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="0.11554032"
-     inkscape:cx="-5028.5475"
-     inkscape:cy="3120.1229"
+     inkscape:zoom="0.16339869"
+     inkscape:cx="-2802.9601"
+     inkscape:cy="2451.0601"
      inkscape:window-width="1906"
      inkscape:window-height="1186"
      inkscape:window-x="0"
@@ -1799,7 +1799,10 @@
        font-weight="400"
        font-style="normal"
        id="g168"
-       style="stroke:#c6a0f6;stroke-width:2.82868;stroke-dasharray:none;stroke-opacity:1">
+       style="stroke:#c6a0f6;stroke-width:2.82868;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-filename="abs.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96">
       <text
          fill="#000000"
          fill-opacity="1"
