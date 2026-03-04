@@ -5,6 +5,12 @@ theme:
     default:
       margin:
         percent: 1
+    bold:
+      colors:
+        foreground: red
+    italics:
+      colors:
+        foredground: blue
     typst:
       colors:
         background: cad3f500
@@ -62,6 +68,7 @@ todo:
 - roll up summaries
 - benchmarks
 - change colours for tps, tns, etc
+- use more text highlights
 
 ---
 
@@ -1416,32 +1423,44 @@ Summary
 How to get the loss' gradient? - numerical method
 ===
 
-```typst +render +width:50%
+<!-- column_layout: [3, 1] -->
+
+<!-- column: 0 -->
+if you remember your calculus classes ...
+```typst +render +width:70%
 derivative definition: #h(0.5em) $f: RR -> RR, #h(0.5em) frac(diff f, diff x) = lim_(h -> 0) frac(f(x + h) - f(x), h)$
 ```
 
+<!-- column: 1 -->
+![image:width:100%](img/gradient.png)
+<!-- column: 0 -->
+
 <!-- pause -->
 
-```typst +render +width:50%
+```typst +render +width:75%
 using Taylor's theorem: #h(0.5em) $f: RR -> RR, #h(0.5em) frac(diff f, diff x) approx frac(f(x + h) - f(x), h) + O(h)$
 ```
 <!-- incremental_lists: true -->
 - `O` is the truncation error
 - we're mis-approximating the derivative with some error dependent on `h`
 - as `h` goes down, the truncation error goes down 👌
-- but ... as `h` is nearing 0, we introduce a round-off error: underflow to 0
+- but ... as `h` is nearing `0`, we introduce a round-off error: underflow to `0`
+<!-- column: 1 -->
+<!-- newlines: 2 -->
+![image:width:100%](img/errors.png)
+<!-- column: 0 -->
 - round-off error worsens as floating point precision decreases
-- max for gpu is f32, lower and lower are used
+- max for my gpu is `f32`, SOTA is using `f4`
 
 there is another problem however...
 <!-- pause -->
 
-```typst +render +width:50%
+```typst +render +width:70%
 for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = frac(f_j (x_i + h) - f_j (x_i), h) + O(h) $
 ```
 
 - this is `O(mn)` complexity
-- we could have millions of parameters
+- we could have **millions** of parameters
 - => won't work
 
 TODO: add picture of derivative + error
