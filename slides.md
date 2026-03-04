@@ -1465,6 +1465,36 @@ for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = fr
 
 ---
 
+How to get the loss' gradient? - symbolic method
+===
+
+if you remember your calculus classes ...
+```typst +render +width:30%
+$
+f(x) = x^2, #h(1em) f'(x) = 2x
+$
+```
+<!-- incremental_lists: true -->
+- no numerical inaccuracies
+- no numerical instabilities
+- expression which can compute a gradient directly 🥳
+
+there are other issues however...
+<!-- pause -->
+```typst +render +width:40%
+$frac(d, d x) f(x) g(x) = f'(x) g(x) + g'(x) f(x)$
+```
+<!-- incremental_lists: true -->
+- we could have **hundreds** of these functions nested within each other
+- quickly becomes untractable
+
+<!-- incremental_lists: true -->
+- is also limited to closed form expressions: `+`, `-`, `x`, `/`, `^`, `√`, `e`, `log`, trig fns
+- can't have `>`, `==`, `is close to` as they are not symbolically differentiable
+- => won't work
+
+---
+
 END
 
 <!-- newlines: 2 -->
