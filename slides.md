@@ -1463,8 +1463,6 @@ for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = fr
 - we could have **millions** of parameters
 - => won't work
 
-TODO: add picture of derivative + error
-
 ---
 
 END
