@@ -10,7 +10,10 @@ theme:
         foreground: red
     italics:
       colors:
-        foredground: blue
+        foreground: blue
+    column_layout:
+      margin:
+        fixed: 4
     typst:
       colors:
         background: cad3f500
@@ -63,12 +66,10 @@ Summary
 # Part 2
 
 todo:
-- line nrs in rust code and rm selective highlights
 - sort out summary slides
 - roll up summaries
 - benchmarks
 - change colours for tps, tns, etc
-- use more text highlights
 
 ---
 
@@ -148,9 +149,7 @@ let data = vec![
 <!-- column: 0 -->
 <!-- newlines: 1 -->
 ```rust +no_background
-struct Shape {
-    data: Vec<usize>,
-}
+struct Shape { data: Vec<usize> }
 ```
 <!-- pause -->
 
@@ -162,25 +161,24 @@ let shape = Shape::new(vec![4, 2, 2]);
 
 <!-- column: 0 -->
 ```rust +no_background
-struct Strides {
-    data: Vec<usize>,
-}
+struct Strides { data: Vec<usize> }
 ```
 <!-- pause -->
 
 <!-- column: 1 -->
-<!-- newlines: 2 -->
 ```rust +no_background
 let strides = Strides::new(vec![4, 2, 1]);
 ```
 <!-- pause -->
 
 <!-- reset_layout -->
+<!-- newlines: 2 -->
 <!-- alignment: center -->
 - transposition (permutation)
 - adding / removing dimensions (viewing)
 
-=> don't require touching data
+_=> don't require touching data_
+
 
 ---
 
@@ -196,7 +194,7 @@ Summary
 What can be done with a tensor?
 ===
 
-<!-- newlines: 5 -->
+<!-- newlines: 3 -->
 <!-- column_layout: [3, 2] -->
 
 <!-- column: 0 -->
@@ -350,6 +348,7 @@ fn call(@builtin(global_invocation_id) id: vec3<u32>) {
 Map - orchestrating gpu code
 ===
 
+<!-- newlines: 3 -->
 ```rust +no_background {all|1|2|4-5|7-10|4,12|14|16|all}
 fn map(&self, f: &'static str) -> Self {
     let output_buffer = create_output_buffer(self.shape.gpu_byte_size());
@@ -463,7 +462,7 @@ Zip - broadcasting
 <span style="color:#a6da95">do's 👍</span>
 <!-- pause -->
 
-```typst +render +width:60%
+```typst +render +width:45%
 $
 1
 +
@@ -487,7 +486,7 @@ underbrace(
 $
 ```
 <!-- pause -->
-```typst +render +width:70%
+```typst +render +width:55%
 $
 m lr(size: #3em, brace.l) vec(
   1, dots.v, 2
@@ -513,7 +512,7 @@ underbrace(
 $
 ```
 <!-- pause -->
-```typst +render +width:70%
+```typst +render +width:55%
 $
 underbrace(
   (1 ... 2),
@@ -540,7 +539,7 @@ underbrace(
 $
 ```
 <!-- pause -->
-```typst +render +width:70%
+```typst +render +width:100%
 $
 m lr(size: #3em, brace.l) underbrace(
   mat(
@@ -577,7 +576,7 @@ $
 <span style="color:#ed8796">dont's 👎</span>
 
 <!-- pause -->
-```typst +render +width:80%
+```typst +render +width:70%
 $
 p != m, #h(0.5em)
 p lr(size: #3em, brace.l) vec(
@@ -595,7 +594,7 @@ underbrace(
 $
 ```
 <!-- pause -->
-```typst +render +width:80%
+```typst +render +width:70%
 $
 q != n, #h(0.5em)
 underbrace(
@@ -614,7 +613,7 @@ underbrace(
 $
 ```
 <!-- pause -->
-```typst +render +width:100%
+```typst +render +width:90%
 $
 p != m, #h(0.5em) q != n, #h(0.5em)
 p lr(size: #3em, brace.l) underbrace(
@@ -699,7 +698,7 @@ Zip - impl
 <!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
-```rust +no_background {all|1-5|6-10|11|13-14|16-26|17|18-19|20-21|22-23|24|25|28|all}
+```rust +no_background +line_numbers
 fn zip<F: Fn(f64, f64) -> f64>(
     &self,
     other: &Self,
@@ -712,10 +711,9 @@ fn zip<F: Fn(f64, f64) -> f64>(
     };
     let strides: Strides = (&shape).into();
 
-    let len = shape.size;
-    let mut out = vec![0.; len];
+    let mut out = vec![0.; shape.size];
 
-    for i in 0..len {
+    for i in 0..shape.size {
         let idx = strides.idx(i);
         let idxa = idx.broadcast(&self.shape);
         let idxb = idx.broadcast(&other.shape);
@@ -733,7 +731,7 @@ fn zip<F: Fn(f64, f64) -> f64>(
 <!-- pause -->
 
 <!-- column: 1 -->
-```typst +render +width:80%
+```typst +render +width:75%
 $
     1 lr(size: #1em, brace.l) underbrace((1 #h(0.5em) 2), 2) +
     underbrace(vec(3, 4), 1) lr(size: #2em, brace.r) 2 =
@@ -749,7 +747,6 @@ $
 [2, 1]
 ```
 <!-- pause -->
-<!-- newlines: 1 -->
 ```rust +no_background
 out = [0, 0, 0, 0]
 ```
@@ -822,7 +819,7 @@ Reduce - impl
 <!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
-```rust +no_background {all|1-6|7-9|10|12-13|15-25|16|17|18-24|19|20|21-22|23|all}
+```rust +no_background +line_numbers
 fn reduce<F: Fn(f64, f64) -> f64>(
     &self,
     f: F,
@@ -937,7 +934,7 @@ Matmul - impl
 
 <!-- column: 0 -->
 <!-- newlines: 5 -->
-```rust +no_background {all|5-7|9-10|12-13|15-16|17-18|all}
+```rust +no_background +line_numbers
 fn matmul(&self, rhs: &Self) -> Option<Self> {
     let lhs_rank = self.shape.len();
     let rhs_rank = rhs.shape.len();
@@ -1009,8 +1006,8 @@ Matmul - impl cont'd
 <!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
-<!-- newlines: 7 -->
-```rust +no_background
+<!-- newlines: 5 -->
+```rust +no_background +line_numbers
     // ... continuing
 
     for (i, out_i) in out.iter_mut().enumerate() {
@@ -1040,7 +1037,7 @@ Matmul - impl cont'd
 <!-- pause -->
 
 <!-- column: 1 -->
-```typst +render +width:90%
+```typst +render +width:70%
 $
 m lr(size: #2em, brace.l) underbrace(mat(1, 2, 3; 4, 5, 6), n)  times
 underbrace(mat(1, 2; 3, 4; 5, 6), p) lr(size: #3em, brace.r) n =
@@ -1102,7 +1099,7 @@ What's a neural network anyway?
 
 ```typst +render +width:40%
 $
-forall f in C(RR^n), #h(0.5em) forall epsilon.alt >= 0, #h(0.5em)  forall x in RR^n,
+forall f in C(RR^n), #h(0.5em) forall epsilon.alt > 0, #h(0.5em)  forall x in RR^n,
 $
 ```
 ```typst +render +width:30%
@@ -1172,12 +1169,19 @@ We need:
 - `σ` activation function: yes/no detectors, making `wx + b` non-linear
 - a way to convert the result:
 
-```typst +render +width:50%
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+```typst +render +width:100%
 $
 accent(p, hat)(y = "starfish" | x) = sigma(accent(f, hat)(x)) \
 accent(p, hat)(y = "urchin" | x) = 1 - accent(p, hat)(y = "starfish" | x) 
 $
 ```
+
+<!-- column: 1 -->
+<!-- pause -->
+![image:width:100%](img/enough.gif)
 
 ---
 
@@ -1187,7 +1191,6 @@ In Rust please!? - layer
 <!-- column_layout: [1, 2] -->
 
 <!-- column: 0 -->
-![image:width:100%](img/enough.gif)
 <!-- newlines: 3 -->
 <!-- pause -->
 ```rust +no_background
@@ -1260,11 +1263,11 @@ impl<'a, B: Backend> Network<'a, B> {
 <!-- column_layout: [4, 1] -->
 <!-- column: 0 -->
 ```rust +no_background
-       fn forward_uat(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
-           let h = self.hidden_layer.forward(x).sigmoid();
-           self.output_layer.forward(h)
-       }
-   }
+          fn forward_uat(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
+              let h = self.hidden_layer.forward(x).sigmoid();
+              self.output_layer.forward(h)
+          }
+      }
 ```
 
 ---
@@ -1339,7 +1342,7 @@ $"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 <!-- column: 1 -->
 <!-- newlines: 1 -->
 ```typst +render +width:15%
-$"loss"^'$
+$"loss"'$
 ```
 <!-- column: 0 -->
 <!-- pause -->
@@ -1420,10 +1423,10 @@ Summary
 
 ---
 
-How to get the loss' gradient? - numerical method
+How to get the loss' gradient? - numerical differentiation
 ===
 
-<!-- column_layout: [3, 1] -->
+<!-- column_layout: [5, 2] -->
 
 <!-- column: 0 -->
 if you remember your calculus classes ...
@@ -1461,11 +1464,12 @@ for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = fr
 
 - this is `O(mn)` complexity
 - we could have **millions** of parameters
-- => won't work
+- _=> won't work_
+- still very useful for property tests
 
 ---
 
-How to get the loss' gradient? - symbolic method
+How to get the loss' gradient? - symbolic differentiation
 ===
 
 if you remember your calculus classes ...
@@ -1484,14 +1488,19 @@ there are other issues however...
 ```typst +render +width:40%
 $frac(d, d x) f(x) g(x) = f'(x) g(x) + g'(x) f(x)$
 ```
+
+<!-- column_layout: [5, 2] -->
+
+<!-- column: 0 -->
 <!-- incremental_lists: true -->
 - we could have **hundreds** of these functions nested within each other
 - quickly becomes untractable
-
-<!-- incremental_lists: true -->
 - is also limited to closed form expressions: `+`, `-`, `x`, `/`, `^`, `√`, `e`, `log`, trig fns
 - can't have `>`, `==`, `is close to` as they are not symbolically differentiable
-- => won't work
+- _=> won't work_
+
+<!-- column: 1 -->
+![image:width:70%](img/whatdowedo.gif)
 
 ---
 
