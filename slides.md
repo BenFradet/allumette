@@ -1504,6 +1504,28 @@ $frac(d, d x) f(x) g(x) = f'(x) g(x) + g'(x) f(x)$
 
 ---
 
+How to get the loss' gradient? - automatic differentiation
+===
+
+- aka `AD`, aka reverse mode `AD` (yes, there is a forward mode)
+- relies on:
+  - an _evaluation trace_
+  - a _computational graph_
+
+```typst +render +width:40%
+$y = f(x_1, x_2) = x_1 x_2 + x_2 - ln(x_1)$
+```
+
+```mermaid +render
+sequenceDiagram
+    Mark --> Bob: Hello!
+    Bob --> Mark: Oh, hi mark!
+```
+
+blog post by Andrew M Holmes: [](huggingface.co/blog/andmholm/what-is-automatic-differentiation)
+
+---
+
 END
 
 <!-- newlines: 2 -->
