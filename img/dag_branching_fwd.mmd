@@ -1,0 +1,17 @@
+stateDiagram-v2
+    direction LR
+
+    state "x = 2" as x
+    state "v1 = w x = 0.2" as v1
+    state "v2 = v1 + b = 0.1" as v2
+    state "h = σ(v2) = 0.5" as h
+    state "u1 = c1 h = 1" as u1
+    state "u2 = c2 h² = 0.75" as u2
+    state "y = u1 + u2 = 1.75" as y
+    x --> v1
+    v1 --> v2
+    v2 --> h
+    h --> u1
+    h --> u2
+    u1 --> y
+    u2 --> y

@@ -1,0 +1,25 @@
+stateDiagram-v2
+    direction RL
+    state "ӯ = ∂y/∂y = 1" as y
+    state "ū1 = ∂y/∂u1 ӯ = 1" as u1
+    state "ū2 = ∂y/∂u2 ӯ = 1" as u2
+    state "č1 = ∂u1/∂c1 ū1 = h = 0.5" as c1
+    state "ĥ¹ = ∂u1/∂h ū1 = c1 = 2" as c1
+    state "č2 = ∂u2/∂c2 ū2 = h² = 0.25" as c2
+    state "ĥ² = ∂u2/∂h ū2 = 2 c2 h = 3" as c2
+    state "ĥ = ĥ¹ + ĥ² = 5" as h
+    state "ṽ2 = ∂h/∂v2 ĥ = 1.2" as v2
+    state "ṽ1 = ∂v2/∂v1 ṽ2 = 1.2" as v1
+    state "ƀ = ∂v2/∂b ṽ2 = 1.2" as v1
+    state "x^ = ∂v1/∂x ṽ1 = w ṽ1 = 0.1" as x
+    state "w^ = ∂v1/∂w ṽ1 = x ṽ1 = 2.4" as x
+
+    y --> u1
+    y --> u2
+    u1 --> c1
+    u2 --> c2
+    c1 --> h
+    c2 --> h
+    h --> v2
+    v2 --> v1
+    v1 --> x
