@@ -1,0 +1,16 @@
+stateDiagram-v2
+    direction RL
+    state "ȳ = ∂y/∂y = 1" as y
+    state "ū3 = ȳ ∂y/∂u3 = c = 3" as u3
+    state "¯c = ӯ ∂y/∂c = u3 = 0.5" as u3
+    state "ū2 = ū3 ∂u3/∂u2 =
+    3 σ'(u2) = 0.8" as u2
+    state "ū1 = ū2 ∂u2/∂u1 = 0.8" as u1
+    state "¯b = ū2 ∂u2/∂b = 0.8" as u1
+    state "¯x = ∂y/∂x = ū1 ∂u1/∂x = 0.8 w = 0.08" as x
+    state "¯w = ū1 ∂u1/∂w = 0.8 x = 1.6" as x
+
+    y --> u3
+    u3 --> u2
+    u2 --> u1
+    u1 --> x
