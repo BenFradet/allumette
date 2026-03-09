@@ -10,6 +10,9 @@
    sodipodi:docname="dag_fwd.svg"
    height="531.89728"
    inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
+   inkscape:export-filename="dag_fwd.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -67,15 +70,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="0.36076877"
-     inkscape:cx="1466.3132"
-     inkscape:cy="480.91746"
+     inkscape:zoom="1.4430751"
+     inkscape:cx="745.62995"
+     inkscape:cy="391.8715"
      inkscape:window-width="1906"
      inkscape:window-height="1186"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="0"
-     inkscape:current-layer="g2">
+     inkscape:current-layer="state-u3-3">
     <inkscape:page
        x="1166.2"
        y="170.52"
@@ -127,7 +130,10 @@
            data-et="edge"
            data-id="edge0"
            data-points="W3sieCI6NTkuNzQyMTg3NSwieSI6MjV9LHsieCI6ODQuMjQyMTg3NSwieSI6MjQuNX0seyJ4IjoxMDkuNzQyMTg3NSwieSI6MjV9XQ=="
-           marker-end="url(#my-svg_stateDiagram-barbEnd)" />
+           marker-end="url(#my-svg_stateDiagram-barbEnd)"
+           inkscape:export-filename="dag_fwd.png"
+           inkscape:export-xdpi="96"
+           inkscape:export-ydpi="96" />
         <path
            d="m 226.98767,25.008051 3.38013,-0.09265 c 3.38096,-0.09377 10.14122,-0.279066 17.04056,-0.279066 6.89851,0 13.93527,0.1853 17.45366,0.279066 l 3.51838,0.09265"
            id="edge1"
@@ -559,31 +565,35 @@
           <rect
              style="fill:none;fill-opacity:1;stroke:#f5a97f;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1"
              id="rect65"
-             width="51.205002"
+             width="96.415329"
              height="33"
              x="-211.89578"
-             y="-16.499998" />
+             y="-16.499998"
+             ry="4.9999628" />
           <rect
              style="fill:none;fill-opacity:1;stroke:#f5a97f;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1"
              id="rect66"
-             width="30.490444"
+             width="75.848145"
              height="33"
              x="-378.89893"
-             y="-16.499998" />
-          <rect
-             style="fill:none;fill-opacity:1;stroke:#f5a97f;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1"
-             id="rect67"
-             width="42.384998"
-             height="33"
-             x="-23.000792"
-             y="-16.499998" />
+             y="-16.499998"
+             ry="4.9997754" />
           <rect
              style="fill:none;fill-opacity:1;stroke:#f5a97f;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1"
              id="rect68"
-             width="35.525002"
+             width="80.312233"
              height="33"
              x="148.25421"
-             y="-16.499998" />
+             y="-16.499998"
+             ry="4.8507524" />
+          <rect
+             style="fill:none;stroke:#f5a97f;stroke-width:1.96999;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+             id="rect1"
+             width="87.850197"
+             height="33.084122"
+             x="-22.362247"
+             y="-16.5"
+             ry="5.1187181" />
         </g>
       </g>
     </g>

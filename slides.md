@@ -1499,25 +1499,42 @@ How to get the loss' gradient? - automatic differentiation
 ===
 
 - aka `AD`, aka reverse mode `AD` (yes, there is a forward mode)
-- relies on: <span style="color: #f5a97f">an evaluation trace</span> + _a computational DAG_ 
 
-```typst +render +width:40%
+<!-- pause -->
+```typst +render +width:60%
 $
-y = c dot sigma (w^T x + b) \
+y = c dot sigma (w^T x + b) #h(4em)
 x = 2, #h(0.5em) w = 0.1, #h(0.5em) b = -0.1, #h(0.5em) c = 3
 $
 ```
 
+<!-- pause -->
+- relies on: <span style="color: #f5a97f">an evaluation trace</span> + _a computational DAG_ 
+
+<!-- pause -->
 ![image:width:75%](img/dag_fwd.png)
 
-chain rule
+todo: more spaces in bwd
+<!-- pause -->
+![image:width:100%](img/dag_bwd.png)
 
-dag backward img
+<!-- incremental_lists: true -->
+- adjoints `ū = ∂y/∂u` represents the sensitivity of the output `y` wrt `u`
+- leverages the *chain rule* over and over:
 
+```typst +render +width:50%
+$
+z(y(x)), #h(0.5em) frac(d z, d x) = frac(d z, d y) dot frac(d y, d x) #h(4em)
+macron(u)_2 = macron(u)_3 dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_3) dot frac(∂ u_3, ∂ u_2)
+$
+```
+
+<!-- incremental_lists: true -->
 - forward pass `O(n)`
 - backward pass `O(n)` once the DAG is topologically sorted
 - great for large inputs, small outputs: we get all `dy/dxi` in one pass
 
+<!-- alignment: center -->
 blog post by Andrew M Holmes: [](huggingface.co/blog/andmholm/what-is-automatic-differentiation)
 
 ---
