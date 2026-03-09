@@ -138,6 +138,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     pub fn backprop(&self, d: Tensor<'a, B>) -> HashMap<String, Self> {
+        // TODO: memoize sort
         let sorted = self.topological_sort_dfs();
         let mut derivs = HashMap::from([(&self.id, d)]);
         let mut res: HashMap<String, Self> = HashMap::new();

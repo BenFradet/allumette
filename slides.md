@@ -1337,18 +1337,9 @@ $"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 
 <!-- column: 0 -->
 <!-- pause -->
-  - determine where to go with the loss' gradient (aka derivative)
-
-<!-- column: 1 -->
-<!-- newlines: 1 -->
-```typst +render +width:15%
-$"loss"'$
-```
-<!-- column: 0 -->
+  - determine where to go with the loss' gradients (derivatives)
 <!-- pause -->
-  - propagate the gradient backward in the network
-<!-- pause -->
-  - update weights and biases
+  - update weights and biases w/ their gradients
 <!-- pause -->
 - rinse and repeat for `n` iterations
 
@@ -1508,24 +1499,32 @@ How to get the loss' gradient? - automatic differentiation
 ===
 
 - aka `AD`, aka reverse mode `AD` (yes, there is a forward mode)
-- relies on:
-  - an <span style="color: #f5a97f">evaluation trace</span>
-  - a _computational graph_
+- relies on: <span style="color: #f5a97f">an evaluation trace</span> + _a computational DAG_ 
 
 ```typst +render +width:40%
-$y = f(x_1, x_2) = x_1 x_2 + x_2 - ln(x_1)$
+$
+y = c dot sigma (w^T x + b) \
+x = 2, #h(0.5em) w = 0.1, #h(0.5em) b = -0.1, #h(0.5em) c = 3
+$
 ```
 
-![image:width:70%](img/dag.png)
+![image:width:75%](img/dag_fwd.png)
+
+chain rule
+
+dag backward img
+
+- forward pass `O(n)`
+- backward pass `O(n)` once the DAG is topologically sorted
+- great for large inputs, small outputs: we get all `dy/dxi` in one pass
 
 blog post by Andrew M Holmes: [](huggingface.co/blog/andmholm/what-is-automatic-differentiation)
 
 ---
 
-END
+What we've learned:
+
+- 3 representations for nns: layers and neurons, math eq and computational DAG
 
 <!-- newlines: 2 -->
 ![image:width:70%](img/thatsallfolks.gif)
-
-Sources:
-- https://huggingface.co/blog/andmholm/what-is-automatic-differentiation
