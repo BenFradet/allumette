@@ -1337,9 +1337,9 @@ $"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 
 <!-- column: 0 -->
 <!-- pause -->
-  - determine where to go with the loss' gradients (derivatives)
+  - determine the loss' gradients (derivatives)
 <!-- pause -->
-  - update weights and biases w/ their gradients
+  - propagate gradient by updating weights and biases w/ their gradients
 <!-- pause -->
 - rinse and repeat for `n` iterations
 
@@ -1386,7 +1386,7 @@ why ?
 
 ![image:width:100%](img/abs.png)
 
-&nbsp; and we want to compute its derivative / gradient
+&nbsp; and we want to compute its derivatives / gradients
 
 <!-- pause -->
 
@@ -1410,11 +1410,11 @@ Summary
 ## What's a neural network?
 ## Training
 ### Loss function
-### Gradient
+### Gradient computations
 
 ---
 
-How to get the loss' gradient? - numerical differentiation
+How to get the loss' gradients? - numerical differentiation
 ===
 
 <!-- column_layout: [5, 2] -->
@@ -1456,11 +1456,11 @@ for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = fr
 - this is `O(mn)` complexity
 - we could have **millions** of parameters
 - _=> won't work_
-- still very useful for property tests
+- _still very useful for property tests_
 
 ---
 
-How to get the loss' gradient? - symbolic differentiation
+How to get the loss' gradients? - symbolic differentiation
 ===
 
 if you remember your calculus classes ...
@@ -1495,7 +1495,7 @@ $frac(d, d x) f(x) g(x) = f'(x) g(x) + g'(x) f(x)$
 
 ---
 
-How to get the loss' gradient? - automatic differentiation
+How to get the loss' gradients? - automatic differentiation
 ===
 
 - aka `AD`, aka reverse mode `AD` (yes, there is a forward mode)
@@ -1514,7 +1514,6 @@ $
 <!-- pause -->
 ![image:width:75%](img/dag_fwd.png)
 
-todo: more spaces in bwd
 <!-- pause -->
 ![image:width:100%](img/dag_bwd.png)
 
@@ -1529,19 +1528,115 @@ macron(u)_2 = macron(u)_3 dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_3) dot 
 $
 ```
 
+<!-- column_layout: [2, 1] -->
+
+<!-- column: 0 -->
 <!-- incremental_lists: true -->
 - forward pass `O(n)`
 - backward pass `O(n)` once the DAG is topologically sorted
-- great for large inputs, small outputs: we get all `dy/dxi` in one pass
+- great for large inputs, small outputs: all `dL/dxi` in one pass
+- _=> will work_
 
+<!-- column: 1 -->
+![image:width:100%](img/phew.gif)
+
+<!-- reset_layout -->
 <!-- alignment: center -->
 blog post by Andrew M Holmes: [](huggingface.co/blog/andmholm/what-is-automatic-differentiation)
+
+---
+
+Summary
+===
+
+# Part 1
+## What's a tensor?
+## What can we do with a tensor?
+# Part 2
+## What's a neural network?
+## Training
+### Loss function
+### Gradient computations
+### Gradient propagation
+
+---
+
+How to propagate the loss' gradients?
+===
+
+<!-- column_layout: [1, 1, 1] -->
+
+<!-- column: 0 -->
+Recap `y => L`:
+
+```typst +render +width:80%
+$
+w = 0.1, #h(0.5em) macron(w) = frac(∂ L, ∂ w) = 1.6 \
+b = -0.1, #h(0.5em) macron(b) = frac(∂ L, ∂ b) = 0.8 \
+c = 3, #h(0.5em) macron(c) = frac(∂ L, ∂ c) = 0.5
+$
+```
+<!-- pause -->
+Gradient direction:
+```typst +render +width:80%
+$
+frac(∂ L, ∂ p) > 0, #h(0.5em) arrow.tr p #h(0.5em) => #h(0.5em) arrow.tr L
+$
+```
+<!-- pause -->
+```typst +render +width:80%
+$
+frac(∂ L, ∂ p) < 0, #h(0.5em) arrow.br p #h(0.5em) => #h(0.5em) arrow.br L
+$
+```
+
+<!-- pause -->
+we introduce a `-1` factor as a result
+
+<!-- column: 1 -->
+<!-- incremental_lists: true -->
+- learning rate `η`
+- the step size at each iteration towards the min loss
+- to what extent new info overrides old info
+- speed at which the network learns
+
+![image:width:100%](img/lr_low.png)
+<!-- pause -->
+![image:width:100%](img/lr_high.png)
+
+<!-- column: 2 -->
+```typst +render +width:80%
+$
+Delta p = -1 dot eta dot frac(∂ L, ∂ p) \
+p_(i + 1) = p_(i) + Delta p
+$
+```
+
+<!-- pause -->
+<!-- newlines: 2 -->
+For the next iteration:
+
+```typst +render +width:100%
+$
+eta = 0.01 \
+w_(i + 1) = w_i - 0.01 dot frac(∂ L, ∂ w) = .084 \
+b_(i + 1) = b_i - 0.01 dot frac(∂ L, ∂ b) = -.108 \
+c_(i + 1) = c_i - 0.01 dot frac(∂ L, ∂ c) = 2.995 \
+$
+```
+
+<!-- reset_layout -->
+<!-- alignment: center -->
+<!-- pause -->
+gradient computation and propagation is also known as _backpropagation_
 
 ---
 
 What we've learned:
 
 - 3 representations for nns: layers and neurons, math eq and computational DAG
+
+what's next
 
 <!-- newlines: 2 -->
 ![image:width:70%](img/thatsallfolks.gif)
