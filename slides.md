@@ -1635,6 +1635,95 @@ gradient computation and propagation is also known as _backpropagation_
 
 ---
 
+Summary
+===
+
+# Part 1
+## What's a tensor?
+## What can we do with a tensor?
+# Part 2
+## What's a neural network?
+## Training
+### Loss function
+### Gradient computations
+### Gradient propagation
+### Rust implementation
+
+---
+
+Rust impl - evaluation trace
+===
+
+<!-- column_layout: [4, 2] -->
+<!-- column: 0 -->
+```rust +no_background
+pub struct Ln;
+impl<'a, B: Backend> Unary<'a, B> for Ln {
+    fn fwd(&self, a: &B::Ops<'a>) -> B::Ops<'a> {
+        a.map(|e| e.ln()) // < 0 amended
+    }
+
+    fn bwd(&self, i: &B::Ops<'a>, d: &B::Ops<'a>) -> B::Ops<'a> {
+        i.zip(d, |ei, ed| ed / ei) // ei != 0 amended
+    }
+}
+```
+<!-- pause -->
+```rust +no_background
+pub struct Mul;
+impl<'a, B: Backend> Binary<'a, B> for Mul {
+    fn fwd(&self, a: &B::Ops<'a>, b: &B::Ops<'a>) -> B::Ops<'a> {
+        a.zip(b, |e1, e2| e1 * e2)
+    }
+
+    fn bwd(
+        &self,
+        lhs: &B::Ops<'a>,
+        rhs: &B::Ops<'a>,
+        d: &B::Ops<'a>,
+    ) -> (B::Ops<'a>, B::Ops<'a>) {
+        (
+            rhs.zip(d, |e1, e2| e1 * e2),
+            lhs.zip(d, |e1, e2| e1 * e2),
+        )
+    }
+}
+```
+
+<!-- column: 1 -->
+<!-- newlines: 2 -->
+<!-- pause -->
+```rust +no_background
+// Rc b/c we need Clone
+// dyn b/c type erasure
+enum Function<'a, B: Backend> {
+    U(Rc<dyn Unary<'a, B>>),
+    B(Rc<dyn Binary<'a, B>>),
+}
+```
+<!-- newlines: 2 -->
+<!-- pause -->
+```rust +no_background
+struct Trace<'a, B: Backend> {
+    last_fn: Option<Function<'a, B>>,
+    inputs: Vec<Tensor<'a, B>>,
+}
+```
+<!-- newlines: 2 -->
+<!-- pause -->
+```rust +no_background
+struct Tensor<'a, B: Backend> {
+    ops: B::Ops<'a>,
+    // Box b/c recursive struct
+    // puts grad on the heap
+    // pointer-sized
+    grad: Option<Box<Tensor<'a, B>>>,
+    trace: Trace<'a, B>,
+}
+```
+
+---
+
 What we've learned:
 
 - 3 representations for nns: layers and neurons, math eq and computational DAG

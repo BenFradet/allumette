@@ -4,6 +4,8 @@ use crate::backend::backend::Backend;
 
 use super::{binary::Binary, unary::Unary};
 
+// Rc because we need clone
+// dyn because we need type erasure
 #[derive(Clone)]
 pub enum Function<'a, B: Backend> {
     U(Rc<dyn Unary<'a, B>>),
