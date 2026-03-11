@@ -33,21 +33,21 @@ where
 {
     pub data: B::Storage<'a>,
     pub grad: Option<Box<Tensor<'a, B>>>,
-    pub history: Trace<'a, B>,
+    pub trace: Trace<'a, B>,
     pub id: String,
     pub is_constant: bool,
     _marker: PhantomData<(B::Element, B::Mode)>,
 }
 
 impl<'a, B: Backend> Tensor<'a, B> {
-    pub fn new(data: B::Storage<'a>, history: Trace<'a, B>) -> Self {
+    pub fn new(data: B::Storage<'a>, trace: Trace<'a, B>) -> Self {
         let mut tensor_id = TENSOR_ID.lock().unwrap();
         let id = tensor_id.random().to_string();
         //let id = rand::thread_rng().r#gen::<u64>().to_string();
         Self {
             data,
             grad: None,
-            history,
+            trace,
             id: id.to_string(),
             is_constant: false,
             _marker: PhantomData,
@@ -61,7 +61,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         Self {
             data,
             grad: None,
-            history: Trace::default(),
+            trace: Trace::default(),
             id,
             is_constant: false,
             _marker: PhantomData,
@@ -104,8 +104,8 @@ impl<'a, B: Backend> Tensor<'a, B> {
         ))
     }
 
-    pub fn history(mut self, h: Trace<'a, B>) -> Self {
-        self.history = h;
+    pub fn trace(mut self, t: Trace<'a, B>) -> Self {
+        self.trace = t;
         self
     }
 
@@ -176,9 +176,9 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     fn chain_rule(&self, d: &B::Storage<'a>) -> impl Iterator<Item = (&Self, B::Storage<'a>)> {
-        let inputs = &self.history.inputs;
+        let inputs = &self.trace.inputs;
         let derivatives = self
-            .history
+            .trace
             .last_fn
             .as_ref()
             .map(|f| match f {
@@ -254,11 +254,11 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     fn parents(&self) -> impl Iterator<Item = &Self> {
-        self.history.inputs.iter()
+        self.trace.inputs.iter()
     }
 
     fn is_leaf(&self) -> bool {
-        self.history.last_fn.is_none()
+        self.trace.last_fn.is_none()
     }
 
     pub fn lt(self, rhs: Tensor<'a, B>) -> Self {
@@ -659,7 +659,7 @@ mod tests {
             F: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
         {
             let id = &tensor.id.clone();
-            let reset = tensor.grad(None).history(Trace::default());
+            let reset = tensor.grad(None).trace(Trace::default());
             let idx = reset.data.shape().sample_idx();
             let out = f(reset);
             let mut res = out.sum(None).backward();
@@ -685,8 +685,8 @@ mod tests {
         {
             let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
-                tensor1.grad(None).history(Trace::default()),
-                tensor2.grad(None).history(Trace::default()),
+                tensor1.grad(None).trace(Trace::default()),
+                tensor2.grad(None).trace(Trace::default()),
             );
             let (idx1, idx2) = (
                 reset1.data.shape().sample_idx(),
@@ -1279,7 +1279,7 @@ mod tests {
             F: Fn(Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
         {
             let id = &tensor.id.clone();
-            let reset = tensor.grad(None).history(Trace::default());
+            let reset = tensor.grad(None).trace(Trace::default());
             let idx = reset.data.shape().sample_idx();
             let out = f(reset);
             let mut res = out.sum(None).backward();
@@ -1308,8 +1308,8 @@ mod tests {
         {
             let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
-                tensor1.grad(None).history(Trace::default()),
-                tensor2.grad(None).history(Trace::default()),
+                tensor1.grad(None).trace(Trace::default()),
+                tensor2.grad(None).trace(Trace::default()),
             );
             let (idx1, idx2) = (
                 reset1.data.shape().sample_idx(),
@@ -1942,25 +1942,25 @@ mod tests {
 
         //    let agtd =
         //        GpuTensorData::new(&ad, ashape.clone(), astrides.clone(), get_wgpu_context());
-        //    let agt = Tensor::new(agtd, History::default());
+        //    let agt = Tensor::new(agtd, Trace::default());
 
         //    let actd = CpuTensorData::new(
         //        ad.iter().map(|&f| f as f64).collect(),
         //        ashape.clone(),
         //        astrides.clone(),
         //    );
-        //    let act: Tensor<_, Seq, _> = Tensor::new(actd.clone(), History::default());
+        //    let act: Tensor<_, Seq, _> = Tensor::new(actd.clone(), Trace::default());
 
         //    let bgtd =
         //        GpuTensorData::new(&bd, bshape.clone(), bstrides.clone(), get_wgpu_context());
-        //    let bgt = Tensor::new(bgtd, History::default());
+        //    let bgt = Tensor::new(bgtd, Trace::default());
 
         //    let bctd = CpuTensorData::new(
         //        bd.iter().map(|&f| f as f64).collect(),
         //        bshape.clone(),
         //        bstrides.clone(),
         //    );
-        //    let bct: Tensor<_, Seq, _> = Tensor::new(bctd.clone(), History::default());
+        //    let bct: Tensor<_, Seq, _> = Tensor::new(bctd.clone(), Trace::default());
 
         //    // try printing central diff for cpu and gpu
         //    cpu::binary_grad_assert(act, bct, |t1, t2| t1.mm(t2));

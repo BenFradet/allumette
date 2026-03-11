@@ -16,7 +16,7 @@ impl Forward {
         rhs: Tensor<'a, B>,
     ) -> Tensor<'a, B> {
         let res = b.forward(&lhs.data, &rhs.data);
-        let new_history = if lhs.is_constant && rhs.is_constant {
+        let new_trace = if lhs.is_constant && rhs.is_constant {
             Trace::default()
         } else {
             Trace::default()
@@ -24,7 +24,7 @@ impl Forward {
                 .push_input(lhs)
                 .push_input(rhs)
         };
-        Tensor::new(res, new_history)
+        Tensor::new(res, new_trace)
     }
 
     pub fn unary<'a, B: Backend>(
@@ -32,13 +32,13 @@ impl Forward {
         a: Tensor<'a, B>,
     ) -> Tensor<'a, B> {
         let res = u.forward(&a.data);
-        let new_history = if a.is_constant {
+        let new_trace = if a.is_constant {
             Trace::default()
         } else {
             Trace::default()
                 .last_fn(Function::U(Rc::new(u)))
                 .push_input(a)
         };
-        Tensor::new(res, new_history)
+        Tensor::new(res, new_trace)
     }
 }
