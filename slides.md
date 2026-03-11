@@ -1540,6 +1540,7 @@ $
 <!-- column: 1 -->
 ![image:width:100%](img/phew.gif)
 
+<!-- pause -->
 <!-- reset_layout -->
 <!-- alignment: center -->
 blog post by Andrew M Holmes: [](huggingface.co/blog/andmholm/what-is-automatic-differentiation)
@@ -1567,26 +1568,26 @@ How to propagate the loss' gradients?
 <!-- column_layout: [1, 1, 1] -->
 
 <!-- column: 0 -->
-Recap `y => L`:
+Recap with `y => L` at iteration `i`:
 
 ```typst +render +width:80%
 $
-w = 0.1, #h(0.5em) macron(w) = frac(∂ L, ∂ w) = 1.6 \
-b = -0.1, #h(0.5em) macron(b) = frac(∂ L, ∂ b) = 0.8 \
-c = 3, #h(0.5em) macron(c) = frac(∂ L, ∂ c) = 0.5
+w_i = 0.1, #h(0.5em) macron(w_i) = frac(∂ L, ∂ w_i) = 1.6 \
+b_i = -0.1, #h(0.5em) macron(b_i) = frac(∂ L, ∂ b_i) = 0.8 \
+c_i = 3, #h(0.5em) macron(c_i) = frac(∂ L, ∂ c_i) = 0.5
 $
 ```
 <!-- pause -->
 Gradient direction:
 ```typst +render +width:80%
 $
-frac(∂ L, ∂ p) > 0, #h(0.5em) arrow.tr p #h(0.5em) => #h(0.5em) arrow.tr L
+frac(∂ L, ∂ p) > 0, #h(0.5em) p arrow.tr #h(0.5em) => #h(0.5em) L arrow.tr
 $
 ```
 <!-- pause -->
 ```typst +render +width:80%
 $
-frac(∂ L, ∂ p) < 0, #h(0.5em) arrow.br p #h(0.5em) => #h(0.5em) arrow.br L
+frac(∂ L, ∂ p) < 0, #h(0.5em) p arrow.br #h(0.5em) => #h(0.5em) L arrow.br
 $
 ```
 
@@ -1594,8 +1595,9 @@ $
 we introduce a `-1` factor as a result
 
 <!-- column: 1 -->
+<!-- pause -->
+Learning rate `η`:
 <!-- incremental_lists: true -->
-- learning rate `η`
 - the step size at each iteration towards the min loss
 - to what extent new info overrides old info
 - speed at which the network learns
@@ -1605,10 +1607,11 @@ we introduce a `-1` factor as a result
 ![image:width:100%](img/lr_high.png)
 
 <!-- column: 2 -->
+Delta `Δ`:
 ```typst +render +width:80%
 $
-Delta p = -1 dot eta dot frac(∂ L, ∂ p) \
-p_(i + 1) = p_(i) + Delta p
+Delta p_i = -1 dot eta dot frac(∂ L, ∂ p_i) \
+p_(i + 1) = p_(i) + Delta p_i
 $
 ```
 
