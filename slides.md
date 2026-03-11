@@ -1724,6 +1724,67 @@ struct Tensor<'a, B: Backend> {
 
 ---
 
+Rust impl - trace capture
+===
+
+<!-- column_layout: [2, 3] -->
+
+<!-- column: 0 -->
+```rust +no_background
+pub struct Forward;
+impl Forward {
+    pub fn unary<'a, B: Backend>(
+        u: impl Unary<'a, B>,
+        a: Tensor<'a, B>,
+    ) -> Tensor<'a, B> {
+        let res = u.forward(&a);
+        let trace = Trace::default()
+            .last_fn(Function::U(Rc::new(u)))
+            .push_input(a);
+        Tensor::new(res, new_trace)
+    }
+
+    pub fn binary<'a, B: Backend>(
+        b: impl Binary<'a, B>,
+        lhs: Tensor<'a, B>,
+        rhs: Tensor<'a, B>,
+    ) -> Tensor<'a, B> {
+        let res = b.forward(&lhs, &rhs);
+        let trace = Trace::default()
+            .last_fn(Function::B(Rc::new(b)))
+            .push_input(lhs)
+            .push_input(rhs);
+        Tensor::new(res, trace)
+    }
+}
+```
+
+<!-- column: 1 -->
+<!-- pause -->
+
+<!-- newlines: 3 -->
+```rust +no_background
+impl<'a, B: Backend> Tensor<'a, B> {
+    fn ln(self) -> Self {
+        Forward::unary(Ln {}, self)
+    }
+}
+t.ln()
+```
+<!-- pause -->
+<!-- newlines: 3 -->
+```rust +no_background
+impl<'a, B: Backend> Mul<Tensor<'a, B>> for Tensor<'a, B> {
+    type Output = Tensor<'a, B>;
+
+    fn mul(self, rhs: Tensor<'a, B>) -> Self::Output {
+        Forward::binary(binary::Mul {}, self, rhs)
+    }
+}
+t1 * t2
+```
+---
+
 What we've learned:
 
 - 3 representations for nns: layers and neurons, math eq and computational DAG

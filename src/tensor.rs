@@ -177,7 +177,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
 
     fn chain_rule(&self, d: &B::Storage<'a>) -> impl Iterator<Item = (&Self, B::Storage<'a>)> {
         let inputs = &self.trace.inputs;
-        let derivatives = self
+        let gradients = self
             .trace
             .last_fn
             .as_ref()
@@ -195,7 +195,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         // expand derivatives b/c out of bwd is a different size than in of fwd
         inputs
             .iter()
-            .zip(derivatives)
+            .zip(gradients)
             .filter_map(|(i, d)| i.data.expand(d).map(|o| (i, o)))
     }
 
