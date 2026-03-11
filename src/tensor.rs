@@ -1,5 +1,5 @@
 use crate::{
-    autodiff::{forward::Forward, history::Trace},
+    autodiff::{forward::Forward, trace::Trace},
     backend::{
         backend::{Backend, GpuBackend},
         mode::Mode,
@@ -176,22 +176,22 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     fn chain_rule(&self, d: &B::Storage<'a>) -> impl Iterator<Item = (&Self, B::Storage<'a>)> {
+        let inputs = &self.history.inputs;
         let derivatives = self
             .history
             .last_fn
             .as_ref()
             .map(|f| match f {
                 Function::B(b) => {
-                    let (da, db) = b.backward(&self.history.ctx, d);
+                    let (da, db) = b.backward(&inputs[0].data, &inputs[1].data, d);
                     vec![da, db]
                 }
                 Function::U(u) => {
-                    let da = u.backward(&self.history.ctx, d);
+                    let da = u.backward(&inputs[0].data, d);
                     vec![da]
                 }
             })
             .unwrap_or_default();
-        let inputs = &self.history.inputs;
         // expand derivatives b/c out of bwd is a different size than in of fwd
         inputs
             .iter()

@@ -1,11 +1,10 @@
-use crate::{autodiff::context::Context, backend::backend::Backend};
+use crate::backend::backend::Backend;
 use crate::{backend::mode::Mode, math::element::Element, ops::ops::Ops, storage::data::Data};
 
 pub trait Unary<'a, B: Backend> {
     // need to have self otherwise can't be made into an object and can't dyn Unary
     fn forward(&self, a: &B::Storage<'a>) -> B::Storage<'a>;
-    // TODO: remove ctx
-    fn backward(&self, ctx: &Context<B::Storage<'a>>, d: &B::Storage<'a>) -> B::Storage<'a>;
+    fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a>;
 
     fn tag(&self) -> &'static str;
 }
@@ -17,7 +16,7 @@ impl<'a, B: Backend> Unary<'a, B> for Neg {
         a.map(|e| -e, <Neg as Unary<'a, B>>::tag(self))
     }
 
-    fn backward(&self, _ctx: &Context<B::Storage<'a>>, d: &B::Storage<'a>) -> B::Storage<'a> {
+    fn backward(&self, _input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
         d.map(|e| -e, <Neg as Unary<'a, B>>::tag(self))
     }
 
@@ -42,11 +41,10 @@ impl<'a, B: Backend> Unary<'a, B> for Inv {
     }
 
     // decomposed for gpu, deriv 1/x => -1/x^2
-    fn backward(&self, ctx: &Context<B::Storage<'a>>, d: &B::Storage<'a>) -> B::Storage<'a> {
+    fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
         let d_neg = d.map(|e| -e, "neg");
-        ctx.fst
-            .as_ref()
-            .and_then(|a| a.zip(a, |e1, e2| e1 * e2, "mul"))
+        input
+            .zip(input, |e1, e2| e1 * e2, "mul")
             .map(|a2| <Inv as Unary<'a, B>>::forward(self, &a2))
             .and_then(|a2_inv| d_neg.zip(&a2_inv, |e1, e2| e1 * e2, "mul"))
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
@@ -74,22 +72,19 @@ impl<'a, B: Backend> Unary<'a, B> for Ln {
         )
     }
 
-    fn backward(&self, ctx: &Context<B::Storage<'a>>, d: &B::Storage<'a>) -> B::Storage<'a> {
-        ctx.fst
-            .as_ref()
-            .and_then(|a| {
-                a.zip(
-                    d,
-                    |e1, e2| {
-                        if e1 == B::Element::zero() {
-                            e2
-                        } else {
-                            e2 / e1
-                        }
-                    },
-                    "ln_diff",
-                )
-            })
+    fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
+        input
+            .zip(
+                d,
+                |e1, e2| {
+                    if e1 == B::Element::zero() {
+                        e2
+                    } else {
+                        e2 / e1
+                    }
+                },
+                "ln_diff",
+            )
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
@@ -107,18 +102,13 @@ impl<'a, B: Backend> Unary<'a, B> for Sig {
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
-    fn backward(&self, ctx: &Context<B::Storage<'a>>, d: &B::Storage<'a>) -> B::Storage<'a> {
-        ctx.fst
-            .as_ref()
-            .and_then(|t| {
-                let sig = <Sig as Unary<'a, B>>::forward(self, t);
-                let minus_sig = sig.map(|e| -e, "neg");
-                let one_minus_sig = <B::Storage<'a> as Data<B::Element>>::from_scalar(
-                    B::Element::one(),
-                )
-                .zip(&minus_sig, |e1, e2| e1 + e2, "add");
-                one_minus_sig.and_then(|oms| sig.zip(&oms, |e1, e2| e1 * e2, "mul"))
-            })
+    fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
+        let sig = <Sig as Unary<'a, B>>::forward(self, input);
+        let minus_sig = sig.map(|e| -e, "neg");
+        let one_minus_sig = <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::one())
+            .zip(&minus_sig, |e1, e2| e1 + e2, "add");
+        one_minus_sig
+            .and_then(|oms| sig.zip(&oms, |e1, e2| e1 * e2, "mul"))
             .and_then(|deriv| d.zip(&deriv, |e1, e2| e1 * e2, "mul"))
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
@@ -136,10 +126,9 @@ impl<'a, B: Backend> Unary<'a, B> for Relu {
         a.map(|e| e.relu(), <Relu as Unary<'a, B>>::tag(self))
     }
 
-    fn backward(&self, ctx: &Context<B::Storage<'a>>, d: &B::Storage<'a>) -> B::Storage<'a> {
-        ctx.fst
-            .as_ref()
-            .and_then(|a| a.zip(d, |e1, e2| e1.relu_diff(e2), "relu_diff"))
+    fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
+        input
+            .zip(d, |e1, e2| e1.relu_diff(e2), "relu_diff")
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
@@ -156,11 +145,9 @@ impl<'a, B: Backend> Unary<'a, B> for Exp {
         a.map(|e| e.exp(), <Exp as Unary<'a, B>>::tag(self))
     }
 
-    fn backward(&self, ctx: &Context<B::Storage<'a>>, d: &B::Storage<'a>) -> B::Storage<'a> {
-        ctx.fst
-            .as_ref()
-            .map(|t| <Exp as Unary<'a, B>>::forward(self, t))
-            .and_then(|exp| exp.zip(d, |e1, e2| e1 * e2, "mul"))
+    fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
+        let exp = <Exp as Unary<'a, B>>::forward(self, input);
+        exp.zip(d, |e1, e2| e1 * e2, "mul")
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
@@ -183,7 +170,7 @@ impl<'a, B: Backend> Unary<'a, B> for Copy {
         .unwrap_or(a.map(|f| f, <Copy as Unary<'a, B>>::tag(self)))
     }
 
-    fn backward(&self, _ctx: &Context<B::Storage<'a>>, d: &B::Storage<'a>) -> B::Storage<'a> {
+    fn backward(&self, _input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
         d.clone()
     }
 

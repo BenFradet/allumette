@@ -1,4 +1,4 @@
-use crate::{autodiff::context::Context, backend::backend::Backend};
+use crate::backend::backend::Backend;
 
 use crate::{
     backend::mode::Mode,
@@ -13,7 +13,8 @@ pub trait Binary<'a, B: Backend> {
     fn forward(&self, lhs: &B::Storage<'a>, rhs: &B::Storage<'a>) -> B::Storage<'a>;
     fn backward(
         &self,
-        ctx: &Context<B::Storage<'a>>,
+        lhs: &B::Storage<'a>,
+        rhs: &B::Storage<'a>,
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>);
     fn tag(&self) -> &'static str;
@@ -30,7 +31,8 @@ impl<'a, B: Backend> Binary<'a, B> for Add {
 
     fn backward(
         &self,
-        _ctx: &Context<B::Storage<'a>>,
+        _lhs: &B::Storage<'a>,
+        _rhs: &B::Storage<'a>,
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (d.clone(), d.clone())
@@ -52,19 +54,16 @@ impl<'a, B: Backend> Binary<'a, B> for Mul {
 
     fn backward(
         &self,
-        ctx: &Context<B::Storage<'a>>,
+        lhs: &B::Storage<'a>,
+        rhs: &B::Storage<'a>,
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
-            ctx.snd
-                .as_ref()
-                .and_then(|b| b.zip(d, |e1, e2| e1 * e2, <Mul as Binary<'a, B>>::tag(self)))
+            rhs.zip(d, |e1, e2| e1 * e2, <Mul as Binary<'a, B>>::tag(self))
                 .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                     d.shape().clone(),
                 )),
-            ctx.fst
-                .as_ref()
-                .and_then(|a| a.zip(d, |e1, e2| e1 * e2, <Mul as Binary<'a, B>>::tag(self)))
+            lhs.zip(d, |e1, e2| e1 * e2, <Mul as Binary<'a, B>>::tag(self))
                 .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                     d.shape().clone(),
                 )),
@@ -97,7 +96,8 @@ impl<'a, B: Backend> Binary<'a, B> for Lt {
 
     fn backward(
         &self,
-        _ctx: &Context<B::Storage<'a>>,
+        _lhs: &B::Storage<'a>,
+        _rhs: &B::Storage<'a>,
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
@@ -132,7 +132,8 @@ impl<'a, B: Backend> Binary<'a, B> for Eq {
 
     fn backward(
         &self,
-        _ctx: &Context<B::Storage<'a>>,
+        _lhs: &B::Storage<'a>,
+        _rhs: &B::Storage<'a>,
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
@@ -167,7 +168,8 @@ impl<'a, B: Backend> Binary<'a, B> for IsClose {
 
     fn backward(
         &self,
-        _ctx: &Context<B::Storage<'a>>,
+        _lhs: &B::Storage<'a>,
+        _rhs: &B::Storage<'a>,
         _d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
@@ -197,7 +199,8 @@ impl<'a, B: Backend> Binary<'a, B> for Sum {
 
     fn backward(
         &self,
-        _ctx: &Context<B::Storage<'a>>,
+        _lhs: &B::Storage<'a>,
+        _rhs: &B::Storage<'a>,
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
@@ -227,7 +230,8 @@ impl<'a, B: Backend> Binary<'a, B> for All {
 
     fn backward(
         &self,
-        _ctx: &Context<B::Storage<'a>>,
+        _lhs: &B::Storage<'a>,
+        _rhs: &B::Storage<'a>,
         _d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
@@ -251,14 +255,11 @@ impl<'a, B: Backend> Binary<'a, B> for Permute {
 
     fn backward(
         &self,
-        ctx: &Context<B::Storage<'a>>,
+        _lhs: &B::Storage<'a>,
+        rhs: &B::Storage<'a>,
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
-        let order = ctx
-            .snd
-            .as_ref()
-            .map(|o| o.to_order())
-            .unwrap_or(Order::range(d.shape().len()));
+        let order = rhs.to_order();
         let mut inv = vec![];
         for i in 0..order.len() {
             let idx = order.index(i).unwrap_or(0);
@@ -295,14 +296,11 @@ impl<'a, B: Backend> Binary<'a, B> for View {
 
     fn backward(
         &self,
-        ctx: &Context<B::Storage<'a>>,
+        lhs: &B::Storage<'a>,
+        _rhs: &B::Storage<'a>,
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
-        let shape = ctx
-            .fst
-            .as_ref()
-            .map(|o| o.shape().clone())
-            .unwrap_or(d.shape().clone());
+        let shape = lhs.shape().clone();
         (
             d.reshape(shape),
             <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::zero()),
@@ -326,20 +324,17 @@ impl<'a, B: Backend> Binary<'a, B> for MatMul {
 
     fn backward(
         &self,
-        ctx: &Context<B::Storage<'a>>,
+        lhs: &B::Storage<'a>,
+        rhs: &B::Storage<'a>,
         d: &B::Storage<'a>,
     ) -> (B::Storage<'a>, B::Storage<'a>) {
         (
-            ctx.snd
-                .as_ref()
-                .and_then(|b| b.transpose())
+            rhs.transpose()
                 .and_then(|b| d.matmul(&b))
                 .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                     d.shape().clone(),
                 )),
-            ctx.fst
-                .as_ref()
-                .and_then(|a| a.transpose())
+            lhs.transpose()
                 .and_then(|a| a.matmul(d))
                 .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                     d.shape().clone(),

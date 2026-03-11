@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    autodiff::{context::Context, history::Trace},
-    backend::{backend::Backend, mode::Mode},
+    autodiff::trace::Trace,
+    backend::backend::Backend,
     fns::{binary::Binary, function::Function, unary::Unary},
     tensor::Tensor,
 };
@@ -16,15 +16,11 @@ impl Forward {
         rhs: Tensor<'a, B>,
     ) -> Tensor<'a, B> {
         let res = b.forward(&lhs.data, &rhs.data);
-        let ctx = Context::default()
-            .fst(lhs.data.clone())
-            .snd(rhs.data.clone());
         let new_history = if lhs.is_constant && rhs.is_constant {
             Trace::default()
         } else {
             Trace::default()
                 .last_fn(Function::B(Rc::new(b)))
-                .context(ctx)
                 .push_input(lhs)
                 .push_input(rhs)
         };
@@ -36,13 +32,11 @@ impl Forward {
         a: Tensor<'a, B>,
     ) -> Tensor<'a, B> {
         let res = u.forward(&a.data);
-        let ctx = Context::default().fst(a.data.clone());
         let new_history = if a.is_constant {
             Trace::default()
         } else {
             Trace::default()
                 .last_fn(Function::U(Rc::new(u)))
-                .context(ctx)
                 .push_input(a)
         };
         Tensor::new(res, new_history)

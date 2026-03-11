@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    autodiff::history::Trace,
+    autodiff::trace::Trace,
     backend::{backend::Backend, mode::Mode},
     optim::optimizer::Optimizer,
     tensor::Tensor,

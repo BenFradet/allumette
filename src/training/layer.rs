@@ -1,5 +1,5 @@
 use crate::{
-    autodiff::history::Trace,
+    autodiff::trace::Trace,
     backend::{backend::Backend, mode::Mode},
     math::element::Element,
     shaping::shape::Shape,
