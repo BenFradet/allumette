@@ -5,14 +5,14 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct History<'a, B: Backend> {
+pub struct Trace<'a, B: Backend> {
     pub last_fn: Option<Function<'a, B>>,
     pub ctx: Context<B::Storage<'a>>,
     pub inputs: Vec<Tensor<'a, B>>,
     _marker: PhantomData<B::Element>,
 }
 
-impl<'a, B: Backend> Default for History<'a, B> {
+impl<'a, B: Backend> Default for Trace<'a, B> {
     fn default() -> Self {
         Self {
             last_fn: Default::default(),
@@ -23,7 +23,7 @@ impl<'a, B: Backend> Default for History<'a, B> {
     }
 }
 
-impl<'a, B: Backend> History<'a, B> {
+impl<'a, B: Backend> Trace<'a, B> {
     pub fn last_fn(mut self, f: Function<'a, B>) -> Self {
         self.last_fn = Some(f);
         self

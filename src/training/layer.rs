@@ -1,5 +1,5 @@
 use crate::{
-    autodiff::history::History,
+    autodiff::history::Trace,
     backend::{backend::Backend, mode::Mode},
     math::element::Element,
     shaping::shape::Shape,
@@ -49,7 +49,7 @@ impl<'a, B: Backend> Layer<'a, B> {
             shape, 1234,
         ));
         (t - Tensor::from_scalar(B::Element::fromf(0.5)))
-            .history(History::default())
+            .history(Trace::default())
             .id(id)
     }
 
@@ -58,7 +58,7 @@ impl<'a, B: Backend> Layer<'a, B> {
         let shape = Shape::new(vec![out_size]);
         let t = Tensor::from_data(<B::Storage<'a> as Data<B::Element>>::zeros(shape));
         (t + Tensor::from_scalar(B::Element::fromf(0.1)))
-            .history(History::default())
+            .history(Trace::default())
             .id(id)
     }
 

@@ -148,7 +148,11 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
             (E::fromf(0.4), E::fromf(0.67)),
         ];
         for (x1, x2) in &x {
-            let y1 = if Self::in_polygon(*x1, *x2, &star) { 1 } else { 0 };
+            let y1 = if Self::in_polygon(*x1, *x2, &star) {
+                1
+            } else {
+                0
+            };
             y.push(y1);
         }
         Self {

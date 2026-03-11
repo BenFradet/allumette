@@ -1,5 +1,5 @@
 use crate::{
-    autodiff::{forward::Forward, history::History},
+    autodiff::{forward::Forward, history::Trace},
     backend::{
         backend::{Backend, GpuBackend},
         mode::Mode,
@@ -33,14 +33,14 @@ where
 {
     pub data: B::Storage<'a>,
     pub grad: Option<Box<Tensor<'a, B>>>,
-    pub history: History<'a, B>,
+    pub history: Trace<'a, B>,
     pub id: String,
     pub is_constant: bool,
     _marker: PhantomData<(B::Element, B::Mode)>,
 }
 
 impl<'a, B: Backend> Tensor<'a, B> {
-    pub fn new(data: B::Storage<'a>, history: History<'a, B>) -> Self {
+    pub fn new(data: B::Storage<'a>, history: Trace<'a, B>) -> Self {
         let mut tensor_id = TENSOR_ID.lock().unwrap();
         let id = tensor_id.random().to_string();
         //let id = rand::thread_rng().r#gen::<u64>().to_string();
@@ -61,7 +61,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         Self {
             data,
             grad: None,
-            history: History::default(),
+            history: Trace::default(),
             id,
             is_constant: false,
             _marker: PhantomData,
@@ -104,7 +104,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         ))
     }
 
-    pub fn history(mut self, h: History<'a, B>) -> Self {
+    pub fn history(mut self, h: Trace<'a, B>) -> Self {
         self.history = h;
         self
     }
@@ -659,7 +659,7 @@ mod tests {
             F: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
         {
             let id = &tensor.id.clone();
-            let reset = tensor.grad(None).history(History::default());
+            let reset = tensor.grad(None).history(Trace::default());
             let idx = reset.data.shape().sample_idx();
             let out = f(reset);
             let mut res = out.sum(None).backward();
@@ -685,8 +685,8 @@ mod tests {
         {
             let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
-                tensor1.grad(None).history(History::default()),
-                tensor2.grad(None).history(History::default()),
+                tensor1.grad(None).history(Trace::default()),
+                tensor2.grad(None).history(Trace::default()),
             );
             let (idx1, idx2) = (
                 reset1.data.shape().sample_idx(),
@@ -1279,7 +1279,7 @@ mod tests {
             F: Fn(Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
         {
             let id = &tensor.id.clone();
-            let reset = tensor.grad(None).history(History::default());
+            let reset = tensor.grad(None).history(Trace::default());
             let idx = reset.data.shape().sample_idx();
             let out = f(reset);
             let mut res = out.sum(None).backward();
@@ -1308,8 +1308,8 @@ mod tests {
         {
             let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
-                tensor1.grad(None).history(History::default()),
-                tensor2.grad(None).history(History::default()),
+                tensor1.grad(None).history(Trace::default()),
+                tensor2.grad(None).history(Trace::default()),
             );
             let (idx1, idx2) = (
                 reset1.data.shape().sample_idx(),

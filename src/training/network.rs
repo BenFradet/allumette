@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    autodiff::history::History,
+    autodiff::history::Trace,
     backend::{backend::Backend, mode::Mode},
     optim::optimizer::Optimizer,
     tensor::Tensor,
@@ -63,37 +63,37 @@ impl<'a, B: Backend> Optimizer<'a, B> for Network<'a, B> {
         if let Some(grad) = &self.layer1.weights.grad {
             let update = lr_tensor.clone() * *grad.clone();
             self.layer1.weights = (self.layer1.weights.clone() - update)
-                .history(History::default())
+                .history(Trace::default())
                 .id(self.layer1.weights.id.clone());
         }
         if let Some(grad) = &self.layer1.biases.grad {
             let update = lr_tensor.clone() * *grad.clone();
             self.layer1.biases = (self.layer1.biases.clone() - update)
-                .history(History::default())
+                .history(Trace::default())
                 .id(self.layer1.biases.id.clone());
         }
         if let Some(grad) = &self.layer2.weights.grad {
             let update = lr_tensor.clone() * *grad.clone();
             self.layer2.weights = (self.layer2.weights.clone() - update)
-                .history(History::default())
+                .history(Trace::default())
                 .id(self.layer2.weights.id.clone());
         }
         if let Some(grad) = &self.layer2.biases.grad {
             let update = lr_tensor.clone() * *grad.clone();
             self.layer2.biases = (self.layer2.biases.clone() - update)
-                .history(History::default())
+                .history(Trace::default())
                 .id(self.layer2.biases.id.clone());
         }
         if let Some(grad) = &self.layer3.weights.grad {
             let update = lr_tensor.clone() * *grad.clone();
             self.layer3.weights = (self.layer3.weights.clone() - update)
-                .history(History::default())
+                .history(Trace::default())
                 .id(self.layer3.weights.id.clone());
         }
         if let Some(grad) = &self.layer3.biases.grad {
             let update = lr_tensor.clone() * *grad.clone();
             self.layer3.biases = (self.layer3.biases.clone() - update)
-                .history(History::default())
+                .history(Trace::default())
                 .id(self.layer3.biases.id.clone());
         }
     }

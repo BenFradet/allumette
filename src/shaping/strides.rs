@@ -18,11 +18,15 @@ impl Strides {
 
     #[inline(always)]
     pub fn idx(&self, mut pos: usize) -> Idx {
-        let res = self.data.iter().map(|&s| {
-            let idx = pos / s;
-            pos %= s;
-            idx
-        }).collect();
+        let res = self
+            .data
+            .iter()
+            .map(|&s| {
+                let idx = pos / s;
+                pos %= s;
+                idx
+            })
+            .collect();
         Idx::new(res)
     }
 
@@ -99,11 +103,9 @@ mod tests {
             println!("lhs idx {lhs_idx:?}");
             rhs_idx[0] = pos;
             println!("rhs idx {rhs_idx:?}");
-            let lhs_pos =
-                self_strides.position(&lhs_idx);
+            let lhs_pos = self_strides.position(&lhs_idx);
             dbg!(lhs_pos);
-            let rhs_pos =
-                rhs_strides.position(&rhs_idx);
+            let rhs_pos = rhs_strides.position(&rhs_idx);
             dbg!(rhs_pos);
         }
         assert!(false)
