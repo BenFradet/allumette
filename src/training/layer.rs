@@ -102,36 +102,32 @@ mod tests {
             get_wgpu_context(),
         );
         let g: Tensor<GpuBackend> = Tensor::from_data(tdg);
+        let g_id = g.id.clone();
         let glayer = Layer::new("layer", 2, 2);
         let gout = glayer.forward(g.clone());
         let gloss = gout.sum(None);
-        let gres = gloss.backward();
-        assert_eq!(
-            vec![1., 1., 1., 1., 1., 1.],
-            gres.get(&g.id)
-                .unwrap()
-                .grad
-                .clone()
-                .unwrap()
-                .data
-                .collect()
-        );
+        gloss.backprop();
+        let gloss_leaf = gloss
+            .topological_sort_dfs()
+            .into_iter()
+            .find(|t| t.id == g_id)
+            .unwrap();
+        let gg = gloss_leaf.grad.borrow().as_ref().unwrap().data.collect();
+        assert_eq!(vec![1., 1., 1., 1., 1., 1.], gg,);
 
         let tdc = CpuData::new(vec![1., 2., 3., 4., 5., 6.], shape.clone(), strides.clone());
         let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
+        let c_id = c.id.clone();
         let clayer = Layer::new("layer", 2, 2);
         let cout = clayer.forward(c.clone());
         let closs = cout.sum(None);
-        let cres = closs.backward();
-        assert_eq!(
-            vec![1., 1., 1., 1., 1., 1.],
-            cres.get(&c.id)
-                .unwrap()
-                .grad
-                .clone()
-                .unwrap()
-                .data
-                .collect()
-        );
+        closs.backprop();
+        let closs_leaf = closs
+            .topological_sort_dfs()
+            .into_iter()
+            .find(|t| t.id == c_id)
+            .unwrap();
+        let cg = closs_leaf.grad.borrow().as_ref().unwrap().data.collect();
+        assert_eq!(vec![1., 1., 1., 1., 1., 1.], cg,);
     }
 }
