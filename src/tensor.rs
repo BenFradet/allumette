@@ -18,7 +18,6 @@ use crate::{
 };
 use proptest::{collection, prelude::*};
 use std::{
-    cell::RefCell,
     collections::{HashMap, HashSet, VecDeque},
     marker::PhantomData,
     ops,
@@ -33,7 +32,7 @@ where
     B: Backend + 'a,
 {
     pub data: B::Storage<'a>,
-    pub grad: RefCell<Option<Box<Tensor<'a, B>>>>,
+    pub grad: Option<Box<Tensor<'a, B>>>,
     pub trace: Trace<'a, B>,
     pub id: String,
     pub is_constant: bool,
@@ -47,7 +46,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         //let id = rand::thread_rng().r#gen::<u64>().to_string();
         Self {
             data,
-            grad: None.into(),
+            grad: None,
             trace,
             id: id.to_string(),
             is_constant: false,
@@ -61,7 +60,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         //let id = rand::thread_rng().r#gen::<u64>().to_string();
         Self {
             data,
-            grad: None.into(),
+            grad: None,
             trace: Trace::default(),
             id,
             is_constant: false,
@@ -111,7 +110,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     pub fn grad(mut self, grad: Option<Tensor<'a, B>>) -> Self {
-        self.grad = grad.map(Box::new).into();
+        self.grad = grad.map(Box::new);
         self
     }
 
@@ -130,36 +129,49 @@ impl<'a, B: Backend> Tensor<'a, B> {
         self
     }
 
-    pub fn backprop(&self) {
+    pub fn backward(&self) -> HashMap<String, Self> {
         assert!(
             *self.data.shape() == Shape::new(vec![1]),
             "use backprop for non-scalar tensors"
         );
-        self.backward(Self::from_scalar(B::Element::one()))
+        self.backprop(Self::from_scalar(B::Element::one()))
     }
 
-    pub fn backward(&self, d: Tensor<'a, B>) {
+    pub fn backprop(&self, d: Tensor<'a, B>) -> HashMap<String, Self> {
         // TODO: memoize sort
         let sorted = self.topological_sort_dfs();
-        let mut derivs = HashMap::from([(&*self.id, d)]);
+        let mut derivs = HashMap::from([(&self.id, d)]);
+        let mut res: HashMap<String, Self> = HashMap::new();
         for s in sorted {
-            if let Some(current_deriv) = derivs.remove(s.id.as_str()) {
+            if let Some(current_deriv) = derivs.get(&s.id).cloned() {
                 for (parent, grad) in s.chain_rule(&current_deriv.data) {
                     let grad_tensor = Tensor::from_data(grad).make_constant();
                     if parent.is_leaf() {
-                        let mut g = parent.grad.borrow_mut();
-                        *g = Some(Box::new(match g.take() {
-                            Some(existing) => *existing + grad_tensor,
-                            None => grad_tensor,
-                        }));
+                        let new = match res.get(&parent.id) {
+                            // TODO: remove clones
+                            Some(s) => s.clone().accumulate_derivative(grad_tensor),
+                            None => parent.clone().accumulate_derivative(grad_tensor),
+                        };
+                        res.insert(parent.id.clone(), new);
                     } else {
-                        match derivs.remove(parent.id.as_str()) {
+                        match derivs.remove(&parent.id) {
                             Some(e) => derivs.insert(&parent.id, e + grad_tensor),
                             None => derivs.insert(&parent.id, grad_tensor),
                         };
                     }
                 }
             }
+        }
+        res
+    }
+
+    fn accumulate_derivative(mut self, d: Tensor<'a, B>) -> Self {
+        if self.is_leaf() {
+            let grad = self.grad.map(|t| *t + d.clone()).unwrap_or(d);
+            self.grad = Some(Box::new(grad.clone()));
+            self
+        } else {
+            self
         }
     }
 
@@ -188,7 +200,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     // TODO: make iterative
-    pub fn topological_sort_dfs(&self) -> impl Iterator<Item = &Self> {
+    fn topological_sort_dfs(&self) -> impl Iterator<Item = &Self> {
         let mut q = VecDeque::new();
         let mut visited = HashSet::new();
         fn dfs<'a, 'b, B: Backend>(
@@ -646,21 +658,19 @@ mod tests {
             B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
             F: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
         {
-            let id = tensor.id.clone();
+            let id = &tensor.id.clone();
             let reset = tensor.grad(None).trace(Trace::default());
             let idx = reset.data.shape().sample_idx();
             let out = f(reset);
-            let scalar = out.sum(None);
-            scalar.backprop();
-            let leaf = scalar
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == id)
-                .expect("tensor should be in computation graph");
-            let grad_ref = leaf.grad.borrow();
-            assert!(grad_ref.is_some(), "tensor should have a grad");
-            let grad = grad_ref.as_ref().unwrap().data[idx.clone()];
-            let check = unary_grad_central_diff(leaf.clone(), f, &idx, B::Element::fromf(1e-6));
+            let mut res = out.sum(None).backward();
+            let tensor_after = res.remove(id);
+            assert!(tensor_after.is_some(), "tensor should be in backprop map");
+            let unwrapped = tensor_after.unwrap();
+            let check =
+                unary_grad_central_diff(unwrapped.clone(), f, &idx, B::Element::fromf(1e-6));
+            assert!(unwrapped.grad.is_some(), "tensor should have a grad");
+            let grad_data = unwrapped.grad.unwrap().data;
+            let grad = grad_data[idx];
             assert!(
                 grad.is_close(check),
                 "tensor grad ({grad:?}) should be close to central diff ({check:?})",
@@ -673,7 +683,7 @@ mod tests {
             B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
             F: Fn(Tensor<'a, B>, Tensor<'a, B>) -> Tensor<'a, B>,
         {
-            let (id1, id2) = (tensor1.id.clone(), tensor2.id.clone());
+            let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
                 tensor1.grad(None).trace(Trace::default()),
                 tensor2.grad(None).trace(Trace::default()),
@@ -683,46 +693,38 @@ mod tests {
                 reset2.data.shape().sample_idx(),
             );
             let out = f(reset1, reset2);
-            let scalar = out.sum(None);
-            scalar.backprop();
-            let (leaf1, leaf2) = (
-                scalar
-                    .topological_sort_dfs()
-                    .into_iter()
-                    .find(|t| t.id == id1)
-                    .expect("tensor 1 should be in computation graph"),
-                scalar
-                    .topological_sort_dfs()
-                    .into_iter()
-                    .find(|t| t.id == id2)
-                    .expect("tensor 2 should be in computation graph"),
-            );
-            let (grad_ref1, grad_ref2) = (leaf1.grad.borrow(), leaf2.grad.borrow());
+            let mut res = out.sum(None).backward();
+            let (after1, after2) = (res.remove(id1), res.remove(id2));
             assert!(
-                grad_ref1.is_some() && grad_ref2.is_some(),
-                "tensors should have a grad"
+                after1.is_some() && after2.is_some(),
+                "tensors should be in backprop map"
             );
-            let (grad1, grad2) = (
-                grad_ref1.as_ref().unwrap().data[idx1.clone()],
-                grad_ref2.as_ref().unwrap().data[idx2.clone()],
-            );
+            let (unwrapped1, unwrapped2) = (after1.unwrap(), after2.unwrap());
             let (check1, check2) = (
                 binary_grad_central_diff(
-                    leaf1.clone(),
-                    leaf2.clone(),
+                    unwrapped1.clone(),
+                    unwrapped2.clone(),
                     &f,
                     &idx1,
                     true,
                     B::Element::fromf(1e-6),
                 ),
                 binary_grad_central_diff(
-                    leaf1.clone(),
-                    leaf2.clone(),
+                    unwrapped1.clone(),
+                    unwrapped2.clone(),
                     f,
                     &idx2,
                     false,
                     B::Element::fromf(1e-6),
                 ),
+            );
+            assert!(
+                unwrapped1.grad.is_some() && unwrapped2.grad.is_some(),
+                "tensors should have grads"
+            );
+            let (grad1, grad2) = (
+                unwrapped1.grad.clone().unwrap().data[idx1.clone()],
+                unwrapped2.grad.clone().unwrap().data[idx2.clone()],
             );
             assert!(
                 grad1.is_close(check1),
@@ -1276,24 +1278,21 @@ mod tests {
         where
             F: Fn(Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
         {
-            let id = tensor.id.clone();
+            let id = &tensor.id.clone();
             let reset = tensor.grad(None).trace(Trace::default());
             let idx = reset.data.shape().sample_idx();
             let out = f(reset);
-            let scalar = out.sum(None);
-            scalar.backprop();
-            let leaf = scalar
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == id)
-                .expect("tensor should be in computation graph");
-            let grad_ref = leaf.grad.borrow();
-            assert!(grad_ref.is_some(), "tensor should have a grad");
-            let grad_data = &grad_ref.as_ref().unwrap().data;
+            let mut res = out.sum(None).backward();
+            let tensor_after = res.remove(id);
+            assert!(tensor_after.is_some(), "tensor should be in backprop map");
+            let unwrapped = tensor_after.unwrap();
+            let check = unary_grad_central_diff(unwrapped.clone(), f, &idx, 1e-3);
+            assert!(unwrapped.grad.is_some(), "tensor should have a grad");
+
+            let grad_data = unwrapped.grad.unwrap().data;
             let grad_data_cpu = grad_data.to_cpu();
             let grad_strides = grad_data.strides.clone();
             let grad = grad_data_cpu[grad_strides.position(&idx)];
-            let check = unary_grad_central_diff(leaf.clone(), f, &idx, 1e-3);
             assert!(
                 grad.is_close(check),
                 "tensor grad ({grad:?}) should be close to central diff ({check:?})",
@@ -1307,7 +1306,7 @@ mod tests {
         ) where
             F: Fn(Tensor<'a, GpuBackend>, Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
         {
-            let (id1, id2) = (tensor1.id.clone(), tensor2.id.clone());
+            let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
                 tensor1.grad(None).trace(Trace::default()),
                 tensor2.grad(None).trace(Trace::default()),
@@ -1317,29 +1316,39 @@ mod tests {
                 reset2.data.shape().sample_idx(),
             );
             let out = f(reset1, reset2);
-            let scalar = out.sum(None);
-            scalar.backprop();
-            let (leaf1, leaf2) = (
-                scalar
-                    .topological_sort_dfs()
-                    .into_iter()
-                    .find(|t| t.id == id1)
-                    .expect("tensor 1 should be in computation graph"),
-                scalar
-                    .topological_sort_dfs()
-                    .into_iter()
-                    .find(|t| t.id == id2)
-                    .expect("tensor 2 should be in computation graph"),
-            );
-            let (grad_ref1, grad_ref2) = (leaf1.grad.borrow(), leaf2.grad.borrow());
+            let mut res = out.sum(None).backward();
+            let (after1, after2) = (res.remove(id1), res.remove(id2));
             assert!(
-                grad_ref1.is_some() && grad_ref2.is_some(),
-                "tensors should have a grad"
+                after1.is_some() && after2.is_some(),
+                "tensors should be in backprop map"
+            );
+            let (unwrapped1, unwrapped2) = (after1.unwrap(), after2.unwrap());
+            let (check1, check2) = (
+                binary_grad_central_diff(
+                    unwrapped1.clone(),
+                    unwrapped2.clone(),
+                    &f,
+                    &idx1,
+                    true,
+                    1e-3,
+                ),
+                binary_grad_central_diff(
+                    unwrapped1.clone(),
+                    unwrapped2.clone(),
+                    f,
+                    &idx2,
+                    false,
+                    1e-3,
+                ),
+            );
+            assert!(
+                unwrapped1.grad.is_some() && unwrapped2.grad.is_some(),
+                "tensors should have grads"
             );
 
             let (grad1_data, grad2_data) = (
-                &grad_ref1.as_ref().unwrap().data,
-                &grad_ref2.as_ref().unwrap().data,
+                unwrapped1.grad.clone().unwrap().data,
+                unwrapped2.grad.clone().unwrap().data,
             );
             let (grad1_data_cpu, grad2_data_cpu) = (grad1_data.to_cpu(), grad2_data.to_cpu());
             let (grad1_strides, grad2_strides) =
@@ -1347,10 +1356,6 @@ mod tests {
             let (grad1, grad2) = (
                 grad1_data_cpu[grad1_strides.position(&idx1)],
                 grad2_data_cpu[grad2_strides.position(&idx2)],
-            );
-            let (check1, check2) = (
-                binary_grad_central_diff(leaf1.clone(), leaf2.clone(), &f, &idx1, true, 1e-3),
-                binary_grad_central_diff(leaf1.clone(), leaf2.clone(), f, &idx2, false, 1e-3),
             );
             assert!(
                 grad1.is_close(check1),
@@ -1703,32 +1708,32 @@ mod tests {
                 get_wgpu_context(),
             );
             let g: Tensor<GpuBackend> = Tensor::from_data(tdg);
-            let g_id = g.id.clone();
             let gs = g.clone().view(&Shape::new(vec![3])).sum(None);
-            gs.backprop();
-            let g_leaf = gs
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == g_id)
-                .unwrap();
+            let gres = gs.backward();
             assert_eq!(
                 vec![1., 1., 1.],
-                g_leaf.grad.borrow().as_ref().unwrap().data.collect(),
+                gres.get(&g.id)
+                    .unwrap()
+                    .grad
+                    .clone()
+                    .unwrap()
+                    .data
+                    .collect()
             );
 
             let tdc = CpuData::new(vec![1., 2., 3.], shape.clone(), strides.clone());
             let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
-            let c_id = c.id.clone();
             let cs = c.clone().view(&Shape::new(vec![3])).sum(None);
-            cs.backprop();
-            let c_leaf = cs
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == c_id)
-                .unwrap();
+            let cres = cs.backward();
             assert_eq!(
                 vec![1., 1., 1.],
-                c_leaf.grad.borrow().as_ref().unwrap().data.collect(),
+                cres.get(&c.id)
+                    .unwrap()
+                    .grad
+                    .clone()
+                    .unwrap()
+                    .data
+                    .collect()
             );
         }
 
@@ -1740,13 +1745,8 @@ mod tests {
             let xc_size = xc.size();
             let vc = xc.view(&Shape::scalar(xc_size));
             let yc = vc.sum(None);
-            yc.backprop();
-            let yc_leaf = yc
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xc_id)
-                .unwrap();
-            let xcg = yc_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mc = yc.backward();
+            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![1., 1., 1., 1., 1., 1.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
@@ -1754,13 +1754,8 @@ mod tests {
             let xg_size = xg.size();
             let vg = xg.view(&Shape::scalar(xg_size));
             let yg = vg.sum(None);
-            yg.backprop();
-            let yg_leaf = yg
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xg_id)
-                .unwrap();
-            let xgg = yg_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mg = yg.backward();
+            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![1., 1., 1., 1., 1., 1.], xgg);
         }
 
@@ -1771,26 +1766,16 @@ mod tests {
             let xc_id = xc.id.clone();
             let oc = xc * Tensor::from_scalar(2.);
             let lc = oc.sum(None);
-            lc.backprop();
-            let lc_leaf = lc
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xc_id)
-                .unwrap();
-            let xcg = lc_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mc = lc.backward();
+            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![2., 2., 2., 2., 2., 2.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let xg_id = xg.id.clone();
             let og = xg * Tensor::from_scalar(2.);
             let lg = og.sum(None);
-            lg.backprop();
-            let lg_leaf = lg
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xg_id)
-                .unwrap();
-            let xgg = lg_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mg = lg.backward();
+            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![2., 2., 2., 2., 2., 2.], xgg);
         }
 
@@ -1800,26 +1785,16 @@ mod tests {
             let xc_id = xc.id.clone();
             let oc = xc + Tensor::from_scalar(5.);
             let lc = oc.sum(None);
-            lc.backprop();
-            let lc_leaf = lc
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xc_id)
-                .unwrap();
-            let xcg = lc_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mc = lc.backward();
+            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![1., 1., 1.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_1d(&[1., 2., 3.]);
             let xg_id = xg.id.clone();
             let og = xg + Tensor::from_scalar(5.);
             let lg = og.sum(None);
-            lg.backprop();
-            let lg_leaf = lg
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xg_id)
-                .unwrap();
-            let xgg = lg_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mg = lg.backward();
+            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![1., 1., 1.], xgg);
         }
 
@@ -1833,13 +1808,8 @@ mod tests {
             let bc = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
             let oc = ac + bc;
             let lc = oc.sum(None);
-            lc.backprop();
-            let lc_leaf = lc
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == ac_id)
-                .unwrap();
-            let acg = lc_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mc = lc.backward();
+            let acg = mc.get(&ac_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![3., 3.], acg);
 
             let ag: Tensor<GpuBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
@@ -1847,13 +1817,8 @@ mod tests {
             let bg = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
             let og = ag + bg;
             let lg = og.sum(None);
-            lg.backprop();
-            let lg_leaf = lg
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == ag_id)
-                .unwrap();
-            let agg = lg_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mg = lg.backward();
+            let agg = mg.get(&ag_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![3., 3.], agg);
         }
 
@@ -1875,20 +1840,10 @@ mod tests {
             let bc_id = bc.id.clone();
             let oc = ac.mm(bc);
             let lc = oc.sum(None);
-            lc.backprop();
-            let lca_leaf = lc
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == ac_id)
-                .unwrap();
-            let acg = lca_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mc = lc.backward();
+            let acg = mc.get(&ac_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(a_grad.clone(), acg);
-            let lcb_leaf = lc
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == bc_id)
-                .unwrap();
-            let bcg = lcb_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let bcg = mc.get(&bc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(b_grad.clone(), bcg);
 
             let ag: Tensor<GpuBackend> = Tensor::from_shape(
@@ -1900,20 +1855,10 @@ mod tests {
             let bg_id = bg.id.clone();
             let og = ag.mm(bg);
             let lg = og.sum(None);
-            lg.backprop();
-            let lga_leaf = lg
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == ag_id)
-                .unwrap();
-            let agg = lga_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mg = lg.backward();
+            let agg = mg.get(&ag_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(a_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), agg);
-            let lgb_leaf = lg
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == bg_id)
-                .unwrap();
-            let bgg = lgb_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let bgg = mg.get(&bg_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(b_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), bgg);
         }
 
@@ -1923,26 +1868,16 @@ mod tests {
             let xc_id = xc.id.clone();
             let oc = xc.relu();
             let lc = oc.sum(None);
-            lc.backprop();
-            let lc_leaf = lc
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xc_id)
-                .unwrap();
-            let xcg = lc_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mc = lc.backward();
+            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![0., 0., 1.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let xg_id = xg.id.clone();
             let og = xg.relu();
             let lg = og.sum(None);
-            lg.backprop();
-            let lg_leaf = lg
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xg_id)
-                .unwrap();
-            let xgg = lg_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mg = lg.backward();
+            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![0., 0., 1.], xgg);
         }
 
@@ -1952,26 +1887,16 @@ mod tests {
             let xc_id = xc.id.clone();
             let oc = xc.sig();
             let lc = oc.sum(None);
-            lc.backprop();
-            let lc_leaf = lc
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xc_id)
-                .unwrap();
-            let xcg = lc_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mc = lc.backward();
+            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![0.19661193324148185, 0.25, 0.19661193324148185], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let xg_id = xg.id.clone();
             let og = xg.sig();
             let lg = og.sum(None);
-            lg.backprop();
-            let lg_leaf = lg
-                .topological_sort_dfs()
-                .into_iter()
-                .find(|t| t.id == xg_id)
-                .unwrap();
-            let xgg = lg_leaf.grad.borrow().as_ref().unwrap().data.collect();
+            let mg = lg.backward();
+            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
             assert_eq!(vec![0.19661194, 0.25, 0.19661193], xgg);
         }
 

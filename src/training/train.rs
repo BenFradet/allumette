@@ -2,6 +2,7 @@ use std::time::Instant;
 
 use crate::{
     backend::{backend::Backend, mode::Mode},
+    math::element::Element,
     optim::optimizer::Optimizer,
     shaping::shape::Shape,
     tensor::Tensor,
@@ -24,6 +25,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     let labels = data.labels();
     let n = data.n();
     let ones = data.ones();
+    let one = Tensor::from_scalar(B::Element::one());
 
     let one_shape = Shape::scalar(1);
     let n_shape = data.n_shape();
@@ -40,10 +42,12 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 
         let loss = -prob.ln();
 
-        let loss_loss = (loss.clone() / n.clone()).sum(None).view(&one_shape);
-        loss_loss.backprop();
+        let res = (loss.clone() / n.clone())
+            .sum(None)
+            .view(&one_shape)
+            .backprop(one.clone());
 
-        network.update(&loss_loss);
+        network.update(&res);
         network.step(lr_tensor.clone());
 
         debugger.debug(&loss, &labels, &out, (iteration, iterations), start_time);
@@ -68,13 +72,8 @@ mod tests {
             + (xc - Tensor::from_scalar(1.) * (yc - Tensor::from_scalar(1.)));
         let lc = -pc.ln();
         let oc = lc.sum(None);
-        oc.backprop();
-        let oc_leaf = oc
-            .topological_sort_dfs()
-            .into_iter()
-            .find(|t| t.id == xc_id)
-            .unwrap();
-        let xcg = oc_leaf.grad.borrow().as_ref().unwrap().data.collect();
+        let mc = oc.backward();
+        let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
         assert_eq!(
             vec![-6.666666666666667, -3.333333333333333, -2.361111111111111],
             xcg
@@ -87,13 +86,8 @@ mod tests {
             + (xg - Tensor::from_scalar(1.) * (yg - Tensor::from_scalar(1.)));
         let lg = -pg.ln();
         let og = lg.sum(None);
-        og.backprop();
-        let og_leaf = og
-            .topological_sort_dfs()
-            .into_iter()
-            .find(|t| t.id == xg_id)
-            .unwrap();
-        let xgg = og_leaf.grad.borrow().as_ref().unwrap().data.collect();
+        let mg = og.backward();
+        let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
         assert_eq!(vec![-6.6666665, -3.3333335, -2.3611112], xgg);
     }
 }
