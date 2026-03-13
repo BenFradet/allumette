@@ -43,7 +43,7 @@ impl<'a, B: Backend> Layer<'a, B> {
     }
 
     pub fn weights(name: &str, in_size: usize, out_size: usize) -> Tensor<'a, B> {
-        let id = Self::weights_key(name);
+        let id = format!("{name}_weights");
         let shape = Shape::new(vec![in_size, out_size]);
         let t = Tensor::from_data(<B::Storage<'a> as Data<B::Element>>::rand_with_seed(
             shape, 1234,
@@ -54,28 +54,12 @@ impl<'a, B: Backend> Layer<'a, B> {
     }
 
     pub fn biases(name: &str, out_size: usize) -> Tensor<'a, B> {
-        let id = Self::biases_key(name);
+        let id = format!("{name}_biases");
         let shape = Shape::new(vec![out_size]);
         let t = Tensor::from_data(<B::Storage<'a> as Data<B::Element>>::zeros(shape));
         (t + Tensor::from_scalar(B::Element::fromf(0.1)))
             .trace(Trace::default())
             .id(id)
-    }
-
-    pub fn wkey(&self) -> String {
-        format!("{}_weights", self.name)
-    }
-
-    fn weights_key(name: &str) -> String {
-        format!("{name}_weights")
-    }
-
-    fn biases_key(name: &str) -> String {
-        format!("{name}_biases")
-    }
-
-    pub fn bkey(&self) -> String {
-        format!("{}_biases", self.name)
     }
 }
 
@@ -108,13 +92,7 @@ mod tests {
         let gres = gloss.backward();
         assert_eq!(
             vec![1., 1., 1., 1., 1., 1.],
-            gres.get(&g.id)
-                .unwrap()
-                .grad
-                .clone()
-                .unwrap()
-                .data
-                .collect()
+            gres.wrt(&g).clone().data.collect()
         );
 
         let tdc = CpuData::new(vec![1., 2., 3., 4., 5., 6.], shape.clone(), strides.clone());
@@ -125,13 +103,7 @@ mod tests {
         let cres = closs.backward();
         assert_eq!(
             vec![1., 1., 1., 1., 1., 1.],
-            cres.get(&c.id)
-                .unwrap()
-                .grad
-                .clone()
-                .unwrap()
-                .data
-                .collect()
+            cres.wrt(&c).clone().data.collect()
         );
     }
 }

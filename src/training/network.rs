@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use crate::{
-    autodiff::trace::Trace,
+    autodiff::{gradients::Gradients, trace::Trace},
     backend::{backend::Backend, mode::Mode},
     optim::optimizer::Optimizer,
     tensor::Tensor,
@@ -27,19 +25,13 @@ impl<'a, B: Backend> Network<'a, B> {
         }
     }
 
-    pub fn update(&mut self, tensors: &HashMap<String, Tensor<'a, B>>) {
-        let l1_wkey = self.layer1.wkey();
-        let l1_bkey = self.layer1.bkey();
-        self.layer1.weights = tensors.get(&l1_wkey).unwrap().clone();
-        self.layer1.biases = tensors.get(&l1_bkey).unwrap().clone();
-        let l2_wkey = self.layer2.wkey();
-        let l2_bkey = self.layer2.bkey();
-        self.layer2.weights = tensors.get(&l2_wkey).unwrap().clone();
-        self.layer2.biases = tensors.get(&l2_bkey).unwrap().clone();
-        let l3_wkey = self.layer3.wkey();
-        let l3_bkey = self.layer3.bkey();
-        self.layer3.weights = tensors.get(&l3_wkey).unwrap().clone();
-        self.layer3.biases = tensors.get(&l3_bkey).unwrap().clone();
+    pub fn update(&mut self, tensors: &Gradients<'a, B>) {
+        self.layer1.weights = tensors.wrt(&self.layer1.weights).clone();
+        self.layer1.biases = tensors.wrt(&self.layer1.biases).clone();
+        self.layer2.weights = tensors.wrt(&self.layer2.weights).clone();
+        self.layer2.biases = tensors.wrt(&self.layer2.biases).clone();
+        self.layer3.weights = tensors.wrt(&self.layer3.weights).clone();
+        self.layer3.biases = tensors.wrt(&self.layer3.biases).clone();
     }
 
     pub fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {

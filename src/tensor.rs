@@ -1,5 +1,5 @@
 use crate::{
-    autodiff::{forward::Forward, trace::Trace},
+    autodiff::{forward::Forward, gradients::Gradients, trace::Trace},
     backend::{
         backend::{Backend, GpuBackend},
         mode::Mode,
@@ -129,7 +129,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         self
     }
 
-    pub fn backward(&self) -> HashMap<String, Self> {
+    pub fn backward(&self) -> Gradients<'a, B> {
         assert!(
             *self.data.shape() == Shape::new(vec![1]),
             "use backprop for non-scalar tensors"
@@ -137,7 +137,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         self.backprop(Self::from_scalar(B::Element::one()))
     }
 
-    pub fn backprop(&self, d: Tensor<'a, B>) -> HashMap<String, Self> {
+    pub fn backprop(&self, d: Tensor<'a, B>) -> Gradients<'a, B> {
         // TODO: memoize sort
         let sorted = self.topological_sort_dfs();
         let mut derivs = HashMap::from([(&self.id, d)]);
@@ -162,7 +162,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
                 }
             }
         }
-        res
+        Gradients(res)
     }
 
     fn accumulate_derivative(mut self, d: Tensor<'a, B>) -> Self {
@@ -658,21 +658,15 @@ mod tests {
             B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
             F: Fn(Tensor<'a, B>) -> Tensor<'a, B>,
         {
-            let id = &tensor.id.clone();
             let reset = tensor.grad(None).trace(Trace::default());
             let idx = reset.data.shape().sample_idx();
-            let out = f(reset);
-            let mut res = out.sum(None).backward();
-            let tensor_after = res.remove(id);
-            assert!(tensor_after.is_some(), "tensor should be in backprop map");
-            let unwrapped = tensor_after.unwrap();
-            let check =
-                unary_grad_central_diff(unwrapped.clone(), f, &idx, B::Element::fromf(1e-6));
-            assert!(unwrapped.grad.is_some(), "tensor should have a grad");
-            let grad_data = unwrapped.grad.unwrap().data;
-            let grad = grad_data[idx];
+            let out = f(reset.clone());
+            let grads = out.sum(None).backward();
+            let grad = grads.wrt(&reset);
+            let grad_data = grad.data[idx.clone()];
+            let check = unary_grad_central_diff(reset.clone(), f, &idx, B::Element::fromf(1e-6));
             assert!(
-                grad.is_close(check),
+                grad_data.is_close(check),
                 "tensor grad ({grad:?}) should be close to central diff ({check:?})",
             );
         }
@@ -683,7 +677,6 @@ mod tests {
             B::Storage<'a>: ops::Index<Idx, Output = B::Element>,
             F: Fn(Tensor<'a, B>, Tensor<'a, B>) -> Tensor<'a, B>,
         {
-            let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
                 tensor1.grad(None).trace(Trace::default()),
                 tensor2.grad(None).trace(Trace::default()),
@@ -692,26 +685,22 @@ mod tests {
                 reset1.data.shape().sample_idx(),
                 reset2.data.shape().sample_idx(),
             );
-            let out = f(reset1, reset2);
-            let mut res = out.sum(None).backward();
-            let (after1, after2) = (res.remove(id1), res.remove(id2));
-            assert!(
-                after1.is_some() && after2.is_some(),
-                "tensors should be in backprop map"
-            );
-            let (unwrapped1, unwrapped2) = (after1.unwrap(), after2.unwrap());
+            let out = f(reset1.clone(), reset2.clone());
+            let grads = out.sum(None).backward();
+            let (grad1, grad2) = (grads.wrt(&reset1), grads.wrt(&reset2));
+            let (grad_data1, grad_data2) = (grad1.data[idx1.clone()], grad2.data[idx2.clone()]);
             let (check1, check2) = (
                 binary_grad_central_diff(
-                    unwrapped1.clone(),
-                    unwrapped2.clone(),
+                    reset1.clone(),
+                    reset2.clone(),
                     &f,
                     &idx1,
                     true,
                     B::Element::fromf(1e-6),
                 ),
                 binary_grad_central_diff(
-                    unwrapped1.clone(),
-                    unwrapped2.clone(),
+                    reset1.clone(),
+                    reset2.clone(),
                     f,
                     &idx2,
                     false,
@@ -719,19 +708,11 @@ mod tests {
                 ),
             );
             assert!(
-                unwrapped1.grad.is_some() && unwrapped2.grad.is_some(),
-                "tensors should have grads"
-            );
-            let (grad1, grad2) = (
-                unwrapped1.grad.clone().unwrap().data[idx1.clone()],
-                unwrapped2.grad.clone().unwrap().data[idx2.clone()],
-            );
-            assert!(
-                grad1.is_close(check1),
+                grad_data1.is_close(check1),
                 "tensor 1 grad ({grad1:?}) should be close to central diff ({check1:?})",
             );
             assert!(
-                grad2.is_close(check2),
+                grad_data2.is_close(check2),
                 "tensor 2 grad ({grad2:?}) should be close to central diff ({check2:?})",
             );
         }
@@ -1278,23 +1259,17 @@ mod tests {
         where
             F: Fn(Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
         {
-            let id = &tensor.id.clone();
             let reset = tensor.grad(None).trace(Trace::default());
             let idx = reset.data.shape().sample_idx();
-            let out = f(reset);
-            let mut res = out.sum(None).backward();
-            let tensor_after = res.remove(id);
-            assert!(tensor_after.is_some(), "tensor should be in backprop map");
-            let unwrapped = tensor_after.unwrap();
-            let check = unary_grad_central_diff(unwrapped.clone(), f, &idx, 1e-3);
-            assert!(unwrapped.grad.is_some(), "tensor should have a grad");
-
-            let grad_data = unwrapped.grad.unwrap().data;
-            let grad_data_cpu = grad_data.to_cpu();
-            let grad_strides = grad_data.strides.clone();
-            let grad = grad_data_cpu[grad_strides.position(&idx)];
+            let out = f(reset.clone());
+            let grads = out.sum(None).backward();
+            let grad = grads.wrt(&reset);
+            let grad_cpu = grad.data.to_cpu();
+            let grad_strides = grad.data.strides.clone();
+            let grad_data = grad_cpu[grad_strides.position(&idx)];
+            let check = unary_grad_central_diff(reset.clone(), f, &idx, 1e-3);
             assert!(
-                grad.is_close(check),
+                grad_data.is_close(check),
                 "tensor grad ({grad:?}) should be close to central diff ({check:?})",
             );
         }
@@ -1306,7 +1281,6 @@ mod tests {
         ) where
             F: Fn(Tensor<'a, GpuBackend>, Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
         {
-            let (id1, id2) = (&tensor1.id.clone(), &tensor2.id.clone());
             let (reset1, reset2) = (
                 tensor1.grad(None).trace(Trace::default()),
                 tensor2.grad(None).trace(Trace::default()),
@@ -1315,54 +1289,27 @@ mod tests {
                 reset1.data.shape().sample_idx(),
                 reset2.data.shape().sample_idx(),
             );
-            let out = f(reset1, reset2);
-            let mut res = out.sum(None).backward();
-            let (after1, after2) = (res.remove(id1), res.remove(id2));
-            assert!(
-                after1.is_some() && after2.is_some(),
-                "tensors should be in backprop map"
-            );
-            let (unwrapped1, unwrapped2) = (after1.unwrap(), after2.unwrap());
-            let (check1, check2) = (
-                binary_grad_central_diff(
-                    unwrapped1.clone(),
-                    unwrapped2.clone(),
-                    &f,
-                    &idx1,
-                    true,
-                    1e-3,
-                ),
-                binary_grad_central_diff(
-                    unwrapped1.clone(),
-                    unwrapped2.clone(),
-                    f,
-                    &idx2,
-                    false,
-                    1e-3,
-                ),
-            );
-            assert!(
-                unwrapped1.grad.is_some() && unwrapped2.grad.is_some(),
-                "tensors should have grads"
-            );
+            let out = f(reset1.clone(), reset2.clone());
+            let grads = out.sum(None).backward();
+            let (grad1, grad2) = (grads.wrt(&reset1), grads.wrt(&reset2));
 
-            let (grad1_data, grad2_data) = (
-                unwrapped1.grad.clone().unwrap().data,
-                unwrapped2.grad.clone().unwrap().data,
+            let (check1, check2) = (
+                binary_grad_central_diff(reset1.clone(), reset2.clone(), &f, &idx1, true, 1e-3),
+                binary_grad_central_diff(reset1.clone(), reset2.clone(), f, &idx2, false, 1e-3),
             );
-            let (grad1_data_cpu, grad2_data_cpu) = (grad1_data.to_cpu(), grad2_data.to_cpu());
+            let (grad1_cpu, grad2_cpu) = (grad1.data.to_cpu(), grad2.data.to_cpu());
             let (grad1_strides, grad2_strides) =
-                (grad1_data.strides.clone(), grad2_data.strides.clone());
-            let (grad1, grad2) = (
-                grad1_data_cpu[grad1_strides.position(&idx1)],
-                grad2_data_cpu[grad2_strides.position(&idx2)],
+                (grad1.data.strides.clone(), grad2.data.strides.clone());
+            let (grad_data1, grad_data2) = (
+                grad1_cpu[grad1_strides.position(&idx1)],
+                grad2_cpu[grad2_strides.position(&idx2)],
             );
             assert!(
-                grad1.is_close(check1),
+                grad_data1.is_close(check1),
                 "tensor 1 grad ({grad1:?}) should be close to central diff ({check1:?})",
             );
             assert!(
-                grad2.is_close(check2),
+                grad_data2.is_close(check2),
                 "tensor 2 grad ({grad2:?}) should be close to central diff ({check2:?})",
             );
         }
@@ -1710,52 +1657,32 @@ mod tests {
             let g: Tensor<GpuBackend> = Tensor::from_data(tdg);
             let gs = g.clone().view(&Shape::new(vec![3])).sum(None);
             let gres = gs.backward();
-            assert_eq!(
-                vec![1., 1., 1.],
-                gres.get(&g.id)
-                    .unwrap()
-                    .grad
-                    .clone()
-                    .unwrap()
-                    .data
-                    .collect()
-            );
+            assert_eq!(vec![1., 1., 1.], gres.wrt(&g).clone().data.collect());
 
             let tdc = CpuData::new(vec![1., 2., 3.], shape.clone(), strides.clone());
             let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
             let cs = c.clone().view(&Shape::new(vec![3])).sum(None);
             let cres = cs.backward();
-            assert_eq!(
-                vec![1., 1., 1.],
-                cres.get(&c.id)
-                    .unwrap()
-                    .grad
-                    .clone()
-                    .unwrap()
-                    .data
-                    .collect()
-            );
+            assert_eq!(vec![1., 1., 1.], cres.wrt(&c).clone().data.collect());
         }
 
         #[test]
         fn test_view_backward() {
             let xc: Tensor<CpuSeqBackend> =
                 Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
-            let xc_id = xc.id.clone();
             let xc_size = xc.size();
-            let vc = xc.view(&Shape::scalar(xc_size));
+            let vc = xc.clone().view(&Shape::scalar(xc_size));
             let yc = vc.sum(None);
             let mc = yc.backward();
-            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
+            let xcg = mc.wrt(&xc).clone().data.collect();
             assert_eq!(vec![1., 1., 1., 1., 1., 1.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
-            let xg_id = xg.id.clone();
             let xg_size = xg.size();
-            let vg = xg.view(&Shape::scalar(xg_size));
+            let vg = xg.clone().view(&Shape::scalar(xg_size));
             let yg = vg.sum(None);
             let mg = yg.backward();
-            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
+            let xgg = mg.wrt(&xg).clone().data.collect();
             assert_eq!(vec![1., 1., 1., 1., 1., 1.], xgg);
         }
 
@@ -1763,38 +1690,34 @@ mod tests {
         fn test_broadcast_mul_backward() {
             let xc: Tensor<CpuSeqBackend> =
                 Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
-            let xc_id = xc.id.clone();
-            let oc = xc * Tensor::from_scalar(2.);
+            let oc = xc.clone() * Tensor::from_scalar(2.);
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
+            let xcg = mc.wrt(&xc).clone().data.collect();
             assert_eq!(vec![2., 2., 2., 2., 2., 2.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
-            let xg_id = xg.id.clone();
-            let og = xg * Tensor::from_scalar(2.);
+            let og = xg.clone() * Tensor::from_scalar(2.);
             let lg = og.sum(None);
             let mg = lg.backward();
-            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
+            let xgg = mg.wrt(&xg).clone().data.collect();
             assert_eq!(vec![2., 2., 2., 2., 2., 2.], xgg);
         }
 
         #[test]
         fn test_broadcast_add_backward() {
             let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[1., 2., 3.]);
-            let xc_id = xc.id.clone();
-            let oc = xc + Tensor::from_scalar(5.);
+            let oc = xc.clone() + Tensor::from_scalar(5.);
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
+            let xcg = mc.wrt(&xc).clone().data.collect();
             assert_eq!(vec![1., 1., 1.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_1d(&[1., 2., 3.]);
-            let xg_id = xg.id.clone();
-            let og = xg + Tensor::from_scalar(5.);
+            let og = xg.clone() + Tensor::from_scalar(5.);
             let lg = og.sum(None);
             let mg = lg.backward();
-            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
+            let xgg = mg.wrt(&xg).clone().data.collect();
             assert_eq!(vec![1., 1., 1.], xgg);
         }
 
@@ -1804,21 +1727,19 @@ mod tests {
             let b_shape = Shape::new(vec![2, 3]);
 
             let ac: Tensor<CpuSeqBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
-            let ac_id = ac.id.clone();
             let bc = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
-            let oc = ac + bc;
+            let oc = ac.clone() + bc;
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let acg = mc.get(&ac_id).unwrap().grad.clone().unwrap().data.collect();
+            let acg = mc.wrt(&ac).clone().data.collect();
             assert_eq!(vec![3., 3.], acg);
 
             let ag: Tensor<GpuBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
-            let ag_id = ag.id.clone();
             let bg = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
-            let og = ag + bg;
+            let og = ag.clone() + bg;
             let lg = og.sum(None);
             let mg = lg.backward();
-            let agg = mg.get(&ag_id).unwrap().grad.clone().unwrap().data.collect();
+            let agg = mg.wrt(&ag).clone().data.collect();
             assert_eq!(vec![3., 3.], agg);
         }
 
@@ -1835,68 +1756,60 @@ mod tests {
                 &(0..15).map(|i| i as f64).collect::<Vec<_>>(),
                 a_shape.clone(),
             );
-            let ac_id = ac.id.clone();
             let bc = Tensor::from_shape(&[1., 2., 3.], b_shape.clone());
-            let bc_id = bc.id.clone();
-            let oc = ac.mm(bc);
+            let oc = ac.clone().mm(bc.clone());
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let acg = mc.get(&ac_id).unwrap().grad.clone().unwrap().data.collect();
+            let acg = mc.wrt(&ac).clone().data.collect();
             assert_eq!(a_grad.clone(), acg);
-            let bcg = mc.get(&bc_id).unwrap().grad.clone().unwrap().data.collect();
+            let bcg = mc.wrt(&bc).clone().data.collect();
             assert_eq!(b_grad.clone(), bcg);
 
             let ag: Tensor<GpuBackend> = Tensor::from_shape(
                 &(0..15).map(|i| i as f32).collect::<Vec<_>>(),
                 a_shape.clone(),
             );
-            let ag_id = ag.id.clone();
             let bg = Tensor::from_shape(&[1., 2., 3., 4., 5., 6.], b_shape.clone());
-            let bg_id = bg.id.clone();
-            let og = ag.mm(bg);
+            let og = ag.clone().mm(bg.clone());
             let lg = og.sum(None);
             let mg = lg.backward();
-            let agg = mg.get(&ag_id).unwrap().grad.clone().unwrap().data.collect();
+            let agg = mg.wrt(&ag).clone().data.collect();
             assert_eq!(a_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), agg);
-            let bgg = mg.get(&bg_id).unwrap().grad.clone().unwrap().data.collect();
+            let bgg = mg.wrt(&bg).clone().data.collect();
             assert_eq!(b_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), bgg);
         }
 
         #[test]
         fn test_relu_backward() {
             let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
-            let xc_id = xc.id.clone();
-            let oc = xc.relu();
+            let oc = xc.clone().relu();
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
+            let xcg = mc.wrt(&xc).clone().data.collect();
             assert_eq!(vec![0., 0., 1.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
-            let xg_id = xg.id.clone();
-            let og = xg.relu();
+            let og = xg.clone().relu();
             let lg = og.sum(None);
             let mg = lg.backward();
-            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
+            let xgg = mg.wrt(&xg).clone().data.collect();
             assert_eq!(vec![0., 0., 1.], xgg);
         }
 
         #[test]
         fn test_sig_backward() {
             let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
-            let xc_id = xc.id.clone();
-            let oc = xc.sig();
+            let oc = xc.clone().sig();
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
+            let xcg = mc.wrt(&xc).clone().data.collect();
             assert_eq!(vec![0.19661193324148185, 0.25, 0.19661193324148185], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
-            let xg_id = xg.id.clone();
-            let og = xg.sig();
+            let og = xg.clone().sig();
             let lg = og.sum(None);
             let mg = lg.backward();
-            let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
+            let xgg = mg.wrt(&xg).clone().data.collect();
             assert_eq!(vec![0.19661194, 0.25, 0.19661193], xgg);
         }
 

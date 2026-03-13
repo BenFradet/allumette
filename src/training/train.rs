@@ -42,12 +42,12 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 
         let loss = -prob.ln();
 
-        let res = (loss.clone() / n.clone())
+        let gradients = (loss.clone() / n.clone())
             .sum(None)
             .view(&one_shape)
             .backprop(one.clone());
 
-        network.update(&res);
+        network.update(&gradients);
         network.step(lr_tensor.clone());
 
         debugger.debug(&loss, &labels, &out, (iteration, iterations), start_time);
@@ -67,13 +67,12 @@ mod tests {
     fn test_train() {
         let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
         let yc: Tensor<CpuSeqBackend> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();
-        let xc_id = xc.id.clone();
         let pc = (xc.clone() * yc.clone())
-            + (xc - Tensor::from_scalar(1.) * (yc - Tensor::from_scalar(1.)));
+            + (xc.clone() - Tensor::from_scalar(1.) * (yc - Tensor::from_scalar(1.)));
         let lc = -pc.ln();
         let oc = lc.sum(None);
         let mc = oc.backward();
-        let xcg = mc.get(&xc_id).unwrap().grad.clone().unwrap().data.collect();
+        let xcg = mc.wrt(&xc).clone().data.collect();
         assert_eq!(
             vec![-6.666666666666667, -3.333333333333333, -2.361111111111111],
             xcg
@@ -81,13 +80,12 @@ mod tests {
 
         let xg: Tensor<GpuBackend> = Tensor::from_1d(&[0.2, 0.5, 0.8]);
         let yg: Tensor<GpuBackend> = Tensor::from_2d(&[&[0.], &[1.], &[0.]]).unwrap();
-        let xg_id = xg.id.clone();
         let pg = (xg.clone() * yg.clone())
-            + (xg - Tensor::from_scalar(1.) * (yg - Tensor::from_scalar(1.)));
+            + (xg.clone() - Tensor::from_scalar(1.) * (yg - Tensor::from_scalar(1.)));
         let lg = -pg.ln();
         let og = lg.sum(None);
         let mg = og.backward();
-        let xgg = mg.get(&xg_id).unwrap().grad.clone().unwrap().data.collect();
+        let xgg = mg.wrt(&xg).clone().data.collect();
         assert_eq!(vec![-6.6666665, -3.3333335, -2.3611112], xgg);
     }
 }
