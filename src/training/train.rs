@@ -42,9 +42,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 
         let loss = -prob.ln();
 
-        let loss_loss = (loss.clone() / n.clone())
-            .sum(None)
-            .view(&one_shape);
+        let loss_loss = (loss.clone() / n.clone()).sum(None).view(&one_shape);
         let gradients = loss_loss.backprop(one.clone());
 
         network.update(&gradients);

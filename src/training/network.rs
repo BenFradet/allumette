@@ -26,23 +26,23 @@ impl<'a, B: Backend> Network<'a, B> {
     }
 
     pub fn update(&mut self, tensors: &Gradients<'a, B>) {
-        if let Some(new_w1) = tensors.wrt(&self.layer1.weights) {
-            self.layer1.weights = new_w1.clone();
+        if let Some(grad) = tensors.wrt(&self.layer1.weights) {
+            self.layer1.weights.grad = Some(Box::new(grad.clone()));
         }
-        if let Some(new_b1) = tensors.wrt(&self.layer1.biases) {
-            self.layer1.biases = new_b1.clone();
+        if let Some(grad) = tensors.wrt(&self.layer1.biases) {
+            self.layer1.biases.grad = Some(Box::new(grad.clone()));
         }
-        if let Some(new_w2) = tensors.wrt(&self.layer2.weights) {
-            self.layer2.weights = new_w2.clone();
+        if let Some(grad) = tensors.wrt(&self.layer2.weights) {
+            self.layer2.weights.grad = Some(Box::new(grad.clone()));
         }
-        if let Some(new_b2) = tensors.wrt(&self.layer2.biases) {
-            self.layer2.biases = new_b2.clone();
+        if let Some(grad) = tensors.wrt(&self.layer2.biases) {
+            self.layer2.biases.grad = Some(Box::new(grad.clone()));
         }
-        if let Some(new_w3) = tensors.wrt(&self.layer3.weights) {
-            self.layer3.weights = new_w3.clone();
+        if let Some(grad) = tensors.wrt(&self.layer3.weights) {
+            self.layer3.weights.grad = Some(Box::new(grad.clone()));
         }
-        if let Some(new_b3) = tensors.wrt(&self.layer3.biases) {
-            self.layer3.biases = new_b3.clone();
+        if let Some(grad) = tensors.wrt(&self.layer3.biases) {
+            self.layer3.biases.grad = Some(Box::new(grad.clone()));
         }
     }
 
