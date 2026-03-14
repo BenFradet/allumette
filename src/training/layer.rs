@@ -92,7 +92,7 @@ mod tests {
         let gres = gloss.backward();
         assert_eq!(
             vec![1., 1., 1., 1., 1., 1.],
-            gres.wrt(&g).clone().data.collect()
+            gres.wrt(&g).unwrap().data.collect()
         );
 
         let tdc = CpuData::new(vec![1., 2., 3., 4., 5., 6.], shape.clone(), strides.clone());
@@ -103,7 +103,7 @@ mod tests {
         let cres = closs.backward();
         assert_eq!(
             vec![1., 1., 1., 1., 1., 1.],
-            cres.wrt(&c).clone().data.collect()
+            cres.wrt(&c).unwrap().data.collect()
         );
     }
 }

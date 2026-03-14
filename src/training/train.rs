@@ -42,10 +42,10 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 
         let loss = -prob.ln();
 
-        let gradients = (loss.clone() / n.clone())
+        let loss_loss = (loss.clone() / n.clone())
             .sum(None)
-            .view(&one_shape)
-            .backprop(one.clone());
+            .view(&one_shape);
+        let gradients = loss_loss.backprop(one.clone());
 
         network.update(&gradients);
         network.step(lr_tensor.clone());
@@ -72,7 +72,7 @@ mod tests {
         let lc = -pc.ln();
         let oc = lc.sum(None);
         let mc = oc.backward();
-        let xcg = mc.wrt(&xc).clone().data.collect();
+        let xcg = mc.wrt(&xc).unwrap().data.collect();
         assert_eq!(
             vec![-6.666666666666667, -3.333333333333333, -2.361111111111111],
             xcg
@@ -85,7 +85,7 @@ mod tests {
         let lg = -pg.ln();
         let og = lg.sum(None);
         let mg = og.backward();
-        let xgg = mg.wrt(&xg).clone().data.collect();
+        let xgg = mg.wrt(&xg).unwrap().data.collect();
         assert_eq!(vec![-6.6666665, -3.3333335, -2.3611112], xgg);
     }
 }

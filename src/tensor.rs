@@ -662,7 +662,7 @@ mod tests {
             let idx = reset.data.shape().sample_idx();
             let out = f(reset.clone());
             let grads = out.sum(None).backward();
-            let grad = grads.wrt(&reset);
+            let grad = grads.wrt(&reset).unwrap();
             let grad_data = grad.data[idx.clone()];
             let check = unary_grad_central_diff(reset.clone(), f, &idx, B::Element::fromf(1e-6));
             assert!(
@@ -687,7 +687,7 @@ mod tests {
             );
             let out = f(reset1.clone(), reset2.clone());
             let grads = out.sum(None).backward();
-            let (grad1, grad2) = (grads.wrt(&reset1), grads.wrt(&reset2));
+            let (grad1, grad2) = (grads.wrt(&reset1).unwrap(), grads.wrt(&reset2).unwrap());
             let (grad_data1, grad_data2) = (grad1.data[idx1.clone()], grad2.data[idx2.clone()]);
             let (check1, check2) = (
                 binary_grad_central_diff(
@@ -1264,8 +1264,8 @@ mod tests {
             let out = f(reset.clone());
             let grads = out.sum(None).backward();
             let grad = grads.wrt(&reset);
-            let grad_cpu = grad.data.to_cpu();
-            let grad_strides = grad.data.strides.clone();
+            let grad_cpu = grad.unwrap().data.to_cpu();
+            let grad_strides = grad.unwrap().data.strides.clone();
             let grad_data = grad_cpu[grad_strides.position(&idx)];
             let check = unary_grad_central_diff(reset.clone(), f, &idx, 1e-3);
             assert!(
@@ -1291,7 +1291,7 @@ mod tests {
             );
             let out = f(reset1.clone(), reset2.clone());
             let grads = out.sum(None).backward();
-            let (grad1, grad2) = (grads.wrt(&reset1), grads.wrt(&reset2));
+            let (grad1, grad2) = (grads.wrt(&reset1).unwrap(), grads.wrt(&reset2).unwrap());
 
             let (check1, check2) = (
                 binary_grad_central_diff(reset1.clone(), reset2.clone(), &f, &idx1, true, 1e-3),
@@ -1657,13 +1657,13 @@ mod tests {
             let g: Tensor<GpuBackend> = Tensor::from_data(tdg);
             let gs = g.clone().view(&Shape::new(vec![3])).sum(None);
             let gres = gs.backward();
-            assert_eq!(vec![1., 1., 1.], gres.wrt(&g).clone().data.collect());
+            assert_eq!(vec![1., 1., 1.], gres.wrt(&g).unwrap().data.collect());
 
             let tdc = CpuData::new(vec![1., 2., 3.], shape.clone(), strides.clone());
             let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
             let cs = c.clone().view(&Shape::new(vec![3])).sum(None);
             let cres = cs.backward();
-            assert_eq!(vec![1., 1., 1.], cres.wrt(&c).clone().data.collect());
+            assert_eq!(vec![1., 1., 1.], cres.wrt(&c).unwrap().data.collect());
         }
 
         #[test]
@@ -1674,7 +1674,7 @@ mod tests {
             let vc = xc.clone().view(&Shape::scalar(xc_size));
             let yc = vc.sum(None);
             let mc = yc.backward();
-            let xcg = mc.wrt(&xc).clone().data.collect();
+            let xcg = mc.wrt(&xc).unwrap().data.collect();
             assert_eq!(vec![1., 1., 1., 1., 1., 1.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
@@ -1682,7 +1682,7 @@ mod tests {
             let vg = xg.clone().view(&Shape::scalar(xg_size));
             let yg = vg.sum(None);
             let mg = yg.backward();
-            let xgg = mg.wrt(&xg).clone().data.collect();
+            let xgg = mg.wrt(&xg).unwrap().data.collect();
             assert_eq!(vec![1., 1., 1., 1., 1., 1.], xgg);
         }
 
@@ -1693,14 +1693,14 @@ mod tests {
             let oc = xc.clone() * Tensor::from_scalar(2.);
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let xcg = mc.wrt(&xc).clone().data.collect();
+            let xcg = mc.wrt(&xc).unwrap().data.collect();
             assert_eq!(vec![2., 2., 2., 2., 2., 2.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
             let og = xg.clone() * Tensor::from_scalar(2.);
             let lg = og.sum(None);
             let mg = lg.backward();
-            let xgg = mg.wrt(&xg).clone().data.collect();
+            let xgg = mg.wrt(&xg).unwrap().data.collect();
             assert_eq!(vec![2., 2., 2., 2., 2., 2.], xgg);
         }
 
@@ -1710,14 +1710,14 @@ mod tests {
             let oc = xc.clone() + Tensor::from_scalar(5.);
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let xcg = mc.wrt(&xc).clone().data.collect();
+            let xcg = mc.wrt(&xc).unwrap().data.collect();
             assert_eq!(vec![1., 1., 1.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_1d(&[1., 2., 3.]);
             let og = xg.clone() + Tensor::from_scalar(5.);
             let lg = og.sum(None);
             let mg = lg.backward();
-            let xgg = mg.wrt(&xg).clone().data.collect();
+            let xgg = mg.wrt(&xg).unwrap().data.collect();
             assert_eq!(vec![1., 1., 1.], xgg);
         }
 
@@ -1731,7 +1731,7 @@ mod tests {
             let oc = ac.clone() + bc;
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let acg = mc.wrt(&ac).clone().data.collect();
+            let acg = mc.wrt(&ac).unwrap().data.collect();
             assert_eq!(vec![3., 3.], acg);
 
             let ag: Tensor<GpuBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
@@ -1739,7 +1739,7 @@ mod tests {
             let og = ag.clone() + bg;
             let lg = og.sum(None);
             let mg = lg.backward();
-            let agg = mg.wrt(&ag).clone().data.collect();
+            let agg = mg.wrt(&ag).unwrap().data.collect();
             assert_eq!(vec![3., 3.], agg);
         }
 
@@ -1760,9 +1760,9 @@ mod tests {
             let oc = ac.clone().mm(bc.clone());
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let acg = mc.wrt(&ac).clone().data.collect();
+            let acg = mc.wrt(&ac).unwrap().data.collect();
             assert_eq!(a_grad.clone(), acg);
-            let bcg = mc.wrt(&bc).clone().data.collect();
+            let bcg = mc.wrt(&bc).unwrap().data.collect();
             assert_eq!(b_grad.clone(), bcg);
 
             let ag: Tensor<GpuBackend> = Tensor::from_shape(
@@ -1773,9 +1773,9 @@ mod tests {
             let og = ag.clone().mm(bg.clone());
             let lg = og.sum(None);
             let mg = lg.backward();
-            let agg = mg.wrt(&ag).clone().data.collect();
+            let agg = mg.wrt(&ag).unwrap().data.collect();
             assert_eq!(a_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), agg);
-            let bgg = mg.wrt(&bg).clone().data.collect();
+            let bgg = mg.wrt(&bg).unwrap().data.collect();
             assert_eq!(b_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), bgg);
         }
 
@@ -1785,14 +1785,14 @@ mod tests {
             let oc = xc.clone().relu();
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let xcg = mc.wrt(&xc).clone().data.collect();
+            let xcg = mc.wrt(&xc).unwrap().data.collect();
             assert_eq!(vec![0., 0., 1.], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let og = xg.clone().relu();
             let lg = og.sum(None);
             let mg = lg.backward();
-            let xgg = mg.wrt(&xg).clone().data.collect();
+            let xgg = mg.wrt(&xg).unwrap().data.collect();
             assert_eq!(vec![0., 0., 1.], xgg);
         }
 
@@ -1802,14 +1802,14 @@ mod tests {
             let oc = xc.clone().sig();
             let lc = oc.sum(None);
             let mc = lc.backward();
-            let xcg = mc.wrt(&xc).clone().data.collect();
+            let xcg = mc.wrt(&xc).unwrap().data.collect();
             assert_eq!(vec![0.19661193324148185, 0.25, 0.19661193324148185], xcg);
 
             let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let og = xg.clone().sig();
             let lg = og.sum(None);
             let mg = lg.backward();
-            let xgg = mg.wrt(&xg).clone().data.collect();
+            let xgg = mg.wrt(&xg).unwrap().data.collect();
             assert_eq!(vec![0.19661194, 0.25, 0.19661193], xgg);
         }
 

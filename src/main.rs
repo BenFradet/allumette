@@ -6,11 +6,11 @@ use allumette::{
 };
 
 fn main() -> Result<(), Error> {
-    let pts = 800;
+    let pts = 500;
     let dataset = Dataset::star(pts);
     let hidden_layer_size = 50;
     let learning_rate = 0.2;
-    let iterations = 400;
+    let iterations = 500;
 
     let mut debugger = VizDebugger::new(&dataset, iterations);
 

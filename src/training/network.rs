@@ -26,12 +26,24 @@ impl<'a, B: Backend> Network<'a, B> {
     }
 
     pub fn update(&mut self, tensors: &Gradients<'a, B>) {
-        self.layer1.weights = tensors.wrt(&self.layer1.weights).clone();
-        self.layer1.biases = tensors.wrt(&self.layer1.biases).clone();
-        self.layer2.weights = tensors.wrt(&self.layer2.weights).clone();
-        self.layer2.biases = tensors.wrt(&self.layer2.biases).clone();
-        self.layer3.weights = tensors.wrt(&self.layer3.weights).clone();
-        self.layer3.biases = tensors.wrt(&self.layer3.biases).clone();
+        if let Some(new_w1) = tensors.wrt(&self.layer1.weights) {
+            self.layer1.weights = new_w1.clone();
+        }
+        if let Some(new_b1) = tensors.wrt(&self.layer1.biases) {
+            self.layer1.biases = new_b1.clone();
+        }
+        if let Some(new_w2) = tensors.wrt(&self.layer2.weights) {
+            self.layer2.weights = new_w2.clone();
+        }
+        if let Some(new_b2) = tensors.wrt(&self.layer2.biases) {
+            self.layer2.biases = new_b2.clone();
+        }
+        if let Some(new_w3) = tensors.wrt(&self.layer3.weights) {
+            self.layer3.weights = new_w3.clone();
+        }
+        if let Some(new_b3) = tensors.wrt(&self.layer3.biases) {
+            self.layer3.biases = new_b3.clone();
+        }
     }
 
     pub fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
