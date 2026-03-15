@@ -1,7 +1,5 @@
 use crate::{
-    autodiff::{gradients::Gradients, trace::Trace},
-    backend::{backend::Backend, mode::Mode},
-    optim::optimizer::Optimizer,
+    autodiff::gradients::Gradients, backend::backend::Backend, optim::optimizer::Optimizer,
     tensor::Tensor,
 };
 
@@ -25,80 +23,18 @@ impl<'a, B: Backend> Network<'a, B> {
         }
     }
 
-    pub fn update(&mut self, tensors: &Gradients<'a, B>) {
-        if let Some(grad) = tensors.wrt(&self.layer1.weights) {
-            self.layer1.weights.grad = Some(Box::new(grad.clone()));
-        }
-        if let Some(grad) = tensors.wrt(&self.layer1.biases) {
-            self.layer1.biases.grad = Some(Box::new(grad.clone()));
-        }
-        if let Some(grad) = tensors.wrt(&self.layer2.weights) {
-            self.layer2.weights.grad = Some(Box::new(grad.clone()));
-        }
-        if let Some(grad) = tensors.wrt(&self.layer2.biases) {
-            self.layer2.biases.grad = Some(Box::new(grad.clone()));
-        }
-        if let Some(grad) = tensors.wrt(&self.layer3.weights) {
-            self.layer3.weights.grad = Some(Box::new(grad.clone()));
-        }
-        if let Some(grad) = tensors.wrt(&self.layer3.biases) {
-            self.layer3.biases.grad = Some(Box::new(grad.clone()));
-        }
+    pub fn step(&mut self, optimizer: &impl Optimizer<'a, B>, gradients: &Gradients<'a, B>) {
+        optimizer.update(&mut self.layer1.weights, gradients);
+        optimizer.update(&mut self.layer1.biases, gradients);
+        optimizer.update(&mut self.layer2.weights, gradients);
+        optimizer.update(&mut self.layer2.biases, gradients);
+        optimizer.update(&mut self.layer3.weights, gradients);
+        optimizer.update(&mut self.layer3.biases, gradients);
     }
 
     pub fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
         let l1 = self.layer1.forward(x).relu();
         let l2 = self.layer2.forward(l1).relu();
         self.layer3.forward(l2).sig()
-    }
-}
-
-impl<'a, B: Backend> Optimizer<'a, B> for Network<'a, B> {
-    fn zero(&mut self) {
-        self.layer1.weights.grad = None;
-        self.layer2.weights.grad = None;
-        self.layer3.weights.grad = None;
-        self.layer1.biases.grad = None;
-        self.layer2.biases.grad = None;
-        self.layer3.biases.grad = None;
-    }
-
-    fn step(&mut self, lr_tensor: Tensor<'a, B>) {
-        if let Some(grad) = &self.layer1.weights.grad {
-            let update = lr_tensor.clone() * *grad.clone();
-            self.layer1.weights = (self.layer1.weights.clone() - update)
-                .trace(Trace::default())
-                .id(self.layer1.weights.id.clone());
-        }
-        if let Some(grad) = &self.layer1.biases.grad {
-            let update = lr_tensor.clone() * *grad.clone();
-            self.layer1.biases = (self.layer1.biases.clone() - update)
-                .trace(Trace::default())
-                .id(self.layer1.biases.id.clone());
-        }
-        if let Some(grad) = &self.layer2.weights.grad {
-            let update = lr_tensor.clone() * *grad.clone();
-            self.layer2.weights = (self.layer2.weights.clone() - update)
-                .trace(Trace::default())
-                .id(self.layer2.weights.id.clone());
-        }
-        if let Some(grad) = &self.layer2.biases.grad {
-            let update = lr_tensor.clone() * *grad.clone();
-            self.layer2.biases = (self.layer2.biases.clone() - update)
-                .trace(Trace::default())
-                .id(self.layer2.biases.id.clone());
-        }
-        if let Some(grad) = &self.layer3.weights.grad {
-            let update = lr_tensor.clone() * *grad.clone();
-            self.layer3.weights = (self.layer3.weights.clone() - update)
-                .trace(Trace::default())
-                .id(self.layer3.weights.id.clone());
-        }
-        if let Some(grad) = &self.layer3.biases.grad {
-            let update = lr_tensor.clone() * *grad.clone();
-            self.layer3.biases = (self.layer3.biases.clone() - update)
-                .trace(Trace::default())
-                .id(self.layer3.biases.id.clone());
-        }
     }
 }

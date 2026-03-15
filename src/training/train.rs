@@ -3,7 +3,7 @@ use std::time::Instant;
 use crate::{
     backend::{backend::Backend, mode::Mode},
     math::element::Element,
-    optim::optimizer::Optimizer,
+    optim::sgd::SGD,
     shaping::shape::Shape,
     tensor::Tensor,
     training::debugger::Debugger,
@@ -19,7 +19,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     debugger: &mut D,
 ) {
     let mut network = Network::new(hidden_layer_size);
-    let lr_tensor = Tensor::from_scalar(learning_rate);
+    let sgd = SGD::new(learning_rate);
 
     let features = data.features();
     let labels = data.labels();
@@ -33,8 +33,6 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     let start_time = Instant::now();
 
     for iteration in 1..iterations + 1 {
-        network.zero();
-
         // c.f. https://docs.pytorch.org/docs/stable/generated/torch.nn.BCELoss.html
         let out = network.forward(features.clone()).view(&n_shape);
         let prob = (out.clone() * labels.clone())
@@ -45,8 +43,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
         let loss_loss = (loss.clone() / n.clone()).sum(None).view(&one_shape);
         let gradients = loss_loss.backprop(one.clone());
 
-        network.update(&gradients);
-        network.step(lr_tensor.clone());
+        network.step(&sgd, &gradients);
 
         debugger.debug(&loss, &labels, &out, (iteration, iterations), start_time);
     }
