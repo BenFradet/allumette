@@ -6,35 +6,35 @@ use crate::{
 use super::layer::Layer;
 
 pub struct Network<'a, B: Backend> {
-    layer1: Layer<'a, B>,
-    layer2: Layer<'a, B>,
-    layer3: Layer<'a, B>,
+    input_layer: Layer<'a, B>,
+    hidden_layer: Layer<'a, B>,
+    output_layer: Layer<'a, B>,
 }
 
 impl<'a, B: Backend> Network<'a, B> {
     pub fn new(hidden_layer_size: usize) -> Self {
-        let layer1 = Layer::new("layer1", 2, hidden_layer_size);
-        let layer2 = Layer::new("layer2", hidden_layer_size, hidden_layer_size);
-        let layer3 = Layer::new("layer3", hidden_layer_size, 1);
+        let input = Layer::new("input", 2, hidden_layer_size);
+        let hidden = Layer::new("hidden", hidden_layer_size, hidden_layer_size);
+        let output = Layer::new("output", hidden_layer_size, 1);
         Self {
-            layer1,
-            layer2,
-            layer3,
+            input_layer: input,
+            hidden_layer: hidden,
+            output_layer: output,
         }
     }
 
     pub fn step(&mut self, optimizer: &impl Optimizer<'a, B>, gradients: &Gradients<'a, B>) {
-        optimizer.update(&mut self.layer1.weights, gradients);
-        optimizer.update(&mut self.layer1.biases, gradients);
-        optimizer.update(&mut self.layer2.weights, gradients);
-        optimizer.update(&mut self.layer2.biases, gradients);
-        optimizer.update(&mut self.layer3.weights, gradients);
-        optimizer.update(&mut self.layer3.biases, gradients);
+        optimizer.update(&mut self.input_layer.weights, gradients);
+        optimizer.update(&mut self.input_layer.biases, gradients);
+        optimizer.update(&mut self.hidden_layer.weights, gradients);
+        optimizer.update(&mut self.hidden_layer.biases, gradients);
+        optimizer.update(&mut self.output_layer.weights, gradients);
+        optimizer.update(&mut self.output_layer.biases, gradients);
     }
 
     pub fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
-        let l1 = self.layer1.forward(x).relu();
-        let l2 = self.layer2.forward(l1).relu();
-        self.layer3.forward(l2).sig()
+        let l1 = self.input_layer.forward(x).relu();
+        let l2 = self.hidden_layer.forward(l1).relu();
+        self.output_layer.forward(l2).sig()
     }
 }

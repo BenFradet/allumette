@@ -138,7 +138,6 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     pub fn backprop(&self, d: Tensor<'a, B>) -> Gradients<'a, B> {
-        // TODO: memoize sort
         let sorted = self.topological_sort_dfs();
         let mut derivs = HashMap::from([(&self.id, d)]);
         let mut res: HashMap<String, Self> = HashMap::new();
@@ -148,7 +147,6 @@ impl<'a, B: Backend> Tensor<'a, B> {
                     let grad_tensor = Tensor::from_data(grad).make_constant();
                     if parent.is_leaf() {
                         let new = match res.get(&parent.id) {
-                            // TODO: remove clones
                             Some(s) => s.clone().accumulate_derivative(grad_tensor),
                             None => parent.clone().accumulate_derivative(grad_tensor),
                         };
