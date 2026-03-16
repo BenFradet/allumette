@@ -1833,6 +1833,38 @@ $
 
 ---
 
+Rust impl - backprop
+===
+
+<!-- newlines: 1 -->
+```rust +no_background
+fn backprop(&self, d: Self) -> Gradients<'a, B> {
+    let mut intermediates = HashMap::from([(self.id, d)]);
+    let mut leaves = HashMap::new();
+
+    for node in self.topological_sort() {
+        let d = intermediates[&node.id];
+        for (parent, d_i) in node.chain_rule(&d_i) {
+            if parent.is_leaf() {
+                *leaves.entry(parent.id).or_default() += d_i;
+            } else {
+                *intermediates.entry(parent.id).or_default() += d_i;
+            }
+        }
+    }
+    Gradients(leaves)
+}
+```
+
+<!-- newlines: 3 -->
+<!-- incremental_lists: true -->
+- topological sort: all children appear before their parents and __stable__
+- at each node: apply the chain rule to get per-input gradients
+- intermediates stores all `∂L/∂ui`
+- leaves stores all `∂L/∂pi`
+
+---
+
 What we've learned:
 
 - 3 representations for nns: layers and neurons, math eq and computational DAG
