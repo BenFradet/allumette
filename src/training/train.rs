@@ -3,7 +3,7 @@ use std::time::Instant;
 use crate::{
     backend::{backend::Backend, mode::Mode},
     math::element::Element,
-    optim::sgd::SGD,
+    optim::gradient_descent::GradientDescent,
     shaping::shape::Shape,
     tensor::Tensor,
     training::debugger::Debugger,
@@ -19,7 +19,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     debugger: &mut D,
 ) {
     let mut network = Network::new(hidden_layer_size);
-    let sgd = SGD::new(learning_rate);
+    let sgd = GradientDescent::new(learning_rate);
 
     let features = data.features();
     let labels = data.labels();
