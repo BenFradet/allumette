@@ -1203,7 +1203,8 @@ struct Layer<'a, B: Backend> {
 
 <!-- pause -->
 <!-- column: 1 -->
-```rust +no_background {all|2-6|9-10|11-12|16|17-19|20-23|all}
+<!-- newlines: 3 -->
+```rust +no_background {all|2-6|9-10|11-12|16|17-19|all}
 impl<'a, B: Backend> Layer<'a, B> {
     pub fn new(
         name: &'a str,
@@ -1220,13 +1221,9 @@ impl<'a, B: Backend> Layer<'a, B> {
     }
 
     fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
-        let n_inputs = x.shape()[0];
-        let in_size = x.shape()[1];
-        let shape = Shape::new(vec![n_inputs, in_size]);
         // weights is shape [in_size, out_size]
         // result is shape [n_inputs, out_size]
-        x.view(&shape).matmul(self.weights) +
-            self.biases
+        x.matmul(self.weights) + self.biases
     }
 }
 ```
@@ -1339,7 +1336,7 @@ $"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 <!-- pause -->
   - determine the loss' gradients (derivatives)
 <!-- pause -->
-  - propagate gradient by updating weights and biases w/ their gradients
+  - propagate gradients by updating weights and biases
 <!-- pause -->
 - rinse and repeat for `n` iterations
 
@@ -1444,6 +1441,7 @@ using Taylor's theorem: #h(0.5em) $f: RR -> RR, #h(0.5em) frac(diff f, diff x) a
 ![image:width:100%](img/errors.png)
 <!-- column: 0 -->
 - round-off error worsens as floating point precision decreases
+- cost increases as floating point precision increases
 - max for my gpu is `f32`, SOTA is using `f4`
 
 there is another problem however...
@@ -1454,7 +1452,7 @@ for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = fr
 ```
 
 - this is `O(mn)` complexity
-- we could have **millions** of parameters
+- we could have **millions or more** of parameters
 - _=> won't work_
 - _still very useful for property tests_
 
@@ -1484,6 +1482,7 @@ $frac(d, d x) f(x) g(x) = f'(x) g(x) + g'(x) f(x)$
 
 <!-- column: 0 -->
 <!-- incremental_lists: true -->
+- this is `O(2^n)` complexity
 - we could have **hundreds** of these functions nested within each other
 - quickly becomes untractable
 - is also limited to closed form expressions: `+`, `-`, `x`, `/`, `^`, `√`, `e`, `log`, trig fns
@@ -1518,13 +1517,13 @@ $
 ![image:width:100%](img/dag_bwd.png)
 
 <!-- incremental_lists: true -->
-- adjoints `ū = ∂y/∂u` represents the sensitivity of the output `y` wrt `u`
+- adjoints `ū = ȳ ∂y/∂u` represents the sensitivity of the output `y` wrt `u`
 - leverages the *chain rule* over and over:
 
-```typst +render +width:50%
+```typst +render +width:80%
 $
-z(y(x)), #h(0.5em) frac(d z, d x) = frac(d z, d y) dot frac(d y, d x) #h(4em)
-macron(u)_2 = macron(u)_3 dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_3) dot frac(∂ u_3, ∂ u_2)
+g(f(x)), #h(1.5em) frac(d g, d x) = frac(d g, d f) dot frac(d f, d x) #h(5em)
+y(u_3(u_2(u_1(x)))), #h(1.5em) macron(u)_2 = macron(u)_3 dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_3) dot frac(∂ u_3, ∂ u_2)
 $
 ```
 
@@ -1557,7 +1556,7 @@ Summary
 ## What's a neural network?
 ## Training
 ### Loss function
-### Gradient computations
+### Gradient computation
 ### Gradient propagation
 
 ---
@@ -1607,6 +1606,7 @@ Learning rate `η`:
 ![image:width:100%](img/lr_high.png)
 
 <!-- column: 2 -->
+<!-- pause -->
 Delta `Δ`:
 ```typst +render +width:80%
 $
@@ -1631,7 +1631,7 @@ $
 <!-- reset_layout -->
 <!-- alignment: center -->
 <!-- pause -->
-gradient computation and propagation is also known as _backpropagation_
+that's _gradient descent_
 
 ---
 
@@ -1654,8 +1654,21 @@ Summary
 Rust impl - evaluation trace
 ===
 
-<!-- column_layout: [4, 2] -->
+<!-- column_layout: [2, 4] -->
+
 <!-- column: 0 -->
+<!-- newlines: 1 -->
+```rust +no_background
+// Rc b/c we need Clone
+// dyn b/c type erasure
+enum Function<'a, B: Backend> {
+    U(Rc<dyn Unary<'a, B>>),
+    B(Rc<dyn Binary<'a, B>>),
+}
+```
+
+<!-- column: 1 -->
+<!-- pause -->
 ```rust +no_background
 pub struct Ln;
 impl<'a, B: Backend> Unary<'a, B> for Ln {
@@ -1690,17 +1703,7 @@ impl<'a, B: Backend> Binary<'a, B> for Mul {
 }
 ```
 
-<!-- column: 1 -->
-<!-- newlines: 2 -->
-<!-- pause -->
-```rust +no_background
-// Rc b/c we need Clone
-// dyn b/c type erasure
-enum Function<'a, B: Backend> {
-    U(Rc<dyn Unary<'a, B>>),
-    B(Rc<dyn Binary<'a, B>>),
-}
-```
+<!-- column: 0 -->
 <!-- newlines: 2 -->
 <!-- pause -->
 ```rust +no_background
@@ -1716,11 +1719,13 @@ struct Tensor<'a, B: Backend> {
     ops: B::Ops<'a>,
     // Box b/c recursive struct
     // puts grad on the heap
-    // pointer-sized
     grad: Option<Box<Tensor<'a, B>>>,
     trace: Trace<'a, B>,
 }
 ```
+
+<!-- pause -->
+_#rust_bookclub_
 
 ---
 
@@ -1769,6 +1774,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         Forward::unary(Ln {}, self)
     }
 }
+
 t.ln()
 ```
 <!-- pause -->
@@ -1781,8 +1787,50 @@ impl<'a, B: Backend> Mul<Tensor<'a, B>> for Tensor<'a, B> {
         Forward::binary(binary::Mul {}, self, rhs)
     }
 }
+
 t1 * t2
 ```
+<!-- reset_layout -->
+<!-- pause -->
+<!-- alignment: center -->
+that's _forward_ done!
+
+---
+
+Rust impl - chain rule
+===
+
+```rust +no_background
+// Self is Tensor<'a, B>
+fn chain_rule(&self, d: &Self) -> impl Iterator<Item = (&Self, Self)> {
+    let inputs = &self.trace.inputs;
+    let gradients = self
+        .trace
+        .last_fn
+        .map(|f| match f {
+            Function::B(b) => {
+                let (da, db) = b.backward(&inputs[0], &inputs[1], d);
+                vec![da, db]
+            }
+            Function::U(u) => {
+                let da = u.backward(&inputs[0], d);
+                vec![da]
+            }
+        })
+        .unwrap_or_default();
+    inputs.iter().zip(gradients)
+}
+```
+
+<!-- pause -->
+```typst +render +width:100%
+$
+d = frac(partial L, partial y) \
+"unary" y = f(x) => [(x, d dot f'(x))] \
+"binary" y = f(a, b) => [(a, d dot (partial f) / (partial a)), (b, d dot (partial f) / (partial b))] 
+$
+```
+
 ---
 
 What we've learned:
