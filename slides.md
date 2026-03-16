@@ -1837,7 +1837,7 @@ Rust impl - backprop
 ===
 
 <!-- newlines: 1 -->
-```rust +no_background
+```rust +no_background {all|1|2-3|5|6-7|8-12|15|all}
 fn backprop(&self, d: Self) -> Gradients<'a, B> {
     let mut intermediates = HashMap::from([(self.id, d)]);
     let mut leaves = HashMap::new();
@@ -1862,6 +1862,34 @@ fn backprop(&self, d: Self) -> Gradients<'a, B> {
 - at each node: apply the chain rule to get per-input gradients
 - intermediates stores all `∂L/∂ui`
 - leaves stores all `∂L/∂pi`
+
+---
+
+Rust impl - gradient descent
+===
+
+<!-- newlines: 2 -->
+```rust +no_background
+pub struct GradientDescent<'a, B: Backend> {
+    learning_rate: Tensor<'a, B>,
+}
+
+impl<'a, B: Backend> Optimizer<'a, B> for GradientDescent<'a, B> {
+    fn update(&self, param: &mut Tensor<'a, B>, gradients: &Gradients<'a, B>) {
+        if let Some(grad) = gradients.wrt(param) {
+            *param = (param - self.learning_rate * grad)
+                .trace(Trace::default());
+        }
+    }
+}
+```
+<!-- pause -->
+```typst +render +width:70%
+$
+Delta p_i = -1 dot eta dot frac(∂ L, ∂ p_i) \
+p_(i + 1) = p_(i) + Delta p_i
+$
+```
 
 ---
 
