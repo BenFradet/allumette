@@ -60,14 +60,12 @@ Summary
 ===
 
 <!-- newlines: 5 -->
-# Part 1
-## What's a tensor?
-## What can we do with a tensor?
-# Part 2
+# Tensors
+# Neural networks
+# Demo
+# Benchmarks
 
 todo:
-- sort out summary slides
-- roll up summaries
 - benchmarks
 - change colours for tps, tns, etc
 
@@ -186,8 +184,9 @@ Summary
 ===
 
 <!-- newlines: 5 -->
-# What's a tensor?
-# What can we do with a tensor?
+# Tensors
+## What's a tensor?
+## What can we do with a tensor?
 
 ---
 
@@ -440,10 +439,11 @@ Summary
 ===
 
 <!-- newlines: 5 -->
-# What's a tensor?
-# What can we do with a tensor?
-## Map
-## Zip
+# Tensors
+## What's a tensor?
+## What can we do with a tensor?
+### Map
+### Zip
 
 ---
 
@@ -770,11 +770,12 @@ Summary
 ===
 
 <!-- newlines: 5 -->
-# What's a tensor?
-# What can we do with a tensor?
-## Map
-## Zip
-## Reduce
+# Tensors
+## What's a tensor?
+## What can we do with a tensor?
+### Map
+### Zip
+### Reduce
 
 ---
 
@@ -884,12 +885,13 @@ Summary
 ===
 
 <!-- newlines: 5 -->
-# What's a tensor?
-# What can we do with a tensor?
-## Map
-## Zip
-## Reduce
-## Matmul
+# Tensors
+## What's a tensor?
+## What can we do with a tensor?
+### Map
+### Zip
+### Reduce
+### Matmul
 
 ---
 
@@ -1071,8 +1073,12 @@ tmp = {4 * 2, 8 + 5 * 4, 28 + 6 * 6} => 64
 
 ---
 
-Part 2
+Summary
 ===
+
+<!-- newlines: 5 -->
+# Tensors
+# Neural networks
 
 ---
 
@@ -1084,7 +1090,7 @@ What are tensors useful for?
 Neural networks!
 
 <!-- pause -->
-- function approximators parameterized by ... tensors
+- function approximators parameterised by ... tensors
 
 <!-- pause -->
 - input / output ...
@@ -1272,10 +1278,9 @@ impl<'a, B: Backend> Network<'a, B> {
 Summary
 ===
 
-# Part 1
-## What's a tensor?
-## What can we do with a tensor?
-# Part 2
+<!-- newlines: 5 -->
+# Tensors
+# Neural networks
 ## What's a neural network?
 ## Training
 
@@ -1348,10 +1353,9 @@ $"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 Summary
 ===
 
-# Part 1
-## What's a tensor?
-## What can we do with a tensor?
-# Part 2
+<!-- newlines: 5 -->
+# Tensors
+# Neural networks
 ## What's a neural network?
 ## Training
 ### Loss function
@@ -1395,15 +1399,16 @@ and also
 
 ![image:width:100%](img/loss.png)
 
+the more wrong we are, the bigger the loss
+
 ---
 
 Summary
 ===
 
-# Part 1
-## What's a tensor?
-## What can we do with a tensor?
-# Part 2
+<!-- newlines: 5 -->
+# Tensors
+# Neural networks
 ## What's a neural network?
 ## Training
 ### Loss function
@@ -1549,10 +1554,9 @@ blog post by Andrew M Holmes: [](huggingface.co/blog/andmholm/what-is-automatic-
 Summary
 ===
 
-# Part 1
-## What's a tensor?
-## What can we do with a tensor?
-# Part 2
+<!-- newlines: 5 -->
+# Tensors
+# Neural networks
 ## What's a neural network?
 ## Training
 ### Loss function
@@ -1638,10 +1642,9 @@ that's _gradient descent_
 Summary
 ===
 
-# Part 1
-## What's a tensor?
-## What can we do with a tensor?
-# Part 2
+<!-- newlines: 5 -->
+# Tensors
+# Neural networks
 ## What's a neural network?
 ## Training
 ### Loss function
@@ -1975,7 +1978,6 @@ $-frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
 
 ---
 
-<!-- newlines: 2 -->
 What we've learned:
 
 ![image:width:100%](img/thatsallfolks.gif)
