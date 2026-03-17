@@ -1868,36 +1868,114 @@ fn backprop(&self, d: Self) -> Gradients<'a, B> {
 Rust impl - gradient descent
 ===
 
-<!-- newlines: 2 -->
+<!-- column_layout: [6, 2] -->
+<!-- column: 0 -->
 ```rust +no_background
-pub struct GradientDescent<'a, B: Backend> {
+struct GradientDescent<'a, B: Backend> {
     learning_rate: Tensor<'a, B>,
 }
 
 impl<'a, B: Backend> Optimizer<'a, B> for GradientDescent<'a, B> {
-    fn update(&self, param: &mut Tensor<'a, B>, gradients: &Gradients<'a, B>) {
-        if let Some(grad) = gradients.wrt(param) {
-            *param = (param - self.learning_rate * grad)
+    fn update(&self, p: &mut Tensor<'a, B>, grads: &Gradients<'a, B>) {
+        if let Some(grad) = grads.wrt(p) {
+            *p = (p - self.learning_rate * grad)
                 .trace(Trace::default());
         }
     }
 }
 ```
+<!-- column: 1 -->
+<!-- newlines: 2 -->
 <!-- pause -->
-```typst +render +width:70%
+```typst +render +width:100%
 $
 Delta p_i = -1 dot eta dot frac(∂ L, ∂ p_i) \
 p_(i + 1) = p_(i) + Delta p_i
 $
 ```
+<!-- column: 0 -->
+<!-- pause -->
+```rust +no_background
+impl<'a, B: Backend> Network<'a, B> {
+    fn step(
+        &mut self,
+        optim: &impl Optimizer<'a, B>,
+        grads: &Gradients<'a, B>,
+    ) {
+        optim.update(&mut self.input_layer.weights, grads);
+        optim.update(&mut self.input_layer.biases, grads);
+        optim.update(&mut self.hidden_layer.weights, grads);
+        optim.update(&mut self.hidden_layer.biases, grads);
+        optim.update(&mut self.output_layer.weights, grads);
+        optim.update(&mut self.output_layer.biases, grads);
+    }
+}
+```
 
 ---
 
-What we've learned:
+Rust impl - putting it all together
+===
 
-- 3 representations for nns: layers and neurons, math eq and computational DAG
+<!-- column_layout: [3, 2] -->
 
-what's next
+<!-- column: 0 -->
+
+```rust +no_background
+impl<'a, B: Backend> Network<'a, B> {
+    fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
+        let l1 = self.input_layer.forward(x).sigmoid();
+        let l2 = self.hidden_layer.forward(l1).sigmoid();
+        self.output_layer.forward(l2).sigmoid()
+    }
+}
+```
+<!-- pause -->
+```rust +no_background {all|2|7|8|10-21|11|13-15|17|19|all}
+pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
+    data: Dataset<B::Element>,
+    learning_rate: B::Element,
+    iterations: usize,
+    hidden_layer_size: usize,
+) {
+    let mut network = Network::new(hidden_layer_size);
+    let gd = GradientDescent::new(learning_rate);
+
+    for i in 0..iterations + 1 {
+        let out = network.forward(data.features);
+
+        let prob = out * data.labels +
+            (out - data.ones) * (data.labels - data.ones);
+        let loss = (-prob.ln() / data.n).sum();
+
+        let gradients = loss.backprop(Tensor::scalar(1.));
+
+        network.step(&gd, &gradients);
+    }
+}
+```
+
+<!-- column: 1 -->
+<!-- newlines: 6 -->
+dataset with features `x1`, `x2` and label `y`
+<!-- newlines: 1 -->
+x1 | x2 | y
+-|-|-
+295.54 | 83.35 | 1
+99.76 | 293.38 | 0
+159.73 | 172.78 | 1
+16.23 | 269.35 | 0
+3.46 | 73.77 | 1
 
 <!-- newlines: 2 -->
-![image:width:70%](img/thatsallfolks.gif)
+binary cross entropy from before
+```typst +render +width:100%
+$-frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
+```
+
+---
+
+<!-- newlines: 2 -->
+What we've learned:
+
+![image:width:100%](img/thatsallfolks.gif)

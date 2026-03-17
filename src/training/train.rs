@@ -19,7 +19,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     debugger: &mut D,
 ) {
     let mut network = Network::new(hidden_layer_size);
-    let sgd = GradientDescent::new(learning_rate);
+    let gd = GradientDescent::new(learning_rate);
 
     let features = data.features();
     let labels = data.labels();
@@ -43,7 +43,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
         let loss_loss = (loss.clone() / n.clone()).sum(None).view(&one_shape);
         let gradients = loss_loss.backprop(one.clone());
 
-        network.step(&sgd, &gradients);
+        network.step(&gd, &gradients);
 
         debugger.debug(&loss, &labels, &out, (iteration, iterations), start_time);
     }
