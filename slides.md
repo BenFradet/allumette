@@ -1978,6 +1978,62 @@ $-frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
 
 ---
 
+Summary
+===
+
+<!-- newlines: 5 -->
+# Tensors
+# Neural networks
+# Demo
+
+---
+
+Summary
+===
+
+<!-- newlines: 5 -->
+# Tensors
+# Neural networks
+# Demo
+# Benchmarks
+
+---
+
+Conclusion
+===
+
 What we've learned:
 
+<!-- incremental_lists: true -->
+- _tensors_ abstract over algebras
+- usually represented as a `1-D array` with `shape` and `strides`
+- tensors can be defined with 4 ops: `map`, `zip`, `reduce` and `matmul`
+- GPUs are great when dealing with these ops
+
+<!-- incremental_lists: true -->
+- _neural networks_ are function approximators parameterised by _tensors_
+- we've seen 3 representations for nns:
+  - `layers` and `neurons`
+  - math equation
+  - computational `DAG`
+- training happens in two repeated stages:
+  - `forward` where input data goes through the network
+  - `backward` where gradients flow back into the network's parameters
+- `gradient descent` on the `loss` guides this process
+- gradient computation is done with `auto differentiation`
+
+<!-- column_layout: [1, 1] -->
+<!-- column: 0 -->
+<!-- newlines: 1 -->
+What's next:
+
+<!-- incremental_lists: true -->
+- convolutional neural network
+- const generics for tensor rank
+- an inference server for burn
+
+<!-- column: 1 -->
 ![image:width:100%](img/thatsallfolks.gif)
+<!-- reset_layout -->
+<!-- alignment: center -->
+Thank you! [](github.com/BenFradet/allumette)
