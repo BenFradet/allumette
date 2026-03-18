@@ -16,3 +16,4 @@ ratatui-core = { path = "../ratatui/ratatui-core" }
 #ratatui-crossterm = { path = "../ratatui/ratatui-crossterm" }
 ratatui-macros = { path = "../ratatui/ratatui-macros" }
 ratatui-widgets = { path = "../ratatui/ratatui-widgets" }
+clap = { version = "4.6.0", features = ["derive"] }
