@@ -101,6 +101,7 @@ The set of dependencies is otherwise pretty limited:
 - `flume` and `futures` for wgpu callbacks
 - `bytemuck` to convert binary buffers copied to/from the GPU
 - `ratatui` for visualization
+- `clap` for cli argument parsing
 - `proptest` for property-based testing
 - `rand` for synthetic data generation
 
@@ -128,8 +129,6 @@ C.f. https://github.com/proptest-rs/proptest/issues/82
 #### proptest & GPU
 
 GPU is fast except going to and from the CPU which happens a lot with prop tests
-
-#### IGPs are slow
 
 #### rust superpowers
 

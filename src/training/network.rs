@@ -13,9 +13,9 @@ pub struct Network<'a, B: Backend> {
 
 impl<'a, B: Backend> Network<'a, B> {
     pub fn new(hidden_layer_size: usize) -> Self {
-        let input = Layer::new("input", 2, hidden_layer_size);
-        let hidden = Layer::new("hidden", hidden_layer_size, hidden_layer_size);
-        let output = Layer::new("output", hidden_layer_size, 1);
+        let input = Layer::new(2, hidden_layer_size);
+        let hidden = Layer::new(hidden_layer_size, hidden_layer_size);
+        let output = Layer::new(hidden_layer_size, 1);
         Self {
             input_layer: input,
             hidden_layer: hidden,

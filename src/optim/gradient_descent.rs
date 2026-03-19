@@ -22,7 +22,7 @@ impl<'a, B: Backend> Optimizer<'a, B> for GradientDescent<'a, B> {
         if let Some(grad) = gradients.wrt(param) {
             *param = (param.clone() - self.lr.clone() * grad.clone())
                 .trace(Trace::default())
-                .id(param.id.clone());
+                .id(param.id);
         }
     }
 }

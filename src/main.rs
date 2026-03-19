@@ -83,9 +83,9 @@ fn benchmark(
     learning_rate: f64,
     iterations: usize,
 ) {
-    for run in 0..5 {
-        if run == 0 {
-            println!("run 0/5 backend={backend:?} points={points} - ignore as warm up");
+    for run in 1..=5 {
+        if run == 1 {
+            println!("run 1/5 backend={backend:?} points={points} - ignore as warm up");
         } else {
             println!("run {run}/5 backend={backend:?} points={points}");
         }

@@ -13,18 +13,17 @@ use crate::{
     ops::ops::Ops,
     shaping::{order::Order, shape::Shape, strides::Strides},
     storage::{cpu_data::CpuData, data::Data, gpu_data::GpuData},
-    util::{tensor_id::TensorId, unsafe_usize_convert::UnsafeUsizeConvert},
+    util::unsafe_usize_convert::UnsafeUsizeConvert,
     wgpu::wgpu_context::get_wgpu_context,
 };
 use proptest::{collection, prelude::*};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     marker::PhantomData,
-    ops,
-    sync::Mutex,
+    ops, sync::atomic::{AtomicU64, Ordering},
 };
 
-static TENSOR_ID: Mutex<TensorId> = Mutex::new(TensorId::new(0));
+static TENSOR_ID: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, Debug)]
 pub struct Tensor<'a, B>
@@ -34,30 +33,26 @@ where
     pub data: B::Storage<'a>,
     pub grad: Option<Box<Tensor<'a, B>>>,
     pub trace: Trace<'a, B>,
-    pub id: String,
+    pub id: u64,
     pub is_constant: bool,
     _marker: PhantomData<(B::Element, B::Mode)>,
 }
 
 impl<'a, B: Backend> Tensor<'a, B> {
     pub fn new(data: B::Storage<'a>, trace: Trace<'a, B>) -> Self {
-        let mut tensor_id = TENSOR_ID.lock().unwrap();
-        let id = tensor_id.random().to_string();
-        //let id = rand::thread_rng().r#gen::<u64>().to_string();
+        let id = TENSOR_ID.fetch_add(1, Ordering::Relaxed);
         Self {
             data,
             grad: None,
             trace,
-            id: id.to_string(),
+            id,
             is_constant: false,
             _marker: PhantomData,
         }
     }
 
     pub fn from_data(data: B::Storage<'a>) -> Self {
-        let mut tensor_id = TENSOR_ID.lock().unwrap();
-        let id = tensor_id.random().to_string();
-        //let id = rand::thread_rng().r#gen::<u64>().to_string();
+        let id = TENSOR_ID.fetch_add(1, Ordering::Relaxed);
         Self {
             data,
             grad: None,
@@ -119,7 +114,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
         self
     }
 
-    pub fn id(mut self, id: String) -> Self {
+    pub fn id(mut self, id: u64) -> Self {
         self.id = id;
         self
     }
@@ -140,7 +135,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
     pub fn backprop(&self, d: Tensor<'a, B>) -> Gradients<'a, B> {
         let sorted = self.topological_sort_dfs();
         let mut derivs = HashMap::from([(&self.id, d)]);
-        let mut res: HashMap<String, Self> = HashMap::new();
+        let mut res: HashMap<u64, Self> = HashMap::new();
         for s in sorted {
             if let Some(current_deriv) = derivs.get(&s.id).cloned() {
                 for (parent, grad) in s.chain_rule(&current_deriv.data) {
@@ -150,7 +145,7 @@ impl<'a, B: Backend> Tensor<'a, B> {
                             Some(s) => s.clone().accumulate_derivative(grad_tensor),
                             None => parent.clone().accumulate_derivative(grad_tensor),
                         };
-                        res.insert(parent.id.clone(), new);
+                        res.insert(parent.id, new);
                     } else {
                         match derivs.remove(&parent.id) {
                             Some(e) => derivs.insert(&parent.id, e + grad_tensor),
@@ -203,13 +198,13 @@ impl<'a, B: Backend> Tensor<'a, B> {
         let mut visited = HashSet::new();
         fn dfs<'a, 'b, B: Backend>(
             t: &'b Tensor<'a, B>,
-            visited: &mut HashSet<&'b str>,
+            visited: &mut HashSet<u64>,
             q: &mut VecDeque<&'b Tensor<'a, B>>,
         ) {
-            if visited.contains(&t.id.as_str()) {
+            if visited.contains(&t.id) {
                 return;
             }
-            visited.insert(&t.id);
+            visited.insert(t.id);
             for parent in t.parents() {
                 if !parent.is_constant {
                     dfs(parent, visited, q);

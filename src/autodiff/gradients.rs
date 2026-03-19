@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{backend::backend::Backend, tensor::Tensor};
 
-pub struct Gradients<'a, B: Backend>(pub HashMap<String, Tensor<'a, B>>);
+pub struct Gradients<'a, B: Backend>(pub HashMap<u64, Tensor<'a, B>>);
 
 impl<'a, B: Backend> Gradients<'a, B> {
     pub fn wrt(&self, t: &Tensor<'a, B>) -> Option<&Tensor<'a, B>> {
