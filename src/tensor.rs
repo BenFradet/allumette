@@ -20,7 +20,8 @@ use proptest::{collection, prelude::*};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     marker::PhantomData,
-    ops, sync::atomic::{AtomicU64, Ordering},
+    ops,
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 static TENSOR_ID: AtomicU64 = AtomicU64::new(0);

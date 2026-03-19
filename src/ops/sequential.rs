@@ -28,41 +28,52 @@ impl Ops<f64, Seq> for CpuData {
         f: F,
         _tag: &str,
     ) -> Option<Self> {
-        let strides: Strides = (&out.shape).into();
-        let len = out.shape.size;
-        let mut out_vec = vec![0.; len];
-        for i in 0..len {
-            let out_idx = strides.idx(i);
-            let idx_bc = out_idx.broadcast(&self.shape)?;
-            let pos_in = self.strides.position(&idx_bc);
-            let v = self.data[pos_in];
-            let pos_out = out.strides.position(&out_idx);
-            out_vec[pos_out] = f(v);
+        if self.shape == out.shape && self.strides == out.strides && self.is_contiguous() {
+            let out = self.data.iter().map(|a| f(*a)).collect();
+            Some(Self::new(out, self.shape.clone(), self.strides.clone()))
+        } else {
+            let strides: Strides = (&out.shape).into();
+            let len = out.shape.size;
+            let mut out_vec = vec![0.; len];
+            for i in 0..len {
+                let out_idx = strides.idx(i);
+                let idx_bc = out_idx.broadcast(&self.shape)?;
+                let pos_in = self.strides.position(&idx_bc);
+                let v = self.data[pos_in];
+                let pos_out = out.strides.position(&out_idx);
+                out_vec[pos_out] = f(v);
+            }
+            Some(Self::new(out_vec, out.shape.clone(), strides))
         }
-        Some(Self::new(out_vec, out.shape.clone(), strides))
     }
 
     fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F, _tag: &str) -> Option<Self> {
-        let shape = if self.shape == other.shape {
-            self.shape.clone()
+        if self.shape == other.shape && self.strides == other.strides && self.is_contiguous() {
+            let out = self
+                .data
+                .iter()
+                .zip(other.data.iter())
+                .map(|(a, b)| f(*a, *b))
+                .collect();
+            Some(Self::new(out, self.shape.clone(), self.strides.clone()))
         } else {
-            self.shape.broadcast(&other.shape)?
-        };
-        let strides: Strides = (&shape).into();
-        let len = shape.size;
-        let mut out = vec![0.; len];
-        for i in 0..len {
-            let idx = strides.idx(i);
-            let idxa = idx.broadcast(&self.shape)?;
-            let idxb = idx.broadcast(&other.shape)?;
-            let posa = self.strides.position(&idxa);
-            let posb = other.strides.position(&idxb);
-            let va = self.data[posa];
-            let vb = other.data[posb];
-            let pos = strides.position(&idx);
-            out[pos] = f(va, vb);
+            let shape = self.shape.broadcast(&other.shape)?;
+            let strides: Strides = (&shape).into();
+            let len = shape.size;
+            let mut out = vec![0.; len];
+            for i in 0..len {
+                let idx = strides.idx(i);
+                let idxa = idx.broadcast(&self.shape)?;
+                let idxb = idx.broadcast(&other.shape)?;
+                let posa = self.strides.position(&idxa);
+                let posb = other.strides.position(&idxb);
+                let va = self.data[posa];
+                let vb = other.data[posb];
+                let pos = strides.position(&idx);
+                out[pos] = f(va, vb);
+            }
+            Some(Self::new(out, shape, strides))
         }
-        Some(Self::new(out, shape, strides))
     }
 
     fn reduce<F: Fn(f64, f64) -> f64 + Sync>(

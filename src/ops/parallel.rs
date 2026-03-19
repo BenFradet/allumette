@@ -6,7 +6,7 @@ use crate::{
     backend::mode::Par,
     ops::ops::Ops,
     shaping::{shape::Shape, strides::Strides},
-    storage::cpu_data::CpuData,
+    storage::{cpu_data::CpuData, data::Data},
 };
 
 impl Ops<f64, Par> for CpuData {
@@ -28,25 +28,26 @@ impl Ops<f64, Par> for CpuData {
     ) -> Option<Self> {
         let len = out.shape.size;
         let strides: Strides = (&out.shape).into();
-        let out_vec: Vec<_> = if self.shape == out.shape {
-            (0..len).into_par_iter().map(|i| f(self.data[i])).collect()
-        } else {
-            (0..len)
-                .into_par_iter()
-                .map(|i| {
-                    let out_idx = strides.idx(i);
-                    let idx_bc = out_idx.broadcast(&self.shape).unwrap();
-                    let pos_in = self.strides.position(&idx_bc);
-                    f(self.data[pos_in])
-                })
-                .collect()
-        };
+        let out_vec: Vec<_> =
+            if self.shape == out.shape && self.strides == out.strides && self.is_contiguous() {
+                (0..len).into_par_iter().map(|i| f(self.data[i])).collect()
+            } else {
+                (0..len)
+                    .into_par_iter()
+                    .map(|i| {
+                        let out_idx = strides.idx(i);
+                        let idx_bc = out_idx.broadcast(&self.shape).unwrap();
+                        let pos_in = self.strides.position(&idx_bc);
+                        f(self.data[pos_in])
+                    })
+                    .collect()
+            };
         Some(Self::new(out_vec, out.shape.clone(), strides))
     }
 
     // TODO: remove unwrap
     fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F, _tag: &str) -> Option<Self> {
-        if self.shape == other.shape {
+        if self.shape == other.shape && self.strides == other.strides && self.is_contiguous() {
             let len = self.shape.size;
             let out = (0..len)
                 .into_par_iter()
