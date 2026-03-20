@@ -69,16 +69,16 @@ impl From<&CpuData> for Order {
 
 impl From<GpuData<'_>> for Order {
     fn from(td: GpuData) -> Self {
-        let ord_data = td.to_cpu();
-        let len = ord_data.len();
-        Order::new(ord_data.iter().map(|f| *f as usize).collect()).unwrap_or(Order::range(len))
+        td.to_cpu().ok().and_then(|ord_data| {
+            Order::new(ord_data.iter().map(|f| *f as usize).collect())
+        }).unwrap_or(Order::range(td.shape.size))
     }
 }
 
 impl From<&GpuData<'_>> for Order {
     fn from(td: &GpuData) -> Self {
-        let ord_data = td.to_cpu();
-        let len = ord_data.len();
-        Order::new(ord_data.iter().map(|f| *f as usize).collect()).unwrap_or(Order::range(len))
+        td.to_cpu().ok().and_then(|ord_data| {
+            Order::new(ord_data.iter().map(|f| *f as usize).collect())
+        }).unwrap_or(Order::range(td.shape.size))
     }
 }

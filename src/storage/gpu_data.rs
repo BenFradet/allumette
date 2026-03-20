@@ -2,6 +2,7 @@ use proptest::{collection, prelude::*};
 use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use std::sync::Arc;
+use wgpu::PollError;
 
 use wgpu::{
     Buffer, BufferUsages, CommandEncoderDescriptor, Device, MapMode,
@@ -14,6 +15,18 @@ use crate::{
     storage::data::Data,
     wgpu::wgpu_context::{WgpuContext, get_wgpu_context},
 };
+
+#[derive(Debug)]
+pub enum GpuError {
+    Poll(PollError),
+    BufferRead,
+}
+
+impl From<PollError> for GpuError {
+    fn from(value: PollError) -> Self {
+        Self::Poll(value)
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct GpuData<'a> {
@@ -81,7 +94,8 @@ impl<'a> GpuData<'a> {
     }
 
     // see repeated_compute example in wgpu
-    pub fn to_cpu(&self) -> Vec<f32> {
+    pub fn to_cpu(&self) -> Result<Vec<f32>, GpuError> {
+        self.context.flush_commands()?;
         let size = self.shape.gpu_byte_size();
         let staging_buffer = self.context.create_output_buffer(
             size,
@@ -104,11 +118,12 @@ impl<'a> GpuData<'a> {
             .poll(PollType::wait_indefinitely())
             .unwrap();
 
-        if let Ok(Ok(())) = receiver.recv() {
-            let data = buffer_slice.get_mapped_range();
-            bytemuck::cast_slice(&data).to_vec()
-        } else {
-            panic!("failed to read buffer from GPU: BufferAsyncError");
+        match receiver.recv() {
+            Ok(Ok(())) => {
+                let data = buffer_slice.get_mapped_range();
+                Ok(bytemuck::cast_slice(&data).to_vec())
+            }
+            _ => Err(GpuError::BufferRead),
         }
     }
 
@@ -173,12 +188,13 @@ impl Data<f32> for GpuData<'_> {
         self.shape.size
     }
 
+    // TODO: modify trait and remove unwrap
     fn collect(&self) -> Vec<f32> {
-        self.to_cpu()
+        self.to_cpu().unwrap()
     }
 
     fn first(&self) -> Option<f32> {
-        self.to_cpu().first().copied()
+        self.to_cpu().ok().and_then(|vec| vec.first().copied())
     }
 
     // TODO: factor out
@@ -337,14 +353,14 @@ mod tests {
     fn assert_tensor_eq(t1: &GpuData, t2: &GpuData) {
         assert_eq!(t1.shape, t2.shape);
         assert_eq!(t1.strides, t2.strides);
-        assert_eq!(t1.to_cpu(), t2.to_cpu());
+        assert_eq!(t1.to_cpu().unwrap(), t2.to_cpu().unwrap());
     }
 
     proptest! {
         #[test]
         fn zeros_test(shape in Shape::arbitrary()) {
             let zeros = GpuData::zeros(shape.clone());
-            let zeros_cpu = zeros.to_cpu();
+            let zeros_cpu = zeros.to_cpu().unwrap();
             assert_eq!(shape.size, zeros_cpu.len());
             assert!(zeros_cpu.iter().all(|f| *f == 0.));
         }
@@ -408,7 +424,7 @@ mod tests {
     #[test]
     fn rand_test() {
         let rand = GpuData::rand(Shape::new(vec![2]));
-        let rand_cpu = rand.to_cpu();
+        let rand_cpu = rand.to_cpu().unwrap();
         assert!(rand_cpu[0] != rand_cpu[1]);
     }
 }

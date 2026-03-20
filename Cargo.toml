@@ -17,3 +17,4 @@ ratatui-core = { path = "../ratatui/ratatui-core" }
 ratatui-macros = { path = "../ratatui/ratatui-macros" }
 ratatui-widgets = { path = "../ratatui/ratatui-widgets" }
 clap = { version = "4.6.0", features = ["derive"] }
+serial_test = "3.4.0"

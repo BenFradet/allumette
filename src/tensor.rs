@@ -577,6 +577,7 @@ impl<'a, B: Backend> ops::Neg for Tensor<'a, B> {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use crate::{
         backend::backend::{CpuParBackend, CpuSeqBackend},
         shaping::idx::Idx,
@@ -1258,7 +1259,7 @@ mod tests {
             let out = f(reset.clone());
             let grads = out.sum(None).backward();
             let grad = grads.wrt(&reset);
-            let grad_cpu = grad.unwrap().data.to_cpu();
+            let grad_cpu = grad.unwrap().data.to_cpu().unwrap();
             let grad_strides = grad.unwrap().data.strides.clone();
             let grad_data = grad_cpu[grad_strides.position(&idx)];
             let check = unary_grad_central_diff(reset.clone(), f, &idx, 1e-3);
@@ -1291,7 +1292,7 @@ mod tests {
                 binary_grad_central_diff(reset1.clone(), reset2.clone(), &f, &idx1, true, 1e-3),
                 binary_grad_central_diff(reset1.clone(), reset2.clone(), f, &idx2, false, 1e-3),
             );
-            let (grad1_cpu, grad2_cpu) = (grad1.data.to_cpu(), grad2.data.to_cpu());
+            let (grad1_cpu, grad2_cpu) = (grad1.data.to_cpu().unwrap(), grad2.data.to_cpu().unwrap());
             let (grad1_strides, grad2_strides) =
                 (grad1.data.strides.clone(), grad2.data.strides.clone());
             let (grad_data1, grad_data2) = (
@@ -1313,10 +1314,10 @@ mod tests {
             FT: Fn(Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
             FF: Fn(f32) -> f32,
         {
-            let data = t.data.to_cpu();
+            let data = t.data.to_cpu().unwrap();
             let strides = t.data.strides.clone();
             let res = ft(t);
-            let res_data = res.data.to_cpu();
+            let res_data = res.data.to_cpu().unwrap();
             let res_strides = res.data.strides.clone();
             for idx in res.data.indices() {
                 assert!(
@@ -1334,14 +1335,14 @@ mod tests {
             FT: Fn(Tensor<'a, GpuBackend>, Tensor<'a, GpuBackend>) -> Tensor<'a, GpuBackend>,
             FF: Fn(f32, f32) -> f32,
         {
-            let data1 = t1.data.to_cpu();
+            let data1 = t1.data.to_cpu().unwrap();
             let strides1 = t1.data.strides.clone();
 
-            let data2 = t2.data.to_cpu();
+            let data2 = t2.data.to_cpu().unwrap();
             let strides2 = t2.data.strides.clone();
 
             let res = ft(t1, t2);
-            let res_data = res.data.to_cpu();
+            let res_data = res.data.to_cpu().unwrap();
             let res_strides = res.data.strides.clone();
 
             for idx in res.data.indices() {
@@ -1354,6 +1355,7 @@ mod tests {
 
         proptest! {
             #[test]
+            #[serial(gpu)]
             fn matmul_tests(
                 (t1, t2) in Tensor::<GpuBackend>::arbitrary_matmul_tuple(),
             ) {
@@ -1370,6 +1372,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn matmul_grad_tests(
                 (a, b) in Tensor::<GpuBackend>::arbitrary_matmul_tuple(),
             ) {
@@ -1377,6 +1380,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn permute_grad_tests(
                 (t, o) in Tensor::<GpuBackend>::arbitrary_with_order(),
             ) {
@@ -1384,6 +1388,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn reduce_grad_tests(
                 t in Tensor::<GpuBackend>::arbitrary(),
             ) {
@@ -1393,6 +1398,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn binary_grad_tests(
                 (t1, t2) in Tensor::<GpuBackend>::arbitrary_tuple(),
             ) {
@@ -1407,6 +1413,7 @@ mod tests {
 
             // central diff doesn't work for lt gt if x == y
             #[test]
+            #[serial(gpu)]
             fn binary_grad_lt_gt_tests(
                 (t1, t2) in Tensor::<GpuBackend>::arbitrary_disjoint_tuple(),
             ) {
@@ -1415,6 +1422,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn binary_grad_broadcast_tests(
                 (t1, t2) in Tensor::<GpuBackend>::arbitrary_tuple(),
             ) {
@@ -1436,6 +1444,7 @@ mod tests {
 
             // central diff doesn't work for lt gt if x == y
             #[test]
+            #[serial(gpu)]
             fn binary_grad_broadcast_lt_gt_tests(
                 (t1, t2) in Tensor::<GpuBackend>::arbitrary_disjoint_tuple(),
             ) {
@@ -1446,6 +1455,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn unary_grad_complex_test1(
                 t in Tensor::<GpuBackend>::arbitrary(),
             ) {
@@ -1456,6 +1466,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn unary_grad_complex_test2(
                 t in Tensor::<GpuBackend>::arbitrary_no_zero(),
             ) {
@@ -1472,6 +1483,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn unary_grad_relu_test(
                 t in Tensor::<GpuBackend>::arbitrary_no_zero(),
             ) {
@@ -1479,6 +1491,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn unary_grad_tests(t in Tensor::<GpuBackend>::arbitrary()) {
                 unary_grad_assert(t.clone(), |t| -t);
                 unary_grad_assert(t.clone(), |t| t.clone() * t);
@@ -1490,6 +1503,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn binary_tests(
                 (t1, t2) in Tensor::<GpuBackend>::arbitrary_tuple(),
             ) {
@@ -1523,6 +1537,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn unary_tests(
                 t in Tensor::<GpuBackend>::arbitrary(),
             ) {
@@ -1552,6 +1567,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn unary_complex_test1(
                 t in Tensor::<GpuBackend>::arbitrary(),
             ) {
@@ -1563,6 +1579,7 @@ mod tests {
             }
 
             #[test]
+            #[serial(gpu)]
             fn unary_complex_test2(
                 t in Tensor::<GpuBackend>::arbitrary(),
             ) {
@@ -1582,6 +1599,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_reduce_forward_one_dim() {
             let shape = Shape::new(vec![3, 2]);
             let strides = (&shape).into();
@@ -1602,6 +1620,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_reduce_forward_one_dim_2() {
             let shape = Shape::new(vec![3, 2]);
             let strides = (&shape).into();
@@ -1622,6 +1641,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_reduce_forward_all_dim() {
             let shape = Shape::new(vec![3, 2]);
             let strides = (&shape).into();
@@ -1638,6 +1658,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_backward_gpu() {
             let shape = Shape::new(vec![3, 1]);
             let strides: Strides = (&shape).into();
@@ -1661,6 +1682,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_view_backward() {
             let xc: Tensor<CpuSeqBackend> =
                 Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
@@ -1681,6 +1703,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_broadcast_mul_backward() {
             let xc: Tensor<CpuSeqBackend> =
                 Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
@@ -1699,6 +1722,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_broadcast_add_backward() {
             let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[1., 2., 3.]);
             let oc = xc.clone() + Tensor::from_scalar(5.);
@@ -1716,6 +1740,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_expand_backward() {
             let a_shape = Shape::new(vec![2, 1]);
             let b_shape = Shape::new(vec![2, 3]);
@@ -1738,6 +1763,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_matmul_backward() {
             let a_shape = Shape::new(vec![1, 5, 3]);
             let b_shape = Shape::new(vec![1, 3, 1]);
@@ -1774,6 +1800,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_relu_backward() {
             let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let oc = xc.clone().relu();
@@ -1791,6 +1818,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(gpu)]
         fn test_sig_backward() {
             let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
             let oc = xc.clone().sig();
@@ -1806,76 +1834,6 @@ mod tests {
             let xgg = mg.wrt(&xg).unwrap().data.collect();
             assert_eq!(vec![0.19661194, 0.25, 0.19661193], xgg);
         }
-
-        //#[test]
-        //fn test_matmul_square() {
-        //    let shape = Shape::new(vec![4, 4]);
-        //    let strides: Strides = (&shape).into();
-
-        //    let tda = GpuTensorData::new(
-        //        &(1..=16).map(|i| i as f32).collect::<Vec<_>>(),
-        //        shape.clone(),
-        //        strides.clone(),
-        //        get_wgpu_context(),
-        //    );
-        //    let a = Tensor::from_data(tda);
-
-        //    let tdb = GpuTensorData::new(
-        //        &[
-        //            2., 0., 0., 0., 0., 2., 0., 0., 0., 0., 2., 0., 0., 0., 0., 2.,
-        //        ],
-        //        shape.clone(),
-        //        strides.clone(),
-        //        get_wgpu_context(),
-        //    );
-        //    let b = Tensor::from_data(tdb);
-
-        //    let c = a.mm(b).data.to_cpu();
-        //    println!("{c:?}");
-        //    assert!(true);
-        //}
-
-        //#[test]
-        //fn repro_test_gpu() {
-        //    let ashape = Shape::new(vec![2, 3]);
-        //    let astrides: Strides = (&ashape).into();
-        //    let ad = vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-
-        //    let bshape = Shape::new(vec![3, 4]);
-        //    let bstrides: Strides = (&bshape).into();
-        //    let bd = vec![
-        //        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.9966465, 0.1533718,
-        //    ];
-
-        //    let agtd =
-        //        GpuTensorData::new(&ad, ashape.clone(), astrides.clone(), get_wgpu_context());
-        //    let agt = Tensor::new(agtd, Trace::default());
-
-        //    let actd = CpuTensorData::new(
-        //        ad.iter().map(|&f| f as f64).collect(),
-        //        ashape.clone(),
-        //        astrides.clone(),
-        //    );
-        //    let act: Tensor<_, Seq, _> = Tensor::new(actd.clone(), Trace::default());
-
-        //    let bgtd =
-        //        GpuTensorData::new(&bd, bshape.clone(), bstrides.clone(), get_wgpu_context());
-        //    let bgt = Tensor::new(bgtd, Trace::default());
-
-        //    let bctd = CpuTensorData::new(
-        //        bd.iter().map(|&f| f as f64).collect(),
-        //        bshape.clone(),
-        //        bstrides.clone(),
-        //    );
-        //    let bct: Tensor<_, Seq, _> = Tensor::new(bctd.clone(), Trace::default());
-
-        //    // try printing central diff for cpu and gpu
-        //    cpu::binary_grad_assert(act, bct, |t1, t2| t1.mm(t2));
-        //    println!("\ncpu good\n");
-        //    gpu::binary_grad_assert(agt, bgt, |t1, t2| t1.mm(t2));
-
-        //    assert!(true)
-        //}
     }
 
     fn view_test<'a, B>(t: Tensor<'a, B>)
@@ -1895,6 +1853,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(gpu)]
     fn test_view() {
         let t_seq = Tensor::<CpuSeqBackend>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_seq);

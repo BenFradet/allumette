@@ -103,6 +103,7 @@ The set of dependencies is otherwise pretty limited:
 - `ratatui` for visualization
 - `clap` for cli argument parsing
 - `proptest` for property-based testing
+- `serial_test` for non parallel gpu tests
 - `rand` for synthetic data generation
 
 ### Next up

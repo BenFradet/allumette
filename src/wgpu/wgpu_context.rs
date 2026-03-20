@@ -2,7 +2,7 @@ use std::{
     borrow::Cow,
     collections::HashMap,
     num::NonZeroU64,
-    sync::{Arc, LazyLock, RwLock, RwLockWriteGuard},
+    sync::{Arc, LazyLock, Mutex, RwLock, RwLockWriteGuard},
 };
 
 use wgpu::{
@@ -28,6 +28,7 @@ pub struct WgpuContext {
     pub device: Device,
     pub queue: Queue,
     pipelines: RwLock<HashMap<(&'static str, WorkgroupInfo), Arc<ComputePipeline>>>,
+    pending_commands: Mutex<Vec<CommandBuffer>>,
 }
 
 impl Default for WgpuContext {
@@ -40,6 +41,7 @@ impl Default for WgpuContext {
             device,
             queue,
             pipelines: RwLock::new(HashMap::new()),
+            pending_commands: vec![].into(),
         }
     }
 }
@@ -64,15 +66,16 @@ impl WgpuContext {
 
     const ENTRY_POINT: &'static str = "call";
 
-    pub fn encode_command(
+    pub fn enqueue_command(
         &self,
         workgroup_info: &WorkgroupInfo,
         pipeline: &ComputePipeline,
         bind_group: &BindGroup,
-    ) -> CommandBuffer {
+    ) {
         let mut encoder = self
             .device
             .create_command_encoder(&CommandEncoderDescriptor { label: None });
+
         {
             let mut compute_pass = encoder.begin_compute_pass(&ComputePassDescriptor {
                 label: None,
@@ -86,16 +89,22 @@ impl WgpuContext {
                 workgroup_info.count.2.try_into().unwrap(),
             );
         }
-        encoder.finish()
+        self.pending_commands.lock().unwrap().push(encoder.finish());
     }
 
     // blocks until execution is complete
-    pub fn submit_command(&self, command_buffer: CommandBuffer) -> Result<PollStatus, PollError> {
-        let index = self.queue.submit([command_buffer]);
-        self.device.poll(PollType::Wait {
-            submission_index: Some(index),
-            timeout: None,
-        })
+    pub fn flush_commands(&self) -> Result<PollStatus, PollError> {
+        let commands: Vec<_> = self.pending_commands.lock().unwrap().drain(..).collect();
+
+        if commands.is_empty() {
+            Ok(PollStatus::QueueEmpty)
+        } else {
+            let index = self.queue.submit(commands);
+            self.device.poll(PollType::Wait {
+                submission_index: Some(index),
+                timeout: None,
+            })
+        }
     }
 
     pub fn create_pipeline_layout(&self, bind_group_layout: &BindGroupLayout) -> PipelineLayout {

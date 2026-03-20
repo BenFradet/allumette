@@ -32,10 +32,8 @@ impl Ops<f32, Gpu> for GpuData<'_> {
             &[&self.buffer, &metadata_buffer, &output_buffer],
             &bind_group_layout,
         );
-        let command = self
-            .context
-            .encode_command(&workgroup_info, &pipeline, &bind_group);
-        self.context.submit_command(command).ok().unwrap();
+        self.context
+            .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
         self.with_buffer(output_buffer)
     }
@@ -72,10 +70,8 @@ impl Ops<f32, Gpu> for GpuData<'_> {
             &bind_group_layout,
         );
 
-        let command = self
-            .context
-            .encode_command(&workgroup_info, &pipeline, &bind_group);
-        self.context.submit_command(command).ok()?;
+        self.context
+            .enqueue_command(&workgroup_info, &pipeline, &bind_group);
         Some(out.with_buffer(output_buffer))
     }
 
@@ -121,10 +117,8 @@ impl Ops<f32, Gpu> for GpuData<'_> {
             &bind_group_layout,
         );
 
-        let command = self
-            .context
-            .encode_command(&workgroup_info, &pipeline, &bind_group);
-        self.context.submit_command(command).ok()?;
+        self.context
+            .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
         Some(Self::from_buffer(
             shape,
@@ -171,10 +165,8 @@ impl Ops<f32, Gpu> for GpuData<'_> {
                 &bind_group_layout,
             );
 
-            let command = self
-                .context
-                .encode_command(&workgroup_info, &pipeline, &bind_group);
-            self.context.submit_command(command).ok()?;
+            self.context
+                .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
             Some(Self::from_buffer(
                 shape,
@@ -241,10 +233,8 @@ impl Ops<f32, Gpu> for GpuData<'_> {
             &bind_group_layout,
         );
 
-        let command = self
-            .context
-            .encode_command(&workgroup_info, &pipeline, &bind_group);
-        self.context.submit_command(command).ok()?;
+        self.context
+            .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
         Some(Self::from_buffer(
             shape,
@@ -268,7 +258,7 @@ mod tests {
         let input: Vec<_> = (1..9).map(|u| u as f32).collect();
         let td = GpuData::new(&input, shape, strides, get_wgpu_context());
         let res = td.map_broadcast(&td, |f| -f, "neg");
-        let cpu_data = res.unwrap().to_cpu();
+        let cpu_data = res.unwrap().to_cpu().unwrap();
         assert_eq!(vec![-1., -2., -3., -4., -5., -6., -7., -8.], cpu_data);
     }
 
