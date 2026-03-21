@@ -65,10 +65,6 @@ Summary
 # Demo
 # Benchmarks
 
-todo:
-- benchmarks
-- change colours for tps, tns, etc
-
 ---
 
 What's a tensor?
@@ -1996,6 +1992,37 @@ Summary
 # Neural networks
 # Demo
 # Benchmarks
+
+---
+
+Benchmarks
+===
+
+Benchmarks for:
+- `50` hidden layer size 
+- `500` iterations
+- `0.1` learning rate
+- `2` features, class 1 in a circle, class 2 outside
+- variable is the size of the input dataset
+- CPU: 12-core i7-1360P, 1MB L1, 9MB L2, 18MB L3
+- IGP: Iris Xe, 2.2 TFLOPS f32, limited to 128MB buffer size
+
+<!-- newlines: 4 -->
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+<!--incremental_tables: true -->
+mode | 10^2 | 10^3 | 10^4 | 10^5 | 10^6
+-|-|-|-|-|-
+sequential|1.93s|18.36s|3m24s|1h02m|???
+parallel|1.96s|10.24s|1m21|16m6s|2h24m2s
+igp|25.78s|37.42s|1m16|4m|???
+
+seq: 1.93, 18.36, 217, 3720
+par: 1.96, 10.24, 81.49, 966.52, 8642.76
+igp: 25.78, 37.42, 76.09, 240.66,
+
 
 ---
 
