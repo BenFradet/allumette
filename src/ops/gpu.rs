@@ -248,10 +248,12 @@ impl Ops<f32, Gpu> for GpuData<'_> {
 #[cfg(test)]
 mod tests {
     use crate::{shaping::shape::Shape, wgpu::wgpu_context::get_wgpu_context};
+    use serial_test::serial;
 
     use super::*;
 
     #[test]
+    #[serial(gpu)]
     fn gpu_map_broadcast_test() {
         let shape = Shape::new(vec![2, 4]);
         let strides = (&shape).into();

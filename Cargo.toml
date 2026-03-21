@@ -11,10 +11,6 @@ proptest = "1.9.0"
 rand = "0.8.5"
 rayon = "1.10.0"
 wgpu = "27.0.1"
-ratatui = { path = "../ratatui/ratatui" }
-ratatui-core = { path = "../ratatui/ratatui-core" }
-#ratatui-crossterm = { path = "../ratatui/ratatui-crossterm" }
-ratatui-macros = { path = "../ratatui/ratatui-macros" }
-ratatui-widgets = { path = "../ratatui/ratatui-widgets" }
+ratatui = { git = "https://github.com/ratatui/ratatui", branch = "main" }
 clap = { version = "4.6.0", features = ["derive"] }
 serial_test = "3.4.0"
