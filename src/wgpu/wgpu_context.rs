@@ -10,8 +10,8 @@ use wgpu::{
     BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType, BufferDescriptor, BufferUsages,
     CommandBuffer, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline,
     ComputePipelineDescriptor, Device, DeviceDescriptor, ExperimentalFeatures, Features, Instance,
-    Limits, MemoryHints, PipelineLayout, PipelineLayoutDescriptor, PollError, PollStatus, PollType,
-    Queue, ShaderModule, ShaderModuleDescriptor, ShaderSource, ShaderStages, Trace,
+    MemoryHints, PipelineLayout, PipelineLayoutDescriptor, PollError, PollStatus, PollType, Queue,
+    ShaderModule, ShaderModuleDescriptor, ShaderSource, ShaderStages, Trace,
     util::{BufferInitDescriptor, DeviceExt},
 };
 
@@ -260,7 +260,7 @@ impl WgpuContext {
             .request_device(&DeviceDescriptor {
                 label: None,
                 required_features: Features::empty(),
-                required_limits: Limits::downlevel_defaults(),
+                required_limits: adapter.limits(),
                 memory_hints: MemoryHints::Performance,
                 trace: Trace::Off,
                 experimental_features: ExperimentalFeatures::disabled(),
