@@ -103,10 +103,15 @@ fn call(
     @builtin(global_invocation_id) global_id: vec3<u32>,
     @builtin(local_invocation_id) local_id: vec3<u32>,
     @builtin(workgroup_id) workgroup_id: vec3<u32>,
+    @builtin(num_workgroups) num_wgs: vec3<u32>,
 ) {
     let output_nb_elems = arrayLength(&output);
+    let wg_index = workgroup_id.x +
+        workgroup_id.y * num_wgs.x +
+        workgroup_id.z * num_wgs.x * num_wgs.y;
+
     // active workgroup flag to avoid early returns
-    let wg_active = workgroup_id.x < output_nb_elems;
+    let wg_active = wg_index < output_nb_elems;
 
     var a_index: array<u32, MAX_DIMS>;
     var out_index: array<u32, MAX_DIMS>;
@@ -119,7 +124,7 @@ fn call(
 
     var out_pos: u32 = 0u;
     if (wg_active) {
-        to_index(workgroup_id.x, out_shape_len, &out_index);
+        to_index(wg_index, out_shape_len, &out_index);
         out_pos = index_to_position_out(out_shape_len, out_index);
     }
 

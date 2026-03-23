@@ -17,6 +17,9 @@ var<storage, read> metadata: array<u32>;
 @group(0) @binding(3)
 var<storage, read_write> output: array<f32>;
 
+// used for chunking
+const WG_SIZE: u32 = 1u;
+
 // used to create local arrays
 const MAX_DIMS: u32 = 32u;
 
@@ -189,8 +192,14 @@ fn index_to_position_out(
 
 @compute
 @workgroup_size(1)
-fn call(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let i = global_id.x;
+fn call(
+    @builtin(global_invocation_id) global_id: vec3<u32>,
+    @builtin(num_workgroups) num_wgs: vec3<u32>,
+) {
+    let x_chunk = num_wgs.x * WG_SIZE;
+    let i = global_id.x +
+        global_id.y * x_chunk +
+        global_id.z * x_chunk * num_wgs.y;
 
     if (i >= arrayLength(&output)) {
         return;

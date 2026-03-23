@@ -12,18 +12,15 @@ pub struct WorkgroupInfo {
     pub size: (usize, usize, usize),
 }
 
-// TODO: batching
-//const MAX_WORKGROUP_COUNT: usize = 65535;
+const MAX_WORKGROUP_COUNT: usize = 65535;
 const MAX_WORKGROUP_SIZE: usize = 256;
 
 impl WorkgroupInfo {
-    // TODO: handle tensor size > SIZE * COUNT
-    // TODO: what if reduce dims > MAX_WORKGROUP_SIZE?
     pub fn for_reduce(reduce_dim: usize, shape: &Shape) -> Self {
         let tensor_size = shape.size;
         let wg_size = MAX_WORKGROUP_SIZE.min(reduce_dim.next_power_of_two());
         WorkgroupInfo {
-            count: (tensor_size, 1, 1),
+            count: Self::chunk(tensor_size),
             size: (wg_size, 1, 1),
         }
     }
@@ -38,10 +35,21 @@ impl WorkgroupInfo {
     pub fn workgroup_size_const(&self) -> String {
         format!("const WG_SIZE: u32 = {}u;", self.size.0)
     }
+
+    fn chunk(count: usize) -> (usize, usize, usize) {
+        if count <= MAX_WORKGROUP_COUNT {
+            (count, 1, 1)
+        } else if count <= MAX_WORKGROUP_COUNT * MAX_WORKGROUP_COUNT {
+            let y = count.div_ceil(MAX_WORKGROUP_COUNT);
+            (MAX_WORKGROUP_COUNT, y, 1)
+        } else {
+            let z = count.div_ceil(MAX_WORKGROUP_COUNT * MAX_WORKGROUP_COUNT);
+            (MAX_WORKGROUP_COUNT, MAX_WORKGROUP_COUNT, z)
+        }
+    }
 }
 
 impl From<&Shape> for WorkgroupInfo {
-    // TODO: handle tensor size > SIZE * COUNT
     fn from(shape: &Shape) -> Self {
         let tensor_size = shape.size;
 
@@ -53,7 +61,7 @@ impl From<&Shape> for WorkgroupInfo {
         } else {
             let count = tensor_size.div_ceil(MAX_WORKGROUP_SIZE);
             WorkgroupInfo {
-                count: (count, 1, 1),
+                count: WorkgroupInfo::chunk(count),
                 size: (MAX_WORKGROUP_SIZE, 1, 1),
             }
         }
@@ -80,6 +88,13 @@ mod tests {
             },
             (&Shape::new(vec![14, 2])).into()
         );
+        assert_eq!(
+            WorkgroupInfo {
+                count: (65535, 3, 1),
+                size: (256, 1, 1)
+            },
+            (&Shape::new(vec![195313, 256])).into()
+        );
     }
 
     #[test]
@@ -91,6 +106,15 @@ mod tests {
                 count: (2, 1, 1),
                 size: (4, 1, 1)
             }
+        );
+    }
+
+    #[test]
+    fn chunk_z_test() {
+        let count = MAX_WORKGROUP_COUNT * MAX_WORKGROUP_COUNT + 1;
+        assert_eq!(
+            WorkgroupInfo::chunk(count),
+            (MAX_WORKGROUP_COUNT, MAX_WORKGROUP_COUNT, 2),
         );
     }
 }
