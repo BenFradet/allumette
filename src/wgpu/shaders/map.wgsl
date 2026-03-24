@@ -7,6 +7,7 @@ var<storage, read> input: array<f32>;
 // out shape len
 // in shape / in strides
 // out shape / out strides
+// fast path
 @group(0) @binding(1)
 var<storage, read> metadata: array<u32>;
 
@@ -19,8 +20,10 @@ const WG_SIZE: u32 = 1u;
 // used to create local arrays
 const MAX_DIMS: u32 = 32u;
 
-// ndims
-const PREAMBLE: u32 = 2u;
+// in dims
+// out dims
+// fast path
+const PREAMBLE: u32 = 3u;
 
 fn in_shape(i: u32) -> u32 {
     return metadata[i + PREAMBLE];
@@ -146,23 +149,29 @@ fn call(
     @builtin(global_invocation_id) global_id: vec3<u32>,
     @builtin(num_workgroups) num_wgs: vec3<u32>,
 ) {
-    let x_chunk = num_wgs.x * WG_SIZE;
+    let x_stride = num_wgs.x * WG_SIZE;
     let i = global_id.x +
-        global_id.y * x_chunk +
-        global_id.z * x_chunk * num_wgs.y;
+        global_id.y * x_stride +
+        global_id.z * x_stride * num_wgs.y;
 
     if (i >= arrayLength(&output)) {
         return;
     }
 
-    var in_index: array<u32, MAX_DIMS>;
-    var out_index: array<u32, MAX_DIMS>;
+    let fast_path = metadata[2u];
 
-    let in_shape_len = metadata[0u];
-    let out_shape_len = metadata[1u];
-    to_index(i, out_shape_len, &out_index);
-    broadcast_index(in_shape_len, out_shape_len, &in_index, out_index);
-    let in_pos = index_to_position_in(in_shape_len, in_index);
-    let out_pos = index_to_position_out(out_shape_len, out_index);
-    output[out_pos] = replace_with_operation(input[in_pos]);
+    if (fast_path == 1) {
+        output[i] = replace_with_operation(input[i]);
+    } else {
+        var in_index: array<u32, MAX_DIMS>;
+        var out_index: array<u32, MAX_DIMS>;
+
+        let in_shape_len = metadata[0u];
+        let out_shape_len = metadata[1u];
+        to_index(i, out_shape_len, &out_index);
+        broadcast_index(in_shape_len, out_shape_len, &in_index, out_index);
+        let in_pos = index_to_position_in(in_shape_len, in_index);
+        let out_pos = index_to_position_out(out_shape_len, out_index);
+        output[out_pos] = replace_with_operation(input[in_pos]);
+    }
 }

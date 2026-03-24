@@ -1,7 +1,10 @@
 use wgpu::BufferUsages;
 
 use crate::{
-    backend::mode::Gpu, ops::ops::Ops, shaping::shape::Shape, storage::gpu_data::GpuData,
+    backend::mode::Gpu,
+    ops::ops::Ops,
+    shaping::shape::Shape,
+    storage::{data::Data, gpu_data::GpuData},
     wgpu::workgroup_info::WorkgroupInfo,
 };
 
@@ -26,7 +29,8 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         let metadata_buffer = self.context.create_metadata_buffer(
             &[&self.shape, &self.shape],
             &[&self.strides, &self.strides],
-            &[],
+            // fast path
+            &[1],
         );
         let bind_group = self.context.create_bind_group(
             &[&self.buffer, &metadata_buffer, &output_buffer],
@@ -60,10 +64,12 @@ impl Ops<f32, Gpu> for GpuData<'_> {
             .context
             .get_or_create_pipeline(tag, workgroup_info, 3, None)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
+        let fast_path =
+            self.shape == out.shape && self.strides == out.strides && self.is_contiguous();
         let metadata_buffer = self.context.create_metadata_buffer(
             &[&self.shape, &out.shape],
             &[&self.strides, &out.strides],
-            &[],
+            &[fast_path as usize],
         );
         let bind_group = self.context.create_bind_group(
             &[&self.buffer, &metadata_buffer, &output_buffer],
