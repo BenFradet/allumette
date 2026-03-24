@@ -108,10 +108,11 @@ impl Ops<f32, Gpu> for GpuData<'_> {
             .context
             .get_or_create_pipeline(tag, workgroup_info, 4, None)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
+        let fast_path = self.shape == other.shape && self.strides == other.strides && self.is_contiguous();
         let metadata_buffer = self.context.create_metadata_buffer(
             &[&self.shape, &other.shape, &shape],
             &[&self.strides, &other.strides, &strides],
-            &[],
+            &[fast_path as usize],
         );
         let bind_group = self.context.create_bind_group(
             &[

@@ -24,7 +24,8 @@ const WG_SIZE: u32 = 1u;
 const MAX_DIMS: u32 = 32u;
 
 // shape lengths
-const PREAMBLE: u32 = 3u;
+// fast path
+const PREAMBLE: u32 = 4u;
 
 fn a_shape(i: u32) -> u32 {
     return metadata[i + PREAMBLE];
@@ -205,21 +206,27 @@ fn call(
         return;
     }
 
-    var a_index: array<u32, MAX_DIMS>;
-    var b_index: array<u32, MAX_DIMS>;
-    var out_index: array<u32, MAX_DIMS>;
+    let fast_path = metadata[3u];
 
-    let a_shape_len = metadata[0u];
-    let b_shape_len = metadata[1u];
-    let out_shape_len = metadata[2u];
+    if (fast_path == 1) {
+        output[i] = replace_with_operation(input_a[i], input_b[i]);
+    } else {
+        var a_index: array<u32, MAX_DIMS>;
+        var b_index: array<u32, MAX_DIMS>;
+        var out_index: array<u32, MAX_DIMS>;
 
-    to_index(i, out_shape_len, &out_index);
-    broadcast_index_a(a_shape_len, out_shape_len, &a_index, out_index);
-    broadcast_index_b(b_shape_len, out_shape_len, &b_index, out_index);
+        let a_shape_len = metadata[0u];
+        let b_shape_len = metadata[1u];
+        let out_shape_len = metadata[2u];
 
-    let a_pos = index_to_position_a(a_shape_len, a_index);
-    let b_pos = index_to_position_b(b_shape_len, b_index);
-    let out_pos = index_to_position_out(out_shape_len, out_index);
+        to_index(i, out_shape_len, &out_index);
+        broadcast_index_a(a_shape_len, out_shape_len, &a_index, out_index);
+        broadcast_index_b(b_shape_len, out_shape_len, &b_index, out_index);
 
-    output[out_pos] = replace_with_operation(input_a[a_pos], input_b[b_pos]);
+        let a_pos = index_to_position_a(a_shape_len, a_index);
+        let b_pos = index_to_position_b(b_shape_len, b_index);
+        let out_pos = index_to_position_out(out_shape_len, out_index);
+
+        output[out_pos] = replace_with_operation(input_a[a_pos], input_b[b_pos]);
+    }
 }
