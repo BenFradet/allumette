@@ -22,8 +22,8 @@ enum CliCommand {
     Benchmark {
         #[arg(value_enum, short, long)]
         backend: CliBackend,
-        #[arg(short, long, default_value_t = 1000)]
-        points: usize,
+        #[arg(short, long, default_value_t = 4)]
+        power_ten_points: u32,
     },
 }
 
@@ -41,10 +41,10 @@ fn main() -> Result<(), Error> {
     let iterations = 500;
 
     match cli.command {
-        Some(CliCommand::Benchmark { backend, points }) => {
+        Some(CliCommand::Benchmark { backend, power_ten_points }) => {
             benchmark(
                 backend,
-                points,
+                power_ten_points,
                 hidden_layer_size,
                 learning_rate,
                 iterations,
@@ -78,11 +78,12 @@ fn viz(hidden_layer_size: usize, learning_rate: f64, iterations: usize) -> Resul
 
 fn benchmark(
     backend: CliBackend,
-    points: usize,
+    power_ten_points: u32,
     hidden_layer_size: usize,
     learning_rate: f64,
     iterations: usize,
 ) {
+    let points = 10_usize.pow(power_ten_points);
     for run in 1..=5 {
         if run == 1 {
             println!("run 1/5 backend={backend:?} points={points} - ignore as warm up");
