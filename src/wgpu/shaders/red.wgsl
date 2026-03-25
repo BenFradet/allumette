@@ -128,30 +128,22 @@ fn call(
         out_pos = index_to_position_out(out_shape_len, out_index);
     }
 
-    var local_acc = reduce_default;
-    for (var j = local_id.x; j < reduce_size; j += WG_SIZE) {
-        out_index[reduce_dim] = j;
+    if (wg_active && local_id.x < reduce_size) {
+        out_index[reduce_dim] = local_id.x;
         let pos = index_to_position_a(a_shape_len, out_index);
-        local_acc = replace_with_operation(local_acc, input[pos]);
+        shared_block[local_id.x] = input[pos];
     }
-    shared_block[local_id.x] = local_acc;
 
     // all invocations must reach the barrier
     // otherwise it is undefined behaviour
     // no early returns allowed
     workgroupBarrier();
 
-    for (var stride = WG_SIZE / 2u; stride > 0u; stride /= 2u) {
-        if (wg_active && local_id.x < stride) {
-            shared_block[local_id.x] = replace_with_operation(
-                shared_block[local_id.x],
-                shared_block[local_id.x + stride],
-            );
-        }
-        workgroupBarrier();
-    }
-
     if (wg_active && local_id.x == 0u) {
-        output[out_pos] = shared_block[0u];
+        var acc = reduce_default;
+        for (var i = 0u; i < reduce_size; i = i + 1u) {
+            acc = replace_with_operation(acc, shared_block[i]);
+        }
+        output[out_pos] = acc;
     }
 }
