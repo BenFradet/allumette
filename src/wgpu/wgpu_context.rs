@@ -256,6 +256,9 @@ impl WgpuContext {
         {
             panic!("Adapter does not support compute shaders");
         }
+        // TODO: sqrt and replace into matmul shader TILE_SIZE
+        // let max_wg_size = adapter.limits().max_compute_invocations_per_workgroup;
+        // println!("max wg size {max_wg_size}");
         adapter
             .request_device(&DeviceDescriptor {
                 label: None,

@@ -21,8 +21,8 @@ var<workgroup> a_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
 var<workgroup> b_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
 
 // used to create local arrays
-// TODO: dynamically change based on cpu limits
-const TILE_SIZE: u32 = 16u;
+// TODO: dynamically change based on gpu limits
+const TILE_SIZE: u32 = 32u;
 
 // shape lengths
 const PREAMBLE: u32 = 3u;
