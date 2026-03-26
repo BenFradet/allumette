@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use wgpu::BufferUsages;
 
 use crate::{
@@ -12,6 +14,9 @@ use crate::{
 impl Ops<f32, Gpu> for GpuData<'_> {
     // TODO: rm unwraps
     fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
+        //let _ = self.context.flush_commands();
+        //let start = Instant::now();
+
         let workgroup_info = (&self.shape).into();
         let gpu_size = self.shape.gpu_byte_size();
 
@@ -39,6 +44,9 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         self.context
             .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
+        //let _ = self.context.flush_commands();
+        //println!("{tag},{:?}", start.elapsed().as_micros());
+
         self.with_buffer(output_buffer)
     }
 
@@ -51,6 +59,9 @@ impl Ops<f32, Gpu> for GpuData<'_> {
     where
         Self: Sized,
     {
+        //let _ = self.context.flush_commands();
+        //let start = Instant::now();
+
         let workgroup_info = (&out.shape).into();
         // TODO: use out.buffer.size?
         let out_gpu_size = out.shape.gpu_byte_size();
@@ -78,6 +89,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
 
         self.context
             .enqueue_command(&workgroup_info, &pipeline, &bind_group);
+
+        //let _ = self.context.flush_commands();
+        //println!("{tag},{:?}", start.elapsed().as_micros());
+
         Some(out.with_buffer(output_buffer))
     }
 
@@ -90,6 +105,9 @@ impl Ops<f32, Gpu> for GpuData<'_> {
     where
         Self: Sized,
     {
+        //let _ = self.context.flush_commands();
+        //let start = Instant::now();
+
         let shape = if self.shape == other.shape {
             self.shape.clone()
         } else {
@@ -108,7 +126,8 @@ impl Ops<f32, Gpu> for GpuData<'_> {
             .context
             .get_or_create_pipeline(tag, workgroup_info, 4, None)?;
         let bind_group_layout = pipeline.get_bind_group_layout(0);
-        let fast_path = self.shape == other.shape && self.strides == other.strides && self.is_contiguous();
+        let fast_path =
+            self.shape == other.shape && self.strides == other.strides && self.is_contiguous();
         let metadata_buffer = self.context.create_metadata_buffer(
             &[&self.shape, &other.shape, &shape],
             &[&self.strides, &other.strides, &strides],
@@ -126,6 +145,9 @@ impl Ops<f32, Gpu> for GpuData<'_> {
 
         self.context
             .enqueue_command(&workgroup_info, &pipeline, &bind_group);
+
+        //let _ = self.context.flush_commands();
+        //println!("{tag},{:?}", start.elapsed().as_micros());
 
         Some(Self::from_buffer(
             shape,
@@ -146,6 +168,9 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         Self: Sized,
     {
         if dim < self.shape.data().len() {
+            //let _ = self.context.flush_commands();
+            //let start = Instant::now();
+
             let mut shape_data = self.shape.data().to_vec();
             shape_data[dim] = 1;
             let shape = Shape::new(shape_data);
@@ -175,6 +200,9 @@ impl Ops<f32, Gpu> for GpuData<'_> {
             self.context
                 .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
+            //let _ = self.context.flush_commands();
+            //println!("{tag},{:?}", start.elapsed().as_micros());
+
             Some(Self::from_buffer(
                 shape,
                 strides,
@@ -187,6 +215,9 @@ impl Ops<f32, Gpu> for GpuData<'_> {
     }
 
     fn matmul(&self, other: &Self) -> Option<Self> {
+        //let _ = self.context.flush_commands();
+        //let start = Instant::now();
+
         let self_shape_len = self.shape.len();
         let other_shape_len = other.shape.len();
         (self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]).then_some(0)?;
@@ -200,7 +231,7 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         let strides = (&shape).into();
 
         let op = "mm";
-        // TODO: make it dynamic
+        // TODO: use sqrt(limits.max_compute_invocations_per_workgroup)
         // max total invocations is 256 = 16 * 16 * 1
         let max_wg_size = 16;
         let workgroup_info = WorkgroupInfo {
@@ -242,6 +273,9 @@ impl Ops<f32, Gpu> for GpuData<'_> {
 
         self.context
             .enqueue_command(&workgroup_info, &pipeline, &bind_group);
+
+        //let _ = self.context.flush_commands();
+        //println!("mm,{:?}", start.elapsed().as_micros());
 
         Some(Self::from_buffer(
             shape,
