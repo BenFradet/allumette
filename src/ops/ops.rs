@@ -37,8 +37,13 @@ pub trait Ops<E: Element, T: Mode> {
         }
 
         let bc_shape = self.shape().broadcast(other.shape())?;
-        let buf = Data::zeros(bc_shape);
-        let mut out = other.map_broadcast(&buf, |f| f, "id")?;
+        let mut out = if other.shape() == &bc_shape {
+            other
+        } else {
+            let buf = Data::zeros(bc_shape);
+            other.map_broadcast(&buf, |f| f, "id")?
+        };
+
         if self.shape() == out.shape() {
             return Some(out);
         }
