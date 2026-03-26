@@ -360,7 +360,11 @@ impl<'a, B: Backend> Tensor<'a, B> {
     }
 
     pub fn contiguous(self) -> Self {
-        Forward::unary(Copy {}, self)
+        if self.data.is_contiguous() {
+            self
+        } else {
+            Forward::unary(Copy {}, self)
+        }
     }
 
     pub fn is_close(self, rhs: Tensor<'a, B>) -> Self {
