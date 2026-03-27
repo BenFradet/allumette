@@ -5,8 +5,7 @@ use crate::{
     math::element::Element,
     optim::gradient_descent::GradientDescent,
     shaping::shape::Shape,
-    tensor::Tensor,
-    training::debugger::Debugger,
+    tensor::Tensor, util::debugger::Debugger,
 };
 
 use super::{dataset::Dataset, network::Network};

@@ -2,11 +2,8 @@ use std::io::Error;
 
 use allumette::{
     backend::backend::{CpuParBackend, CpuSeqBackend, GpuBackend},
-    training::{
-        dataset::Dataset,
-        debugger::{TerseDebugger, VizDebugger},
-        train,
-    },
+    training::{dataset::Dataset, train},
+    util::debugger::{TerseDebugger, VizDebugger},
 };
 use clap::{Parser, Subcommand, ValueEnum};
 
@@ -41,7 +38,10 @@ fn main() -> Result<(), Error> {
     let iterations = 500;
 
     match cli.command {
-        Some(CliCommand::Benchmark { backend, power_ten_points }) => {
+        Some(CliCommand::Benchmark {
+            backend,
+            power_ten_points,
+        }) => {
             benchmark(
                 backend,
                 power_ten_points,
