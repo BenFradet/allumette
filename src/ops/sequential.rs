@@ -5,16 +5,22 @@ use crate::{
     ops::ops::Ops,
     shaping::{shape::Shape, strides::Strides},
     storage::{cpu_data::CpuData, data::Data},
+    util::profiler::Profiler,
 };
 
-impl Ops<f64, Seq> for CpuData {
-    fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F, _tag: &str) -> Self {
+impl<P: Profiler> Ops<f64, Seq, P> for CpuData {
+    fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F, tag: &'static str) -> Self {
+        let p = P::start();
+
         let len = self.size();
         let mut out = vec![0.; len];
         // TODO: add an iterator
         for (i, d) in self.data.iter().enumerate() {
             out[i] = f(*d);
         }
+
+        p.stop(tag);
+
         Self {
             data: Arc::new(out),
             shape: self.shape.clone(),
@@ -26,12 +32,15 @@ impl Ops<f64, Seq> for CpuData {
         &self,
         out: &Self,
         f: F,
-        _tag: &str,
+        tag: &'static str,
     ) -> Option<Self> {
         if self.shape == out.shape && self.strides == out.strides && self.is_contiguous() {
+            let p = P::start();
             let out = self.data.iter().map(|a| f(*a)).collect();
+            p.stop(tag);
             Some(Self::new(out, self.shape.clone(), self.strides.clone()))
         } else {
+            let p = P::start();
             let strides: Strides = (&out.shape).into();
             let len = out.shape.size;
             let mut out_vec = vec![0.; len];
@@ -43,20 +52,29 @@ impl Ops<f64, Seq> for CpuData {
                 let pos_out = out.strides.position(&out_idx);
                 out_vec[pos_out] = f(v);
             }
+            p.stop(tag);
             Some(Self::new(out_vec, out.shape.clone(), strides))
         }
     }
 
-    fn zip<F: Fn(f64, f64) -> f64 + Sync>(&self, other: &Self, f: F, _tag: &str) -> Option<Self> {
+    fn zip<F: Fn(f64, f64) -> f64 + Sync>(
+        &self,
+        other: &Self,
+        f: F,
+        tag: &'static str,
+    ) -> Option<Self> {
         if self.shape == other.shape && self.strides == other.strides && self.is_contiguous() {
+            let p = P::start();
             let out = self
                 .data
                 .iter()
                 .zip(other.data.iter())
                 .map(|(a, b)| f(*a, *b))
                 .collect();
+            p.stop(tag);
             Some(Self::new(out, self.shape.clone(), self.strides.clone()))
         } else {
+            let p = P::start();
             let shape = self.shape.broadcast(&other.shape)?;
             let strides: Strides = (&shape).into();
             let len = shape.size;
@@ -72,6 +90,7 @@ impl Ops<f64, Seq> for CpuData {
                 let pos = strides.position(&idx);
                 out[pos] = f(va, vb);
             }
+            p.stop(tag);
             Some(Self::new(out, shape, strides))
         }
     }
@@ -81,9 +100,10 @@ impl Ops<f64, Seq> for CpuData {
         f: F,
         dim: usize,
         zero: f64,
-        _tag: &'static str,
+        tag: &'static str,
     ) -> Option<Self> {
         if dim < self.shape.data().len() {
+            let p = P::start();
             let mut shape_data = self.shape.data().to_vec();
             shape_data[dim] = 1;
             let shape = Shape::new(shape_data);
@@ -101,6 +121,7 @@ impl Ops<f64, Seq> for CpuData {
                     out[out_pos] = f(v_out, v_self);
                 }
             }
+            p.stop(tag);
             Some(Self::new(out, shape, strides))
         } else {
             None
@@ -108,6 +129,7 @@ impl Ops<f64, Seq> for CpuData {
     }
 
     fn matmul(&self, other: &Self) -> Option<Self> {
+        let p = P::start();
         let self_shape_len = self.shape.len();
         let other_shape_len = other.shape.len();
         (self.shape[self_shape_len - 1] == other.shape[other_shape_len - 2]).then_some(0)?;
@@ -137,6 +159,7 @@ impl Ops<f64, Seq> for CpuData {
             }
             *out_i = tmp;
         }
+        p.stop("mm");
 
         Some(Self::new(out, shape, strides))
     }
@@ -146,13 +169,15 @@ impl Ops<f64, Seq> for CpuData {
 mod tests {
     use proptest::proptest;
 
+    use crate::util::profiler::NoopProfiler;
+
     use super::*;
 
     #[test]
     fn expand_test() {
         let input = CpuData::from_scalar(0.);
         let deriv = CpuData::from_1d(&[1., 1.]);
-        let res = Ops::<f64, Seq>::expand(&input, deriv)
+        let res = Ops::<f64, Seq, NoopProfiler>::expand(&input, deriv)
             .map(|d| d.data)
             .unwrap();
         assert_eq!(vec![2.], *res);
@@ -169,7 +194,8 @@ mod tests {
         fn reduce_test_sum(t1 in CpuData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
-                t1p = Ops::<f64, Seq>::reduce(&t1p, |a, b| a + b, i, 0., "sum").unwrap();
+                t1p = Ops::<f64, Seq, NoopProfiler>::reduce(&t1p, |a, b| a + b, i, 0., "sum")
+                    .unwrap();
             }
             let res = t1.data.clone().iter().fold(0., |acc, a| acc + a);
             assert_eq!(1, t1p.data.len());
@@ -180,7 +206,8 @@ mod tests {
         fn reduce_test_mul(t1 in CpuData::arbitrary()) {
             let mut t1p = t1.clone();
             for i in 0..t1.shape.data().len() {
-                t1p = Ops::<f64, Seq>::reduce(&t1p, |a, b| a * b, i, 1., "all").unwrap();
+                t1p = Ops::<f64, Seq, NoopProfiler>::reduce(&t1p, |a, b| a * b, i, 1., "all")
+                    .unwrap();
             }
             let res = t1.data.clone().iter().fold(1., |acc, a| acc * a);
             assert_eq!(1, t1p.data.len());
@@ -190,8 +217,8 @@ mod tests {
         #[test]
         fn zip_commutative_test(t1 in CpuData::arbitrary(), t2 in CpuData::arbitrary()) {
             // this works if f is commutative
-            let res1 = Ops::<f64, Seq>::zip(&t1, &t2, |a, b| a + b, "plus");
-            let res2 = Ops::<f64, Seq>::zip(&t2, &t1, |a, b| a + b, "plus");
+            let res1 = Ops::<f64, Seq, NoopProfiler>::zip(&t1, &t2, |a, b| a + b, "plus");
+            let res2 = Ops::<f64, Seq, NoopProfiler>::zip(&t2, &t1, |a, b| a + b, "plus");
             match (res1, res2) {
                 (Some(r1), Some(r2)) => assert_tensor_eq(&r1, &r2),
                 (None, None) => (),
@@ -201,12 +228,12 @@ mod tests {
 
         #[test]
         fn map_identity_test(t in CpuData::arbitrary()) {
-            assert_tensor_eq(&t, &Ops::<f64, Seq>::map(&t, |f| f, "id"));
+            assert_tensor_eq(&t, &Ops::<f64, Seq, NoopProfiler>::map(&t, |f| f, "id"));
         }
 
         #[test]
         fn map_broadcast_identity_test(t in CpuData::arbitrary()) {
-            let bc = Ops::<f64, Seq>::map_broadcast(&t, &t, |f| f, "id");
+            let bc = Ops::<f64, Seq, NoopProfiler>::map_broadcast(&t, &t, |f| f, "id");
             assert!(bc.is_some());
             assert_tensor_eq(&t, bc.as_ref().unwrap());
         }
@@ -217,8 +244,12 @@ mod tests {
             let g = |a: f64| a.powf(2.);
             let fg = |a: f64| g(f(a));
             assert_tensor_eq(
-                &Ops::<f64, Seq>::map(&Ops::<f64, Seq>::map(&t.clone(), f, "one"), g, "two"),
-                &Ops::<f64, Seq>::map(&t, fg, "three")
+                &Ops::<f64, Seq, NoopProfiler>::map(
+                    &Ops::<f64, Seq, NoopProfiler>::map(&t.clone(), f, "one"),
+                    g,
+                    "two",
+                ),
+                &Ops::<f64, Seq, NoopProfiler>::map(&t, fg, "three")
             );
         }
 
@@ -227,9 +258,9 @@ mod tests {
             let f = |a: f64| a * 2.;
             let g = |a: f64| a.powf(2.);
             let fg = |a: f64| g(f(a));
-            let t1 = Ops::<f64, Seq>::map_broadcast(&t.clone(), &t, f, "one")
-                .and_then(|t| Ops::<f64, Seq>::map_broadcast(&t, &t, g, "two"));
-            let t2 = Ops::<f64, Seq>::map_broadcast(&t, &t, fg, "three");
+            let t1 = Ops::<f64, Seq, NoopProfiler>::map_broadcast(&t.clone(), &t, f, "one")
+                .and_then(|t| Ops::<f64, Seq, NoopProfiler>::map_broadcast(&t, &t, g, "two"));
+            let t2 = Ops::<f64, Seq, NoopProfiler>::map_broadcast(&t, &t, fg, "three");
             assert!(t1.is_some());
             assert!(t2.is_some());
             assert_tensor_eq(t1.as_ref().unwrap(), t2.as_ref().unwrap());
@@ -237,7 +268,11 @@ mod tests {
 
         #[test]
         fn map_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
-            let map = Ops::<f64, Seq>::map(&CpuData::zeros(shape.clone()), |z| z + f, "tag");
+            let map = Ops::<f64, Seq, NoopProfiler>::map(
+                &CpuData::zeros(shape.clone()),
+                |z| z + f,
+                "tag",
+            );
             assert_eq!(shape.size, map.data.len());
             assert!(map.data.iter().all(|e| *e == f));
         }
@@ -245,7 +280,7 @@ mod tests {
         #[test]
         fn map_broadcast_test(shape in Shape::arbitrary(), f in -1_f64..1.) {
             let t = CpuData::zeros(shape.clone());
-            let res = Ops::<f64, Seq>::map_broadcast(&t, &t, |z| z + f, "tag");
+            let res = Ops::<f64, Seq, NoopProfiler>::map_broadcast(&t, &t, |z| z + f, "tag");
             assert!(res.is_some());
             let map = res.unwrap();
             assert_eq!(shape.size, map.data.len());

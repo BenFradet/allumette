@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use wgpu::BufferUsages;
 
 use crate::{
@@ -7,15 +5,18 @@ use crate::{
     ops::ops::Ops,
     shaping::shape::Shape,
     storage::{data::Data, gpu_data::GpuData},
+    util::profiler::Profiler,
     wgpu::workgroup_info::WorkgroupInfo,
 };
 
 // TODO: abstract fn, they're all doing mostly the same
-impl Ops<f32, Gpu> for GpuData<'_> {
+impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
     // TODO: rm unwraps
     fn map<F: Fn(f32) -> f32 + Sync>(&self, _f: F, tag: &'static str) -> Self {
-        //let _ = self.context.flush_commands();
-        //let start = Instant::now();
+        if P::ENABLED {
+            let _ = self.context.flush_commands();
+        }
+        let p = P::start();
 
         let workgroup_info = (&self.shape).into();
         let gpu_size = self.shape.gpu_byte_size();
@@ -44,8 +45,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         self.context
             .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
-        //let _ = self.context.flush_commands();
-        //println!("{tag},{:?}", start.elapsed().as_micros());
+        if P::ENABLED {
+            let _ = self.context.flush_commands();
+        }
+        p.stop(tag);
 
         self.with_buffer(output_buffer)
     }
@@ -59,8 +62,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
     where
         Self: Sized,
     {
-        //let _ = self.context.flush_commands();
-        //let start = Instant::now();
+        if P::ENABLED {
+            let _ = self.context.flush_commands();
+        }
+        let p = P::start();
 
         let workgroup_info = (&out.shape).into();
         // TODO: use out.buffer.size?
@@ -90,8 +95,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         self.context
             .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
-        //let _ = self.context.flush_commands();
-        //println!("{tag},{:?}", start.elapsed().as_micros());
+        if P::ENABLED {
+            let _ = self.context.flush_commands();
+        }
+        p.stop(tag);
 
         Some(out.with_buffer(output_buffer))
     }
@@ -105,8 +112,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
     where
         Self: Sized,
     {
-        //let _ = self.context.flush_commands();
-        //let start = Instant::now();
+        if P::ENABLED {
+            let _ = self.context.flush_commands();
+        }
+        let p = P::start();
 
         let shape = if self.shape == other.shape {
             self.shape.clone()
@@ -146,8 +155,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         self.context
             .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
-        //let _ = self.context.flush_commands();
-        //println!("{tag},{:?}", start.elapsed().as_micros());
+        if P::ENABLED {
+            let _ = self.context.flush_commands();
+        }
+        p.stop(tag);
 
         Some(Self::from_buffer(
             shape,
@@ -168,8 +179,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         Self: Sized,
     {
         if dim < self.shape.data().len() {
-            //let _ = self.context.flush_commands();
-            //let start = Instant::now();
+            if P::ENABLED {
+                let _ = self.context.flush_commands();
+            }
+            let p = P::start();
 
             let mut shape_data = self.shape.data().to_vec();
             shape_data[dim] = 1;
@@ -200,8 +213,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
             self.context
                 .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
-            //let _ = self.context.flush_commands();
-            //println!("{tag},{:?}", start.elapsed().as_micros());
+            if P::ENABLED {
+                let _ = self.context.flush_commands();
+            }
+            p.stop(tag);
 
             Some(Self::from_buffer(
                 shape,
@@ -215,8 +230,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
     }
 
     fn matmul(&self, other: &Self) -> Option<Self> {
-        //let _ = self.context.flush_commands();
-        //let start = Instant::now();
+        if P::ENABLED {
+            let _ = self.context.flush_commands();
+        }
+        let p = P::start();
 
         let self_shape_len = self.shape.len();
         let other_shape_len = other.shape.len();
@@ -274,8 +291,10 @@ impl Ops<f32, Gpu> for GpuData<'_> {
         self.context
             .enqueue_command(&workgroup_info, &pipeline, &bind_group);
 
-        //let _ = self.context.flush_commands();
-        //println!("mm,{:?}", start.elapsed().as_micros());
+        if P::ENABLED {
+            let _ = self.context.flush_commands();
+        }
+        p.stop("mm");
 
         Some(Self::from_buffer(
             shape,
@@ -288,7 +307,9 @@ impl Ops<f32, Gpu> for GpuData<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{shaping::shape::Shape, wgpu::wgpu_context::get_wgpu_context};
+    use crate::{
+        shaping::shape::Shape, util::profiler::NoopProfiler, wgpu::wgpu_context::get_wgpu_context,
+    };
     use serial_test::serial;
 
     use super::*;
@@ -300,7 +321,7 @@ mod tests {
         let strides = (&shape).into();
         let input: Vec<_> = (1..9).map(|u| u as f32).collect();
         let td = GpuData::new(&input, shape, strides, get_wgpu_context());
-        let res = td.map_broadcast(&td, |f| -f, "neg");
+        let res = Ops::<f32, Gpu, NoopProfiler>::map_broadcast(&td, &td, |f| -f, "neg");
         let cpu_data = res.unwrap().to_cpu().unwrap();
         assert_eq!(vec![-1., -2., -3., -4., -5., -6., -7., -8.], cpu_data);
     }

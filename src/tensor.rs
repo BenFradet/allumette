@@ -1250,7 +1250,7 @@ mod tests {
     }
 
     mod gpu {
-        use crate::backend::backend::CpuSeqBackend;
+        use crate::{backend::backend::CpuSeqBackend, util::profiler::NoopProfiler};
 
         use super::*;
 
@@ -1728,7 +1728,7 @@ mod tests {
         #[test]
         #[serial(gpu)]
         fn test_broadcast_add_backward() {
-            let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[1., 2., 3.]);
+            let xc: Tensor<CpuSeqBackend<NoopProfiler>> = Tensor::from_1d(&[1., 2., 3.]);
             let oc = xc.clone() + Tensor::from_scalar(5.);
             let lc = oc.sum(None);
             let mc = lc.backward();

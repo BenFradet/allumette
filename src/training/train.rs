@@ -5,7 +5,7 @@ use crate::{
     math::element::Element,
     optim::gradient_descent::GradientDescent,
     shaping::shape::Shape,
-    tensor::Tensor, util::debugger::Debugger,
+    tensor::Tensor, util::{debugger::Debugger, profiler::Profiler},
 };
 
 use super::{dataset::Dataset, network::Network};
@@ -46,6 +46,8 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 
         debugger.debug(&loss, &labels, &out, (iteration, iterations), start_time);
     }
+
+    <B::Profiler>::flush("profile.csv");
 }
 
 #[cfg(test)]

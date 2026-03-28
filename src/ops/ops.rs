@@ -1,8 +1,8 @@
 use crate::{
-    backend::mode::Mode, math::element::Element, shaping::shape::Shape, storage::data::Data,
+    backend::mode::Mode, math::element::Element, shaping::shape::Shape, storage::data::Data, util::profiler::Profiler,
 };
 
-pub trait Ops<E: Element, T: Mode> {
+pub trait Ops<E: Element, T: Mode, P: Profiler> {
     fn map<F: Fn(E) -> E + Sync>(&self, f: F, tag: &'static str) -> Self;
     fn map_broadcast<F: Fn(E) -> E + Sync>(
         &self,

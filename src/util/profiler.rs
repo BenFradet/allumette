@@ -7,6 +7,7 @@ pub trait Profiler {
     fn flush(path: &str);
 }
 
+#[derive(Clone, Debug)]
 pub struct NoopProfiler;
 impl Profiler for NoopProfiler {
     const ENABLED: bool = false;
@@ -17,6 +18,7 @@ impl Profiler for NoopProfiler {
     fn flush(_path: &str) {}
 }
 
+#[derive(Clone, Debug)]
 pub struct CsvProfiler {
     start: Instant,
 }
