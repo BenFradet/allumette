@@ -3,7 +3,10 @@ use std::io::Error;
 use allumette::{
     backend::backend::{CpuParBackend, CpuSeqBackend, GpuBackend},
     training::{dataset::Dataset, train},
-    util::debugger::{TerseDebugger, VizDebugger},
+    util::{
+        debugger::{TerseDebugger, VizDebugger},
+        profiler::{CsvProfiler, NoopProfiler, Profiler},
+    },
 };
 use clap::{Parser, Subcommand, ValueEnum};
 
@@ -21,6 +24,14 @@ enum CliCommand {
         backend: CliBackend,
         #[arg(short, long, default_value_t = 4)]
         power_ten_points: u32,
+    },
+    Profile {
+        #[arg(value_enum, short, long)]
+        backend: CliBackend,
+        #[arg(short, long, default_value_t = 4)]
+        power_ten_points: u32,
+        #[arg(short, long)]
+        output_path: String,
     },
 }
 
@@ -51,6 +62,21 @@ fn main() -> Result<(), Error> {
             );
             Ok(())
         }
+        Some(CliCommand::Profile {
+            backend,
+            power_ten_points,
+            output_path: profile_path,
+        }) => {
+            profile(
+                backend,
+                power_ten_points,
+                hidden_layer_size,
+                learning_rate,
+                iterations,
+                profile_path,
+            );
+            Ok(())
+        }
         _ => viz(hidden_layer_size, learning_rate, iterations),
     }
 }
@@ -70,10 +96,30 @@ fn viz(hidden_layer_size: usize, learning_rate: f64, iterations: usize) -> Resul
             iterations,
             hidden_layer_size,
             &mut debugger_thread_clone,
+            None,
         );
     });
 
     debugger.run()
+}
+
+fn profile(
+    backend: CliBackend,
+    power_ten_points: u32,
+    hidden_layer_size: usize,
+    learning_rate: f64,
+    iterations: usize,
+    profile_path: String,
+) {
+    let points = 10_usize.pow(power_ten_points);
+    run_training::<CsvProfiler>(
+        &backend,
+        points,
+        hidden_layer_size,
+        learning_rate,
+        iterations,
+        Some(&profile_path),
+    )
 }
 
 fn benchmark(
@@ -90,37 +136,58 @@ fn benchmark(
         } else {
             println!("run {run}/5 backend={backend:?} points={points}");
         }
-        match backend {
-            CliBackend::Seq => {
-                let dataset = Dataset::circle(points);
-                train::train::<CpuSeqBackend, _>(
-                    dataset,
-                    learning_rate,
-                    iterations,
-                    hidden_layer_size,
-                    &mut TerseDebugger {},
-                );
-            }
-            CliBackend::Par => {
-                let dataset = Dataset::circle(points);
-                train::train::<CpuParBackend, _>(
-                    dataset,
-                    learning_rate,
-                    iterations,
-                    hidden_layer_size,
-                    &mut TerseDebugger {},
-                );
-            }
-            CliBackend::Gpu => {
-                let dataset = Dataset::circle(points);
-                train::train::<GpuBackend, _>(
-                    dataset,
-                    learning_rate as f32,
-                    iterations,
-                    hidden_layer_size,
-                    &mut TerseDebugger {},
-                );
-            }
+        run_training::<NoopProfiler>(
+            &backend,
+            points,
+            hidden_layer_size,
+            learning_rate,
+            iterations,
+            None,
+        )
+    }
+}
+
+fn run_training<P: Profiler + Clone + std::fmt::Debug + 'static>(
+    backend: &CliBackend,
+    points: usize,
+    hidden_layer_size: usize,
+    learning_rate: f64,
+    iterations: usize,
+    profile_path: Option<&String>,
+) {
+    match backend {
+        CliBackend::Seq => {
+            let dataset = Dataset::circle(points);
+            train::train::<CpuSeqBackend<P>, _>(
+                dataset,
+                learning_rate,
+                iterations,
+                hidden_layer_size,
+                &mut TerseDebugger {},
+                profile_path,
+            );
+        }
+        CliBackend::Par => {
+            let dataset = Dataset::circle(points);
+            train::train::<CpuParBackend<P>, _>(
+                dataset,
+                learning_rate,
+                iterations,
+                hidden_layer_size,
+                &mut TerseDebugger {},
+                profile_path,
+            );
+        }
+        CliBackend::Gpu => {
+            let dataset = Dataset::circle(points);
+            train::train::<GpuBackend<P>, _>(
+                dataset,
+                learning_rate as f32,
+                iterations,
+                hidden_layer_size,
+                &mut TerseDebugger {},
+                profile_path,
+            );
         }
     }
 }

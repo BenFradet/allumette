@@ -16,6 +16,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     iterations: usize,
     hidden_layer_size: usize,
     debugger: &mut D,
+    profiling_path: Option<&String>,
 ) {
     let mut network = Network::new(hidden_layer_size);
     let gd = GradientDescent::new(learning_rate);
@@ -47,7 +48,10 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
         debugger.debug(&loss, &labels, &out, (iteration, iterations), start_time);
     }
 
-    <B::Profiler>::flush("profile.csv");
+    if let Some(path) =  profiling_path {
+        <B::Profiler>::flush(path);
+        println!("profiling information written out to {path}");
+    }
 }
 
 #[cfg(test)]
