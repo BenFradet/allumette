@@ -23,6 +23,7 @@ var<workgroup> b_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
 // used to create local arrays
 // TODO: dynamically change based on gpu limits
 const TILE_SIZE: u32 = 32u;
+const WG_DIM: u32 = 16u;
 
 // shape lengths
 const PREAMBLE: u32 = 3u;
@@ -103,34 +104,61 @@ fn call(
     let b_col_s = b_strides(b_shape_len - 1u);
     let b_row_s = b_strides(b_shape_len - 2u);
 
-    var acc = 0.;
+    var acc00 = 0.;
+    var acc01 = 0.;
+    var acc10 = 0.;
+    var acc11 = 0.;
     let n_tiles = div_ceil(a_col, TILE_SIZE);
     for (var tile = 0u; tile < n_tiles; tile = tile + 1u) {
         // starting index of the tile
         let tile_idx = tile * TILE_SIZE;
 
-        // each thread loads one element of a_tile
-        if ((lx + tile_idx) < a_col && (ly + ty) < a_row) {
-            let a_idx = z * a_fst_s + (lx + tile_idx) * a_col_s + (ly + ty) * a_row_s;
-            a_tile[ly][lx] = input_a[a_idx];
-        } else {
-            a_tile[ly][lx] = 0.;
-        }
+        //// each thread loads one element of a_tile
+        //if ((lx + tile_idx) < a_col && (ly + ty) < a_row) {
+        //    let a_idx = z * a_fst_s + (lx + tile_idx) * a_col_s + (ly + ty) * a_row_s;
+        //    a_tile[ly][lx] = input_a[a_idx];
+        //} else {
+        //    a_tile[ly][lx] = 0.;
+        //}
 
-        // each thread loads one element of b_tile
-        if ((lx + tx) < b_col && (ly + tile_idx) < b_row) {
-            let b_idx = z * b_fst_s + (lx + tx) * b_col_s + (ly + tile_idx) * b_row_s;
-            b_tile[ly][lx] = input_b[b_idx];
-        } else {
-            b_tile[ly][lx] = 0.;
+        //// each thread loads one element of b_tile
+        //if ((lx + tx) < b_col && (ly + tile_idx) < b_row) {
+        //    let b_idx = z * b_fst_s + (lx + tx) * b_col_s + (ly + tile_idx) * b_row_s;
+        //    b_tile[ly][lx] = input_b[b_idx];
+        //} else {
+        //    b_tile[ly][lx] = 0.;
+        //}
+
+        // each thread loads 2x2 elements into shared memory
+        for (var r = ly; r < TILE_SIZE; r += WG_DIM) {
+            for (var c = lx; c < TILE_SIZE; c += WG_DIM) {
+                if ((c + tile_idx) < a_col && (r + ty) < a_row) {
+                    a_tile[r][c] = input_a[z * a_fst_s + (c + tile_idx) * a_col_s + (r + ty) * a_row_s];
+                } else {
+                    a_tile[r][c] = 0.;
+                }
+                if ((c + tx) < b_col && (r + tile_idx) < b_row) {
+                    b_tile[r][c] = input_b[z * b_fst_s + (c + tx) * b_col_s + (r + tile_idx) * b_row_s];
+                } else {
+                    b_tile[r][c] = 0.;
+                }
+            }
         }
 
         workgroupBarrier();
 
         // dot product of a row and b col (look into builtin op for dotp)
-        for (var inner_idx = 0u; inner_idx < TILE_SIZE; inner_idx = inner_idx + 1u) {
-            acc = fma(a_tile[ly][inner_idx], b_tile[inner_idx][lx], acc);
+        //for (var inner_idx = 0u; inner_idx < TILE_SIZE; inner_idx = inner_idx + 1u) {
+        //    acc = fma(a_tile[ly][inner_idx], b_tile[inner_idx][lx], acc);
+        //}
+        for (var k = 0u; k < TILE_SIZE; k = k + 1u) {
+            acc00 = fma(a_tile[ly][k],          b_tile[k][lx],          acc00);
+            acc01 = fma(a_tile[ly][k],          b_tile[k][lx + WG_DIM], acc01);
+            acc10 = fma(a_tile[ly + WG_DIM][k], b_tile[k][lx],          acc10);
+            acc11 = fma(a_tile[ly + WG_DIM][k], b_tile[k][lx + WG_DIM], acc11);
         }
+
+        workgroupBarrier();
     }
 
     let out_col = out_shape(out_shape_len - 1u);
@@ -138,8 +166,20 @@ fn call(
     let out_fst_s = out_strides(0u);
     let out_col_s = out_strides(out_shape_len - 1u);
     let out_row_s = out_strides(out_shape_len - 2u);
+    //if ((lx + tx) < out_col && (ly + ty) < out_row) {
+    //    let idx = z * out_fst_s + (lx + tx) * out_col_s + (ly + ty) * out_row_s;
+    //    output[idx] = acc;
+    //}
     if ((lx + tx) < out_col && (ly + ty) < out_row) {
-        let idx = z * out_fst_s + (lx + tx) * out_col_s + (ly + ty) * out_row_s;
-        output[idx] = acc;
+        output[z * out_fst_s + (lx + tx) * out_col_s + (ly + ty) * out_row_s] = acc00;
+    }
+    if ((lx + WG_DIM + tx) < out_col && (ly + ty) < out_row) {
+        output[z * out_fst_s + (lx + WG_DIM + tx) * out_col_s + (ly + ty) * out_row_s] = acc01;
+    }
+    if ((lx + tx) < out_col && (ly + WG_DIM + ty) < out_row) {
+        output[z * out_fst_s + (lx + tx) * out_col_s + (ly + WG_DIM + ty) * out_row_s] = acc10;
+    }
+    if ((lx + WG_DIM + tx) < out_col && (ly + WG_DIM + ty) < out_row) {
+        output[z * out_fst_s + (lx + WG_DIM + tx) * out_col_s + (ly + WG_DIM + ty) * out_row_s] = acc11;
     }
 }

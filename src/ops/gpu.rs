@@ -251,10 +251,11 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
         // TODO: use sqrt(limits.max_compute_invocations_per_workgroup)
         // max total invocations is 256 = 16 * 16 * 1
         let max_wg_size = 16;
+        let tile_size = 32;
         let workgroup_info = WorkgroupInfo {
             count: (
-                shape[2].div_ceil(max_wg_size), // x tiles over columns
-                shape[1].div_ceil(max_wg_size), // y tiles over rows
+                shape[2].div_ceil(tile_size), // x tiles over columns
+                shape[1].div_ceil(tile_size), // y tiles over rows
                 shape[0],
             ),
             size: (max_wg_size, max_wg_size, 1),
