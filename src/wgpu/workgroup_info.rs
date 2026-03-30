@@ -25,6 +25,25 @@ impl WorkgroupInfo {
         }
     }
 
+    pub fn for_matmul(sqrt_max_invoc_per_wg: usize, shape: &Shape) -> (Self, usize) {
+        let x_tiles = shape[2].div_ceil(sqrt_max_invoc_per_wg);
+        let y_tiles = shape[1].div_ceil(sqrt_max_invoc_per_wg);
+        let batch = shape[0];
+
+        let (y_dispatch, y_chunks) = if y_tiles > MAX_WORKGROUP_COUNT {
+            (MAX_WORKGROUP_COUNT, y_tiles.div_ceil(MAX_WORKGROUP_COUNT))
+        } else {
+            (y_tiles, 1)
+        };
+        (
+            WorkgroupInfo {
+                count: (x_tiles, y_dispatch, batch * y_chunks),
+                size: (sqrt_max_invoc_per_wg, sqrt_max_invoc_per_wg, 1),
+            },
+            y_chunks,
+        )
+    }
+
     pub fn workgroup_size(&self) -> String {
         format!(
             "@workgroup_size({}, {}, {})",

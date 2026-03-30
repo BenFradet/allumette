@@ -25,7 +25,7 @@ var<workgroup> b_tile: array<array<f32, TILE_SIZE>, TILE_SIZE>;
 const TILE_SIZE: u32 = 32u;
 
 // shape lengths
-const PREAMBLE: u32 = 3u;
+const PREAMBLE: u32 = 4u;
 
 fn a_shape(i: u32) -> u32 {
     return metadata[i + PREAMBLE];
@@ -81,11 +81,14 @@ fn call(
     // positions of the thread in the tile
     let lx = local_id.x;
     let ly = local_id.y;
+    // to go beyound the 65535 limit
+    let y_chunks = metadata[3u];
+    let y_chunk = workgroup_id.z % y_chunks;
+    // batch index
+    let z = workgroup_id.z / y_chunks;
     // positions of the tile in the grid
     let tx = workgroup_id.x * TILE_SIZE;
-    let ty = workgroup_id.y * TILE_SIZE;
-    // batch index
-    let z = workgroup_id.z;
+    let ty = (workgroup_id.y + y_chunk * 65535u) * TILE_SIZE;
 
     let a_shape_len = metadata[0];
     let b_shape_len = metadata[1];

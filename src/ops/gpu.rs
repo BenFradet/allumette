@@ -250,15 +250,8 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
         let op = "mm";
         // TODO: use sqrt(limits.max_compute_invocations_per_workgroup)
         // max total invocations is 256 = 16 * 16 * 1
-        let max_wg_size = 16;
-        let workgroup_info = WorkgroupInfo {
-            count: (
-                shape[2].div_ceil(max_wg_size), // x tiles over columns
-                shape[1].div_ceil(max_wg_size), // y tiles over rows
-                shape[0],
-            ),
-            size: (max_wg_size, max_wg_size, 1),
-        };
+        let sqrt_max_invoc_per_wg = 16;
+        let (workgroup_info, y_chunks) = WorkgroupInfo::for_matmul(sqrt_max_invoc_per_wg, &shape);
         let gpu_size = shape.gpu_byte_size();
 
         let output_buffer = self.context.create_output_buffer(
@@ -276,7 +269,7 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
             // backwards matmul tranposes beforehand so the strides are not contiguous
             // i.e. can't use into
             &[&self.strides, &other.strides, &strides],
-            &[],
+            &[y_chunks],
         );
         let bind_group = self.context.create_bind_group(
             &[
