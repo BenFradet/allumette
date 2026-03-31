@@ -2055,6 +2055,8 @@ mem | 0.12MiB | 2.28MiB | 22.8MiB | 229MiB | 2.3GiB | 22.89GiB
 Profiling
 ===
 
+![image:width:100%](img/profile_plot.png)
+
 igp 10^5:
 - 240
 - 230 map/zip fast path
@@ -2063,20 +2065,7 @@ igp 10^5:
 - 191 contiguous fast path
 - 152 expand fast path
 
-op|share
--|-
-matmul | 22%
-sum (reduce) | 15%
-relu_diff (zip) | 14%
-add (zip) | 14%
-relu (map) | 10%
-copy (map) | 4%
-mul (zip) | 2.5%
-neg (map) | 1.2%
-
 profiling plot
-
-histograms of ops
 
 ---
 
