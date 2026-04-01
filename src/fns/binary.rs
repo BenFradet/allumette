@@ -75,6 +75,71 @@ impl<'a, B: Backend> Binary<'a, B> for Mul {
     }
 }
 
+pub struct Div;
+impl<'a, B: Backend> Binary<'a, B> for Div {
+    fn forward(&self, a: &B::Storage<'a>, b: &B::Storage<'a>) -> B::Storage<'a> {
+        a.zip(
+            b,
+            |e1, e2| {
+                if e2 != B::Element::zero() {
+                    e1 / e2
+                } else {
+                    B::Element::zero()
+                }
+            },
+            <Div as Binary<'a, B>>::tag(self),
+        )
+        .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
+            a.shape().clone(),
+        ))
+    }
+
+    fn backward(
+        &self,
+        lhs: &B::Storage<'a>,
+        rhs: &B::Storage<'a>,
+        d: &B::Storage<'a>,
+    ) -> (B::Storage<'a>, B::Storage<'a>) {
+        (
+            // d / rhs
+            rhs.zip(
+                d,
+                |er, ed| {
+                    if er != B::Element::zero() {
+                        ed / er
+                    } else {
+                        B::Element::zero()
+                    }
+                },
+                "div_diff_lhs",
+            )
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
+                d.shape().clone(),
+            )),
+            // -d * lhs / rhs^2
+            lhs.zip(
+                rhs,
+                |el, er| {
+                    if er != B::Element::zero() {
+                        el / (er * er)
+                    } else {
+                        B::Element::zero()
+                    }
+                },
+                "div_diff_rhs_1",
+            )
+            .and_then(|lr| lr.zip(d, |elr, ed| -ed * elr, "div_diff_rhs_2"))
+            .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
+                d.shape().clone(),
+            )),
+        )
+    }
+
+    fn tag(&self) -> &'static str {
+        "div"
+    }
+}
+
 pub struct Lt;
 impl<'a, B: Backend> Binary<'a, B> for Lt {
     fn forward(&self, a: &B::Storage<'a>, b: &B::Storage<'a>) -> B::Storage<'a> {

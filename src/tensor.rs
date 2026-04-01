@@ -5,7 +5,7 @@ use crate::{
         mode::Mode,
     },
     fns::{
-        binary::{Add, All, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
+        binary::{Add, All, Div, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
         function::Function,
         unary::{Copy, Exp, Inv, Ln, Neg, Relu, Sig},
     },
@@ -565,10 +565,8 @@ impl<'a, B: Backend> ops::Mul<Tensor<'a, B>> for Tensor<'a, B> {
 impl<'a, B: Backend> ops::Div<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
-    // TODO: fuse
     fn div(self, rhs: Tensor<'a, B>) -> Self::Output {
-        let new_rhs = Forward::unary(Inv {}, rhs);
-        Forward::binary(Mul {}, self, new_rhs)
+        Forward::binary(Div {}, self, rhs)
     }
 }
 

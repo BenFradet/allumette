@@ -107,6 +107,34 @@ fn inv_diff(i: f32, d: f32) -> f32 {
     }
 }
 
+fn div(l: f32, r: f32) -> f32 {
+    if (r == 0.) {
+        return 0.;
+    } else {
+        return l / r;
+    }
+}
+
+fn div_diff_lhs(i: f32, d: f32) -> f32 {
+    if (i == 0.) {
+        return 0.;
+    } else {
+        return d / i;
+    }
+}
+
+fn div_diff_rhs_1(l: f32, r: f32) -> f32 {
+    if (r == 0.) {
+        return 0.;
+    } else {
+        return l / (r * r);
+    }
+}
+
+fn div_diff_rhs_2(i: f32, d: f32) -> f32 {
+    return -d * i;
+}
+
 fn prod(
     start: u32,
     shape_len: u32,
