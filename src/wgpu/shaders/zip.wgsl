@@ -83,19 +83,27 @@ fn is_close(a: f32, b: f32) -> f32 {
     }
 }
 
-fn ln_diff(a: f32, b: f32) -> f32 {
-    if (a == 0.) {
-        return b;
+fn ln_diff(i: f32, d: f32) -> f32 {
+    if (i == 0.) {
+        return d;
     } else {
-        return b / a;
+        return d / i;
     }
 }
 
-fn relu_diff(a: f32, b: f32) -> f32 {
-    if (a > 0.) {
-        return b;
+fn relu_diff(i: f32, d: f32) -> f32 {
+    if (i > 0.) {
+        return d;
     } else {
         return 0.;
+    }
+}
+
+fn inv_diff(i: f32, d: f32) -> f32 {
+    if (i == 0.) {
+        return -d;
+    } else {
+        return -d / (i * i);
     }
 }
 

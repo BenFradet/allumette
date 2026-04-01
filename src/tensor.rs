@@ -565,6 +565,7 @@ impl<'a, B: Backend> ops::Mul<Tensor<'a, B>> for Tensor<'a, B> {
 impl<'a, B: Backend> ops::Div<Tensor<'a, B>> for Tensor<'a, B> {
     type Output = Tensor<'a, B>;
 
+    // TODO: fuse
     fn div(self, rhs: Tensor<'a, B>) -> Self::Output {
         let new_rhs = Forward::unary(Inv {}, rhs);
         Forward::binary(Mul {}, self, new_rhs)

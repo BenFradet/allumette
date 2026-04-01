@@ -40,13 +40,16 @@ impl<'a, B: Backend> Unary<'a, B> for Inv {
         )
     }
 
-    // decomposed for gpu, deriv 1/x => -1/x^2
+    // deriv 1/x => -1/x^2
     fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
-        let d_neg = d.map(|e| -e, "neg");
         input
-            .zip(input, |e1, e2| e1 * e2, "mul")
-            .map(|a2| <Inv as Unary<'a, B>>::forward(self, &a2))
-            .and_then(|a2_inv| d_neg.zip(&a2_inv, |e1, e2| e1 * e2, "mul"))
+            .zip(d, |ei, ed| {
+                if ei == B::Element::zero() {
+                    -ed
+                } else {
+                    -ed / (ei * ei)
+                }
+            }, "inv_diff")
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
@@ -76,11 +79,11 @@ impl<'a, B: Backend> Unary<'a, B> for Ln {
         input
             .zip(
                 d,
-                |e1, e2| {
-                    if e1 == B::Element::zero() {
-                        e2
+                |ei, ed| {
+                    if ei == B::Element::zero() {
+                        ed
                     } else {
-                        e2 / e1
+                        ed / ei
                     }
                 },
                 "ln_diff",
@@ -102,6 +105,7 @@ impl<'a, B: Backend> Unary<'a, B> for Sig {
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
+    // TODO: fuse for gpu
     fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
         let sig = <Sig as Unary<'a, B>>::forward(self, input);
         let minus_sig = sig.map(|e| -e, "neg");
@@ -128,7 +132,7 @@ impl<'a, B: Backend> Unary<'a, B> for Relu {
 
     fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
         input
-            .zip(d, |e1, e2| e1.relu_diff(e2), "relu_diff")
+            .zip(d, |ei, ed| ei.relu_diff(ed), "relu_diff")
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
@@ -145,9 +149,10 @@ impl<'a, B: Backend> Unary<'a, B> for Exp {
         a.map(|e| e.exp(), <Exp as Unary<'a, B>>::tag(self))
     }
 
+    // TODO: fuse for gpu
     fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
         let exp = <Exp as Unary<'a, B>>::forward(self, input);
-        exp.zip(d, |e1, e2| e1 * e2, "mul")
+        exp.zip(d, |ei, ed| ei * ed, "mul")
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
