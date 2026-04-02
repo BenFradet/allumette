@@ -107,6 +107,20 @@ fn inv_diff(i: f32, d: f32) -> f32 {
     }
 }
 
+fn sig(i: f32) -> f32 {
+    if (i >= 0.) {
+        return 1. / (1. + exp(-i));
+    } else {
+        let e = exp(i);
+        return e / (1. + e);
+    }
+}
+
+fn sig_diff(i: f32, d: f32) -> f32 {
+    let s = sig(i);
+    return d * s * (1. - s);
+}
+
 fn div(l: f32, r: f32) -> f32 {
     if (r == 0.) {
         return 0.;

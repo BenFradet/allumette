@@ -580,12 +580,12 @@ impl<'a, B: Backend> ops::Neg for Tensor<'a, B> {
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use crate::{
         backend::backend::{CpuParBackend, CpuSeqBackend},
         shaping::idx::Idx,
         storage::gpu_data::GpuData,
     };
+    use serial_test::serial;
 
     use super::*;
 
@@ -1295,7 +1295,8 @@ mod tests {
                 binary_grad_central_diff(reset1.clone(), reset2.clone(), &f, &idx1, true, 1e-3),
                 binary_grad_central_diff(reset1.clone(), reset2.clone(), f, &idx2, false, 1e-3),
             );
-            let (grad1_cpu, grad2_cpu) = (grad1.data.to_cpu().unwrap(), grad2.data.to_cpu().unwrap());
+            let (grad1_cpu, grad2_cpu) =
+                (grad1.data.to_cpu().unwrap(), grad2.data.to_cpu().unwrap());
             let (grad1_strides, grad2_strides) =
                 (grad1.data.strides.clone(), grad2.data.strides.clone());
             let (grad_data1, grad_data2) = (

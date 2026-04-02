@@ -43,13 +43,17 @@ impl<'a, B: Backend> Unary<'a, B> for Inv {
     // deriv 1/x => -1/x^2
     fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
         input
-            .zip(d, |ei, ed| {
-                if ei == B::Element::zero() {
-                    -ed
-                } else {
-                    -ed / (ei * ei)
-                }
-            }, "inv_diff")
+            .zip(
+                d,
+                |ei, ed| {
+                    if ei == B::Element::zero() {
+                        -ed
+                    } else {
+                        -ed / (ei * ei)
+                    }
+                },
+                "inv_diff",
+            )
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
@@ -105,15 +109,13 @@ impl<'a, B: Backend> Unary<'a, B> for Sig {
     }
 
     // sig'(x) = sig(x) * (1 - sig(x))
-    // TODO: fuse for gpu
     fn backward(&self, input: &B::Storage<'a>, d: &B::Storage<'a>) -> B::Storage<'a> {
-        let sig = <Sig as Unary<'a, B>>::forward(self, input);
-        let minus_sig = sig.map(|e| -e, "neg");
-        let one_minus_sig = <B::Storage<'a> as Data<B::Element>>::from_scalar(B::Element::one())
-            .zip(&minus_sig, |e1, e2| e1 + e2, "add");
-        one_minus_sig
-            .and_then(|oms| sig.zip(&oms, |e1, e2| e1 * e2, "mul"))
-            .and_then(|deriv| d.zip(&deriv, |e1, e2| e1 * e2, "mul"))
+        input
+            .zip(
+                d,
+                |ei, ed| ed * ei.sig() * (B::Element::one() - ei.sig()),
+                "sig_diff",
+            )
             .unwrap_or(<B::Storage<'a> as Data<B::Element>>::ones(
                 d.shape().clone(),
             ))
