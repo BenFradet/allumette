@@ -6,7 +6,7 @@ use crate::{
     shaping::shape::Shape,
     storage::{data::Data, gpu_data::GpuData},
     util::profiler::Profiler,
-    wgpu::workgroup_info::WorkgroupInfo,
+    wgpu::workgroup_info::{MAX_WORKGROUP_SIZE, WorkgroupInfo},
 };
 
 // TODO: abstract fn, they're all doing mostly the same
@@ -178,17 +178,30 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
     where
         Self: Sized,
     {
-        if dim < self.shape.data().len() {
+        if dim >= self.shape.data().len() {
+            None
+        } else {
             if P::ENABLED {
                 let _ = self.context.flush_commands();
             }
             let p = P::start();
 
+            let reduce_dim_size = self.shape.data()[dim];
+            let wg_size = MAX_WORKGROUP_SIZE.min(reduce_dim_size.next_power_of_two());
+
+            let two_pass = reduce_dim_size > wg_size * wg_size;
+            let (target_dim, reduce_arg) = if two_pass {
+                (reduce_dim_size.div_ceil(wg_size), wg_size)
+            } else {
+                (1, reduce_dim_size)
+            };
+
             let mut shape_data = self.shape.data().to_vec();
-            shape_data[dim] = 1;
+            shape_data[dim] = target_dim;
             let shape = Shape::new(shape_data);
+            let wg_info = WorkgroupInfo::for_reduce(reduce_arg, &shape);
+
             let strides = (&shape).into();
-            let workgroup_info = WorkgroupInfo::for_reduce(self.shape.data()[dim], &shape);
             let gpu_size = shape.gpu_byte_size();
             let output_buffer = self.context.create_output_buffer(
                 gpu_size,
@@ -198,7 +211,7 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
 
             let pipeline =
                 self.context
-                    .get_or_create_pipeline(tag, workgroup_info, 3, Some(zero))?;
+                    .get_or_create_pipeline(tag, wg_info, 3, Some(zero))?;
             let bind_group_layout = pipeline.get_bind_group_layout(0);
             let metadata_buffer = self.context.create_metadata_buffer(
                 &[&self.shape, &shape],
@@ -211,21 +224,25 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
             );
 
             self.context
-                .enqueue_command(&workgroup_info, &pipeline, &bind_group);
+                .enqueue_command(&wg_info, &pipeline, &bind_group);
 
             if P::ENABLED {
                 let _ = self.context.flush_commands();
             }
             p.stop(tag);
 
-            Some(Self::from_buffer(
+            let result = Self::from_buffer(
                 shape,
                 strides,
                 output_buffer,
                 self.context,
-            ))
-        } else {
-            None
+            );
+
+            if two_pass {
+                <GpuData<'_> as Ops<f32, Gpu, P>>::reduce::<F>(&result, _f, dim, zero, tag)
+            } else {
+                Some(result)
+            }
         }
     }
 

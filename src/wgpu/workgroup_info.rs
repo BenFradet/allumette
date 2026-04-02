@@ -13,7 +13,7 @@ pub struct WorkgroupInfo {
 }
 
 const MAX_WORKGROUP_COUNT: usize = 65535;
-const MAX_WORKGROUP_SIZE: usize = 256;
+pub const MAX_WORKGROUP_SIZE: usize = 256;
 
 impl WorkgroupInfo {
     pub fn for_reduce(reduce_dim: usize, shape: &Shape) -> Self {
