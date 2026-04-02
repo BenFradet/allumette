@@ -128,22 +128,33 @@ fn call(
         out_pos = index_to_position_out(out_shape_len, out_index);
     }
 
-    if (wg_active && local_id.x < reduce_size) {
-        out_index[reduce_dim] = local_id.x;
-        let pos = index_to_position_a(a_shape_len, out_index);
-        shared_block[local_id.x] = input[pos];
+    // each thread accumulates its portion with stride
+    var local_acc = reduce_default;
+    if (wg_active) {
+        for (var k = local_id.x; k < reduce_size; k += WG_SIZE) {
+            out_index[reduce_dim] = k;
+            let pos = index_to_position_a(a_shape_len, out_index);
+            local_acc = replace_with_operation(local_acc, input[pos]);
+        }
     }
+    shared_block[local_id.x] = local_acc;
 
     // all invocations must reach the barrier
     // otherwise it is undefined behaviour
     // no early returns allowed
     workgroupBarrier();
 
-    if (wg_active && local_id.x == 0u) {
-        var acc = reduce_default;
-        for (var i = 0u; i < reduce_size; i = i + 1u) {
-            acc = replace_with_operation(acc, shared_block[i]);
+    for (var stride = WG_SIZE / 2u; stride > 0u; stride = stride / 2u) {
+        if (wg_active && local_id.x < stride) {
+            shared_block[local_id.x] = replace_with_operation(
+                shared_block[local_id.x],
+                shared_block[local_id.x + stride]
+            );
         }
-        output[out_pos] = acc;
+        workgroupBarrier();
+    }
+
+    if (wg_active && local_id.x == 0u) {
+        output[out_pos] = shared_block[0];
     }
 }
