@@ -97,10 +97,6 @@ fn all(a: f32, b: f32) -> f32 {
   return a * b;
 }
 
-fn div_ceil(a: u32, b: u32) -> u32 {
-  return (a + b - 1u) / b;
-}
-
 @compute
 @workgroup_size(WG_SIZE)
 fn call(
@@ -135,28 +131,11 @@ fn call(
     // each thread accumulates its portion with stride
     var local_acc = reduce_default;
     if (wg_active) {
-        let out_reduce_dim_size = out_shape(reduce_dim);
-
-        if (out_reduce_dim_size <= 1u) {
-            // single pass
-            for (var k = local_id.x; k < reduce_size; k += WG_SIZE) {
-                out_index[reduce_dim] = k;
-                let pos = index_to_position_a(a_shape_len, out_index);
-                local_acc = replace_with_operation(local_acc, input[pos]);
-            }
-        } else {
-            // two-pass
-            let chunk_size = div_ceil(reduce_size, out_reduce_dim_size);
-            let chunk_idx = out_index[reduce_dim];
-            let chunk_start = chunk_idx * chunk_size;
-            let chunk_end = min(chunk_start + chunk_size, reduce_size);
-            for (var k = chunk_start + local_id.x; k < chunk_end; k += WG_SIZE) {
-                out_index[reduce_dim] = k;
-                let pos = index_to_position_a(a_shape_len, out_index);
-                local_acc = replace_with_operation(local_acc, input[pos]);
-            }
+        for (var k = local_id.x; k < reduce_size; k += WG_SIZE) {
+            out_index[reduce_dim] = k;
+            let pos = index_to_position_a(a_shape_len, out_index);
+            local_acc = replace_with_operation(local_acc, input[pos]);
         }
-
     }
     shared_block[local_id.x] = local_acc;
 
