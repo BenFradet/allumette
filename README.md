@@ -119,9 +119,11 @@ cargo run --release -- benchmark -b gpu -p 5
 
 There is a small profiling tool which helps understand in which operations time is spent, it can be
 run with:
+
 ```bash
 cargo run --release -- profile -b gpu -p 5 -o /tmp/profile.csv
 ```
+
 - `b` stands for backend, you have a choice of `gpu`, `par` and `seq`.
 - `p` is the number of points raised to the power of 10, e.g. 5 stands for 100 000 points
 - `o` is the output path
@@ -137,6 +139,10 @@ xan groupby op '
     var(duration_micros),
     stddev(duration_micros)
 ' /tmp/profile.csv | xan view -I
+
+xan groupby op 'sum(duration_micros) as sum' /tmp/profile.csv |
+    xan sort -s sum -N -R |
+    xan view -I
 ```
 
 
