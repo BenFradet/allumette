@@ -1,10 +1,7 @@
-# op  %
-matmul, 37.3
-relu_diff (zip), 19.1
-add (zip), 18
-relu (map), 12.1
-copy, 5.5
-sum (reduce), 3
-mul (zip), 1.9
-neg (map), 1.4
-others, 1.7
+# s  t
+240, 0
+230, 1
+228, 2
+172, 3
+161, 4
+149, 5
