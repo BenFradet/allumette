@@ -884,6 +884,14 @@ out[2] = {1 * 7, 7 * 8, 56 * 9}
 
 ---
 
+Reduce - gpu impl
+===
+
+Mark Harris: https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
+
+---
+
+
 Summary
 ===
 
@@ -1073,6 +1081,15 @@ rhs_pos = {1, 3, 5} // nD => 1D: [2, 1] pos rhs_idx
 
 tmp = {4 * 2, 8 + 5 * 4, 28 + 6 * 6} => 64
 ```
+
+---
+
+Matmul - gpu impl
+===
+
+Simon Boehm: https://siboehm.com/articles/22/CUDA-MMM
+
+Aleksa Gordić: https://www.aleksagordic.com/blog/matmul
 
 ---
 
@@ -2014,41 +2031,48 @@ Benchmarks for:
 - `2` features
 - `50` hidden layer size 
 - variable is the size of the input dataset `N`
-- memory requirements:
-  - matmul -> add -> relu
-  - input and hidden layers
-  - forward and backward
-  - `3 x 2 x 2 x [N, 50]`
 
 <!-- pause -->
 
 <!-- column: 1 -->
 Specs:
-- CPU: i7-1360P, 12 cores @ 5GHz = 0.12 TFLOPS f32 w/o SIMD
-- IGP: Iris Xe, 768 shading units @ 1.3 GHz = 1.9 TFLOPS f32
-- GPU: GTX 1070, 2048 shading units @ 1.4 Ghz = 5.7 TFLOPS f32
+- CPU: i7-1360P
+  - 12 cores @ 5GHz = 0.12 TFLOPS f32 w/o SIMD
+- IGP: Iris Xe
+  - 768 shading units @ 1.3 GHz = 1.9 TFLOPS f32
+  - DDR5 @ 6.4GHz => 102.4 GB/s
+- GPU: GTX 1070
+  - 2048 shading units @ 1.4 Ghz = 5.7 TFLOPS f32
+  - GDDR5 @ 2GHz, 256 bit bus => 256 GB/s
 
 <!-- column: 0 -->
-<!-- newlines: 2 -->
+<!-- newlines: 5 -->
 Results:
 <!--incremental_tables: true -->
 mode | 10^2 | 10^3 | 10^4 | 10^5 | 10^6 | 10^7
 -|-|-|-|-|-|-
 seq | 1.93s   | 18.36s  | 3m24s   | 1h2m   | ???    | ???
 par | 1.96s   | 10.24s  | 1m21s   | 16m6s  | 2h24m  | ???
-igp | 22.22s  | 24.79s  | 41.02s  | 2m32s  | 25m09s | ???
-gpu | 14.12s  | 14.53s  | 34.65s  | 2m10s  | 21m13s | ???
+igp | 19.72s  | 22.53s  | 37.78s  | 2m29s  | 23m43s | ???
+gpu | 11.22s  | 12s     | 25.33s  | 2m10s  | 20m27s | ???
 mem | 0.12MiB | 2.28MiB | 22.8MiB | 229MiB | 2.3GiB | 22.89GiB
 
+Memory requirements:
+- matmul -> add -> relu
+- input and hidden layers
+- forward and backward
+- `3 x 2 x 2 x [N, 50]`
+
 <!-- column: 1 -->
-<!-- newlines: 6 -->
+<!-- newlines: 1 -->
 ![image:width:100%](img/benchmark.png)
 
 <!-- reset_layout -->
 <!-- newlines: 2 -->
 <!-- alignment: center -->
+<!-- pause -->
 - gradient descent => stochastic gradient descent `SGD`
-- GPU is not that fast compared to IGP because of PCIe
+- not compute-bound, not memory-bound but dispatch-bound => `kernel fusion`
 
 ---
 
@@ -2062,8 +2086,9 @@ igp 10^5:
 - 230 map/zip fast path
 - 228.86 matmul tile size
 (start profiling)
-- 191 contiguous fast path
-- 152 expand fast path
+- 172 contiguous fast path
+- 161 expand fast path
+- 149 tree reduction
 
 profiling plot
 
