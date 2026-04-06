@@ -2054,7 +2054,7 @@ mode | 10^2 | 10^3 | 10^4 | 10^5 | 10^6 | 10^7
 seq | 1.93s   | 18.36s  | 3m24s   | 1h2m   | ???    | ???
 par | 1.96s   | 10.24s  | 1m21s   | 16m6s  | 2h24m  | ???
 igp | 19.72s  | 22.53s  | 37.78s  | 2m29s  | 23m43s | ???
-gpu | 11.22s  | 12s     | 25.33s  | 2m10s  | 20m27s | ???
+gpu | 11.22s  | 12s     | 25.33s  | 2m4s  | 20m27s | ???
 mem | 0.12MiB | 2.28MiB | 22.8MiB | 229MiB | 2.3GiB | 22.89GiB
 
 Memory requirements:
@@ -2065,7 +2065,7 @@ Memory requirements:
 
 <!-- column: 1 -->
 <!-- newlines: 1 -->
-![image:width:100%](img/benchmark.png)
+![image:width:100%](img/benchmark_plot.png)
 
 <!-- reset_layout -->
 <!-- newlines: 2 -->
@@ -2079,18 +2079,14 @@ Memory requirements:
 Profiling
 ===
 
+<!-- newlines: 5 -->
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
 ![image:width:100%](img/profile_plot.png)
-
-igp 10^5:
-- 240
-- 230 map/zip fast path
-- 228.86 matmul tile size
-(start profiling)
-- 172 contiguous fast path
-- 161 expand fast path
-- 149 tree reduction
-
-profiling plot
+<!-- pause -->
+<!-- column: 1 -->
+![image:width:100%](img/profile_pie.png)
 
 ---
 
