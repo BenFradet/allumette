@@ -1,4 +1,5 @@
-use rand::{Rng, thread_rng};
+use rand::rngs::StdRng;
+use rand::{Rng, RngCore, SeedableRng, thread_rng};
 
 use crate::backend::backend::Backend;
 use crate::shaping::shape::Shape;
@@ -44,8 +45,8 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
         Shape::scalar(self.n)
     }
 
-    pub fn simple(n: usize) -> Self {
-        let x = Self::make_points(n);
+    pub fn simple(n: usize, seed: Option<u64>) -> Self {
+        let x = Self::make_points(n, seed);
         let mut y = vec![];
         for v in &x {
             let y1 = if v.0 < E::fromf(0.5) { 1 } else { 0 };
@@ -58,8 +59,8 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
         }
     }
 
-    pub fn diag(n: usize) -> Self {
-        let x = Self::make_points(n);
+    pub fn diag(n: usize, seed: Option<u64>) -> Self {
+        let x = Self::make_points(n, seed);
         let mut y = vec![];
         for (x1, x2) in &x {
             let y1 = if *x1 + *x2 < E::fromf(0.5) { 1 } else { 0 };
@@ -72,8 +73,8 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
         }
     }
 
-    pub fn split(n: usize) -> Self {
-        let x = Self::make_points(n);
+    pub fn split(n: usize, seed: Option<u64>) -> Self {
+        let x = Self::make_points(n, seed);
         let mut y = vec![];
         for v in &x {
             let y1 = if v.0 < E::fromf(0.2) || v.0 > E::fromf(0.8) {
@@ -90,8 +91,8 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
         }
     }
 
-    pub fn xor(n: usize) -> Self {
-        let x = Self::make_points(n);
+    pub fn xor(n: usize, seed: Option<u64>) -> Self {
+        let x = Self::make_points(n, seed);
         let mut y = vec![];
         for (x1, x2) in &x {
             let y1 = if (*x1 < E::fromf(0.5) && *x2 > E::fromf(0.5))
@@ -110,8 +111,8 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
         }
     }
 
-    pub fn circle(n: usize) -> Self {
-        let x = Self::make_points(n);
+    pub fn circle(n: usize, seed: Option<u64>) -> Self {
+        let x = Self::make_points(n, seed);
         let mut y = vec![];
         let center = E::fromf(0.5);
         let radius_sq = E::fromf(0.20);
@@ -131,8 +132,8 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
         }
     }
 
-    pub fn star(n: usize) -> Self {
-        let x = Self::make_points(n);
+    pub fn star(n: usize, seed: Option<u64>) -> Self {
+        let x = Self::make_points(n, seed);
         let mut y = vec![];
         // all .x5 are wrong
         let star = [
@@ -191,9 +192,12 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
         inside
     }
 
-    fn make_points(n: usize) -> Vec<(E, E)> {
+    fn make_points(n: usize, seed: Option<u64>) -> Vec<(E, E)> {
         let mut res = vec![];
-        let mut rng = thread_rng();
+        let mut rng: Box<dyn RngCore> = match seed {
+            Some(s) => Box::new(StdRng::seed_from_u64(s)),
+            None => Box::new(thread_rng()),
+        };
         for _i in 0..n {
             let x1 = E::fromf(rng.r#gen());
             let x2 = E::fromf(rng.r#gen());
@@ -223,7 +227,7 @@ mod tests {
     proptest! {
         #[test]
         fn simple_test(n in 0usize..10) {
-            let res: Dataset<f64> = Dataset::simple(n);
+            let res: Dataset<f64> = Dataset::simple(n, None);
             common_test(&res, n);
             assert!(res.features.iter().zip(res.labels.iter()).all(|((x1, _x2), y)| {
                 if *x1 < 0.5 {
@@ -236,7 +240,7 @@ mod tests {
 
         #[test]
         fn diag_test(n in 0usize..10) {
-            let res: Dataset<f64> = Dataset::diag(n);
+            let res: Dataset<f64> = Dataset::diag(n, None);
             common_test(&res, n);
             assert!(res.features.iter().zip(res.labels.iter()).all(|((x1, x2), y)| {
                 if *x1 + *x2 < 0.5 {
@@ -249,7 +253,7 @@ mod tests {
 
         #[test]
         fn split_test(n in 0usize..10) {
-            let res: Dataset<f64> = Dataset::split(n);
+            let res: Dataset<f64> = Dataset::split(n, None);
             common_test(&res, n);
             assert!(res.features.iter().zip(res.labels.iter()).all(|((x1, _x2), y)| {
                 if *x1 < 0.2 || *x1 > 0.8 {
@@ -262,7 +266,7 @@ mod tests {
 
         #[test]
         fn xor_test(n in 0usize..10) {
-            let res: Dataset<f64> = Dataset::xor(n);
+            let res: Dataset<f64> = Dataset::xor(n, None);
             common_test(&res, n);
             assert!(res.features.iter().zip(res.labels.iter()).all(|((x1, x2), y)| {
                 if (*x1 < 0.5 && *x2 > 0.5) || (*x1 > 0.5 && *x2 < 0.5) {
@@ -275,7 +279,7 @@ mod tests {
 
         #[test]
         fn circle_test(n in 0usize..10) {
-            let res: Dataset<f64> = Dataset::circle(n);
+            let res: Dataset<f64> = Dataset::circle(n, None);
             common_test(&res, n);
             let center = 0.5;
             let radius_sq = 0.20;
@@ -290,7 +294,7 @@ mod tests {
 
         #[test]
         fn make_points_test(n in 0usize..10) {
-            let res: Vec<(f64, f64)> = Dataset::make_points(n);
+            let res: Vec<(f64, f64)> = Dataset::make_points(n, None);
             assert_eq!(n, res.len());
             assert!(res.iter().all(|(x1, x2)| *x1 >= 0. && *x1 <= 1. && *x2 >= 0. && *x2 <= 1.));
         }

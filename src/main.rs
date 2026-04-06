@@ -24,12 +24,16 @@ enum CliCommand {
         backend: CliBackend,
         #[arg(short, long, default_value_t = 4)]
         power_ten_points: u32,
+        #[arg(short, long)]
+        seed: Option<u64>,
     },
     Profile {
         #[arg(value_enum, short, long)]
         backend: CliBackend,
         #[arg(short, long, default_value_t = 4)]
         power_ten_points: u32,
+        #[arg(short, long)]
+        seed: Option<u64>,
         #[arg(short, long)]
         output_path: String,
     },
@@ -52,6 +56,7 @@ fn main() -> Result<(), Error> {
         Some(CliCommand::Benchmark {
             backend,
             power_ten_points,
+            seed,
         }) => {
             benchmark(
                 backend,
@@ -59,13 +64,15 @@ fn main() -> Result<(), Error> {
                 hidden_layer_size,
                 learning_rate,
                 iterations,
+                seed,
             );
             Ok(())
         }
         Some(CliCommand::Profile {
             backend,
             power_ten_points,
-            output_path: profile_path,
+            seed,
+            output_path,
         }) => {
             profile(
                 backend,
@@ -73,7 +80,8 @@ fn main() -> Result<(), Error> {
                 hidden_layer_size,
                 learning_rate,
                 iterations,
-                profile_path,
+                seed,
+                output_path,
             );
             Ok(())
         }
@@ -83,7 +91,7 @@ fn main() -> Result<(), Error> {
 
 fn viz(hidden_layer_size: usize, learning_rate: f64, iterations: usize) -> Result<(), Error> {
     let pts = 1000;
-    let dataset = Dataset::circle(pts);
+    let dataset = Dataset::circle(pts, None);
 
     let mut debugger = VizDebugger::new(&dataset, iterations);
 
@@ -109,7 +117,8 @@ fn profile(
     hidden_layer_size: usize,
     learning_rate: f64,
     iterations: usize,
-    profile_path: String,
+    seed: Option<u64>,
+    output_path: String,
 ) {
     let points = 10_usize.pow(power_ten_points);
     run_training::<CsvProfiler>(
@@ -118,7 +127,8 @@ fn profile(
         hidden_layer_size,
         learning_rate,
         iterations,
-        Some(&profile_path),
+        seed,
+        Some(&output_path),
     )
 }
 
@@ -128,6 +138,7 @@ fn benchmark(
     hidden_layer_size: usize,
     learning_rate: f64,
     iterations: usize,
+    seed: Option<u64>,
 ) {
     let points = 10_usize.pow(power_ten_points);
     for run in 1..=5 {
@@ -142,6 +153,7 @@ fn benchmark(
             hidden_layer_size,
             learning_rate,
             iterations,
+            seed,
             None,
         )
     }
@@ -153,11 +165,12 @@ fn run_training<P: Profiler + Clone + std::fmt::Debug + 'static>(
     hidden_layer_size: usize,
     learning_rate: f64,
     iterations: usize,
+    seed: Option<u64>,
     profile_path: Option<&String>,
 ) {
     match backend {
         CliBackend::Seq => {
-            let dataset = Dataset::circle(points);
+            let dataset = Dataset::circle(points, seed);
             train::train::<CpuSeqBackend<P>, _>(
                 dataset,
                 learning_rate,
@@ -168,7 +181,7 @@ fn run_training<P: Profiler + Clone + std::fmt::Debug + 'static>(
             );
         }
         CliBackend::Par => {
-            let dataset = Dataset::circle(points);
+            let dataset = Dataset::circle(points, seed);
             train::train::<CpuParBackend<P>, _>(
                 dataset,
                 learning_rate,
@@ -179,7 +192,7 @@ fn run_training<P: Profiler + Clone + std::fmt::Debug + 'static>(
             );
         }
         CliBackend::Gpu => {
-            let dataset = Dataset::circle(points);
+            let dataset = Dataset::circle(points, seed);
             train::train::<GpuBackend<P>, _>(
                 dataset,
                 learning_rate as f32,
