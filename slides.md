@@ -1138,9 +1138,63 @@ tmp = {4 * 2, 8 + 5 * 4, 28 + 6 * 6} => 64
 Matmul - gpu impl
 ===
 
-Simon Boehm: https://siboehm.com/articles/22/CUDA-MMM
+<!-- newlines: 1 -->
+<!-- column_layout: [4, 3] -->
 
-Aleksa Gordić: https://www.aleksagordic.com/blog/matmul
+<!-- column: 0 -->
+```rust +no_background +line_numbers
+var<workgroup> a_tile: array<array<f32, T>, T>;
+var<workgroup> b_tile: array<array<f32, T>, T>;
+
+@compute @workgroup_size(T, T)
+fn matmul(local_id: vec2<u32>, workgroup_id: vec2<u32>) {
+    let lx = local_id.x;
+    let ly = local_id.y;
+    let tx = workgroup_id.x * T;
+    let ty = workgroup_id.y * T;
+
+    var acc = 0.0;
+    for (var tile = 0u; tile < ceil(K / T); tile++) {
+
+        a_tile[ly][lx] = A[ty + ly][tile * T + lx];
+
+        b_tile[ly][lx] = B[tile * T + ly][tx + lx];
+
+        workgroupBarrier();
+
+        for (var k = 0u; k < T; k++) {
+            acc = fma(a_tile[ly][k], b_tile[k][lx], acc);
+        }
+    }
+
+    output[ty + ly][tx + lx] = acc;
+}
+```
+
+<!-- column: 1 -->
+<!-- pause -->
+each wg loads 2 TxT tiles, one load per thread
+<!-- newlines: 3 -->
+thread position within tile
+<!-- pause -->
+tile position in output grid
+<!-- pause -->
+<!-- newlines: 2 -->
+each thread loads one element from A and one from B
+<!-- pause -->
+row from A, A[M, K]
+<!-- pause -->
+col from B, B[K, N]
+<!-- pause -->
+<!-- newlines: 2 -->
+accumulate dot product from shared memory
+
+<!-- reset_layout -->
+<!-- alignment: center -->
+<!-- pause -->
+blog post by Simon Boehm: [](siboehm.com/articles/22/CUDA-MMM)
+
+blog post by Aleksa Gordić: [](www.aleksagordic.com/blog/matmul)
 
 ---
 
