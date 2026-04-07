@@ -176,7 +176,7 @@ let strides = Strides::new(vec![4, 2, 1]);
 <!-- newlines: 2 -->
 <!-- alignment: center -->
 - transposition (permutation)
-- adding / removing dimensions (viewing)
+- adding / removing empty dimensions (viewing)
 
 _=> don't require touching data_
 
@@ -363,9 +363,7 @@ fn map(&self, f: &'static str) -> Self {
         &pipeline.get_bind_group_layout(0),
     );
 
-    let command = encode_command(&workgroups.count, &pipeline, &bind_group);
-
-    submit_command(command);
+    let command = enqueue_command(&workgroups.count, &pipeline, &bind_group);
 
     self.with_buffer(output_buffer)
 }
@@ -426,9 +424,9 @@ fn call(@builtin(global_invocation_id)
 <!-- pause -->
 
 <!-- column: 1 -->
-<!-- newlines: 2 -->
-```rust +no_background {all|6|all}
-// encode_command explained
+<!-- newlines: 3 -->
+```rust +no_background
+// enqueue command explained
 let mut encoder = create_command_encoder();
 let mut pass = encoder.begin_compute_pass();
 pass.set_pipeline(pipeline);
@@ -887,7 +885,60 @@ out[2] = {1 * 7, 7 * 8, 56 * 9}
 Reduce - gpu impl
 ===
 
-Mark Harris: https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
+<!-- column_layout: [4, 3] -->
+
+<!-- column: 0 -->
+```rust +no_background +line_numbers
+var<workgroup> shared: array<f32, WG_SIZE>;
+
+@compute @workgroup_size(WG_SIZE)
+fn reduce(local_id: u32, workgroup_id: u32) {
+    let out_pos = workgroup_id;
+    
+    var acc = 0.0;
+    for (var k = local_id; k < red_dim_size; k += WG_SIZE) {
+        acc = op(acc, input[index(out_pos, k)]);
+    }
+    shared[local_id] = acc;
+    workgroupBarrier();
+
+    for (var s = WG_SIZE / 2; s > 0; s /= 2) {
+        if (local_id < s) {
+            shared[local_id] = op(
+                shared[local_id],
+                shared[local_id + s]
+            );
+        }
+        workgroupBarrier();
+    }
+
+    if (local_id == 0) {
+        output[out_pos] = shared[0];
+    }
+}
+```
+
+<!-- column: 1 -->
+<!-- pause -->
+`WG_SIZE = min(256, red_dim_size)`
+<!-- newlines: 1 -->
+<!-- pause -->
+1 workgroup per output element
+<!-- newlines: 2 -->
+<!-- pause -->
+_Phase 1_: each thread strides through the reduce dim
+<!-- newlines: 3 -->
+<!-- pause -->
+_Phase 2_: parallel tree reduction in shared memory
+![image:width:60%](img/tree_red.png)
+<!-- pause -->
+_Phase 3_: thread 0 writes the final result
+
+<!-- reset_layout -->
+<!-- alignment: center -->
+<!-- newlines: 2 -->
+<!-- pause -->
+presentation by Mark Harris: [](developer.download.nvidia.com/assets/cuda/files/reduction.pdf)
 
 ---
 
