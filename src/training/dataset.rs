@@ -193,7 +193,7 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
     }
 
     fn make_points(n: usize, seed: Option<u64>) -> Vec<(E, E)> {
-        let mut res = vec![];
+        let mut res = Vec::with_capacity(n);
         let mut rng: Box<dyn RngCore> = match seed {
             Some(s) => Box::new(StdRng::seed_from_u64(s)),
             None => Box::new(thread_rng()),
@@ -222,6 +222,14 @@ mod tests {
             && *x2 >= E::zero()
             && *x2 <= E::one()));
         assert!(ds.labels.iter().all(|y| *y == 0 || *y == 1));
+    }
+
+    #[test]
+    fn seed_is_deterministic() {
+        let a: Dataset<f64> = Dataset::circle(100, Some(42));
+        let b: Dataset<f64> = Dataset::circle(100, Some(42));
+        assert_eq!(a.features, b.features);
+        assert_eq!(a.labels, b.labels);
     }
 
     proptest! {

@@ -110,10 +110,12 @@ The set of dependencies is otherwise pretty limited:
 
 You can run benchmarks with:
 ```bash
-cargo run --release -- benchmark -b gpu -p 5
+cargo run --release -- benchmark -b gpu -p 5 -s 1234
 ```
+
 - `b` stands for backend, you have a choice of `gpu`, `par` and `seq`.
 - `p` is the number of points raised to the power of 10, e.g. 5 stands for 100 000 points
+- `s` is the seed to generate synthetic data
 
 ### Profiling
 
@@ -121,11 +123,12 @@ There is a small profiling tool which helps understand in which operations time 
 run with:
 
 ```bash
-cargo run --release -- profile -b gpu -p 5 -o /tmp/profile.csv
+cargo run --release -- profile -b gpu -p 5 -s 1234 -o /tmp/profile.csv
 ```
 
 - `b` stands for backend, you have a choice of `gpu`, `par` and `seq`.
 - `p` is the number of points raised to the power of 10, e.g. 5 stands for 100 000 points
+- `s` is the seed to generate synthetic data
 - `o` is the output path
 
 an example analysis with [xan](https://github.com/medialab/xan):

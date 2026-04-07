@@ -1,6 +1,6 @@
 use crate::shaping::shape::Shape;
 
-/// workgroup is a collection of `size` threads that execute together and share local memory
+/// a workgroup is a collection of `size` threads that execute together and share local memory
 /// each thread has a unique id, allowing it to process a specific portion of the data
 /// https://medium.com/@josh.sideris/mastering-thread-calculations-in-webgpu-workgroup-size-count-and-thread-identification-6b44a87a4764
 ///
