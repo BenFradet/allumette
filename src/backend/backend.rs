@@ -5,7 +5,10 @@ use crate::{
     math::element::Element,
     ops::ops::Ops,
     storage::{cpu_data::CpuData, data::Data, gpu_data::GpuData},
-    util::{profiler::{NoopProfiler, Profiler}, unsafe_usize_convert::UnsafeUsizeConvert},
+    util::{
+        profiler::{NoopProfiler, Profiler},
+        unsafe_usize_convert::UnsafeUsizeConvert,
+    },
 };
 
 use super::mode::Mode;

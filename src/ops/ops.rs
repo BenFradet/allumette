@@ -1,5 +1,6 @@
 use crate::{
-    backend::mode::Mode, math::element::Element, shaping::shape::Shape, storage::data::Data, util::profiler::Profiler,
+    backend::mode::Mode, math::element::Element, shaping::shape::Shape, storage::data::Data,
+    util::profiler::Profiler,
 };
 
 pub trait Ops<E: Element, T: Mode, P: Profiler> {

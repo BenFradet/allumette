@@ -29,7 +29,9 @@ impl Profiler for CsvProfiler {
     const ENABLED: bool = true;
 
     fn start() -> Self {
-        Self { start: Instant::now() }
+        Self {
+            start: Instant::now(),
+        }
     }
 
     fn stop(self, tag: &'static str) {
