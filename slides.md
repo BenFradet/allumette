@@ -348,8 +348,19 @@ fn map<F: Fn(f64) -> f64>(
 Map - gpu using wgpu and wgsl
 ===
 
-<!-- newlines: 4 -->
-```rust +no_background {all|1-4|6-8|10|11|12|13|14|all}
+<!-- pause -->
+_WebGPU_: cross platform API sitting on top of Vulkan, Metal or Direct3D
+<!-- pause -->
+_WGSL_: WebGPU shader language, similar to Rust
+<!-- pause -->
+_wgpu_: Rust implementation of WebGPU used in Firefox and Deno
+
+<!-- column_layout: [1, 1]-->
+
+<!-- column: 0 -->
+<!-- pause -->
+<!-- newlines: 1 -->
+```rust +no_background +line_numbers
 @group(0) @binding(0)
 var<storage, read> input: array<f32>;
 @group(0) @binding(1)
@@ -361,11 +372,38 @@ fn neg(in: f32) -> f32 {
 
 @compute
 @workgroup_size(x, y, z)
-fn call(@builtin(global_invocation_id) id: vec3<u32>) {
+fn call(
+    @builtin(global_invocation_id) id: vec3<u32>
+) {
     let i = id.x;
     output[i] = replace_me(input[i]);
 }
 ```
+
+<!-- column: 1 -->
+<!-- newlines: 1 -->
+<!-- pause -->
+buffers living in GPU memory bound from the CPU side
+
+GPU doesn't allocate its own memory
+<!-- pause -->
+<!-- newlines: 4 -->
+this is a compute shader as opposed to a graphics one
+<!-- pause -->
+how many threads run together as a work group
+<!-- pause -->
+each thread gets a unique id (SIMT), thread 0 acts on `input[0]`
+<!-- pause -->
+template trick: GPU shader compilation happens at runtime
+
+<!-- reset_layout -->
+<!-- pause -->
+<!-- newlines: 1 -->
+<!-- alignment: center -->
+_implicit parallelism_: there is no loop,
+the "loop" is the CPU saying launch `N` threads each running `call`
+
+[](github.com/gfx-rs/wgpu)
 
 ---
 
