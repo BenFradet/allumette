@@ -5,6 +5,8 @@ theme:
     default:
       margin:
         percent: 1
+    slide_title:
+      padding_top: 0
     bold:
       colors:
         foreground: red
@@ -18,13 +20,15 @@ theme:
       colors:
         background: cad3f500
         foreground: cad3f5
+      horizontal_margin: 0
+      vertical_margin: 4
     footer:
       style: template
-      left:
-        image: img/logo.png
+      #left:
+      #  image: img/logo.png
       #center: '**allumette**'
       right: "{current_slide} / {total_slides}"
-      height: 3
+      height: 1
     code:
       padding:
         vertical: 0
@@ -52,12 +56,9 @@ built with https://github.com/mfontanini/presenterm
 
 <span style="color: #ed8796">**allumette**</span>
 
-<span style="color: #f5a97f">a toy tensor library written in Rust</span>
+<span style="color: #f5a97f">a tensor library written in Rust</span>
 
 <span style="color: #eed49f">Ben Fradet</span>
-
-
-TODO: detail gpu zip, reduce, mm
 
 <!-- no_footer -->
 
@@ -71,6 +72,7 @@ Summary
 # Neural networks
 # Demo
 # Benchmarks
+# Profiling
 
 ---
 
@@ -92,7 +94,7 @@ multi-dimensional array of arbitrary dimensions
 What does a tensor look like in rust?
 ===
 
-```typst +render +width:40%
+```typst +render +width:30%
 #set table(
   stroke: none,
   inset: -1pt,
@@ -113,12 +115,15 @@ What does a tensor look like in rust?
   )
 }
 
-#table(
-  columns: 4,
-  [], [], [#cell()], [$mat(delim: "[", 41, 42; 43, 44)$],
-  [], [#cell()], [$mat(delim: "[", 31, 32; 33, 34)$], [#cell(dy: 1em, angle: 170deg)],
-  [#cell()], [$mat(delim: "[", 21, 22; 23, 24)$], [#cell(angle: 170deg, dy: 1em)], [],
-  [$mat(delim: "[", 11, 12; 13, 14)$], [#cell(dy: 1em)], [], [],
+#scale(
+  75%,
+  table(
+    columns: 2,
+    //[], [], [#cell()], [$mat(delim: "[", 41, 42; 43, 44)$],
+    //[], [#cell()], [$mat(delim: "[", 31, 32; 33, 34)$], [#cell(dy: 1em, angle: 170deg)],
+    [#cell(dx: 0.5em)], [$mat(delim: "[", 21, 22, 23; 24, 25, 26)$],
+    [$mat(delim: "[", 11, 12, 13; 14, 15, 16)$], [#cell(dy: 1em)]
+  )
 )
 ```
 <!-- newlines: 1 -->
@@ -225,7 +230,7 @@ $\{\ln(x), e^x, -x, frac(1, x), ...\}$
 
 <!-- column: 1 -->
 ```typst +render +width:80%
-$\{x + y, x dot y, x = y, ...\}$
+$\{x + y, x times y, x == y, ...\}$
 ```
 <!-- pause -->
 
@@ -368,6 +373,8 @@ fn map(&self, f: &'static str) -> Self {
     self.with_buffer(output_buffer)
 }
 ```
+
+TODO: explain more?
 
 <!-- pause -->
 <!-- newlines: 1 -->
@@ -1138,7 +1145,6 @@ tmp = {4 * 2, 8 + 5 * 4, 28 + 6 * 6} => 64
 Matmul - gpu impl
 ===
 
-<!-- newlines: 1 -->
 <!-- column_layout: [4, 3] -->
 
 <!-- column: 0 -->
@@ -2231,6 +2237,6 @@ What's next:
 
 <!-- column: 1 -->
 ![image:width:100%](img/thatsallfolks.gif)
-<!-- reset_layout -->
-<!-- alignment: center -->
+<!-- column: 0 -->
+<!-- newlines: 1 -->
 Thank you! [](github.com/BenFradet/allumette)
