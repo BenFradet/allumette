@@ -144,16 +144,13 @@ struct Tensor {
 <!-- column: 1 -->
 ```rust +no_background
 let data = vec![
-    11., 12., 13., 14.,
-    21., 22., 23., 24.,
-    31., 32., 33., 34.,
-    41., 42., 43., 44.
+    11., 12., 13., 14., 15, 16,
+    21., 22., 23., 24., 25, 26,
 ];
 ```
 <!-- pause -->
 
 <!-- column: 0 -->
-<!-- newlines: 1 -->
 ```rust +no_background
 struct Shape { data: Vec<usize> }
 ```
@@ -161,7 +158,8 @@ struct Shape { data: Vec<usize> }
 
 <!-- column: 1 -->
 ```rust +no_background
-let shape = Shape::new(vec![4, 2, 2]);
+// row major
+let shape = Shape::new(vec![2, 2, 3]);
 ```
 <!-- pause -->
 
@@ -173,17 +171,27 @@ struct Strides { data: Vec<usize> }
 
 <!-- column: 1 -->
 ```rust +no_background
-let strides = Strides::new(vec![4, 2, 1]);
+let strides = Strides::new(vec![6, 3, 1]);
 ```
 <!-- pause -->
+
+<!-- column: 0 -->
+![image:width:60%](img/strides.png)
+<!-- column: 1 -->
+<!-- newlines: 1 -->
+```rust +no_background
+tensor[0][1][0] = data[3]
+tensor[1][1][2] = data[11]
+tensor[i][j][k] = data[i * si + j * sj + k * sk]
+```
 
 <!-- reset_layout -->
 <!-- newlines: 2 -->
 <!-- alignment: center -->
-- transposition (permutation)
-- adding / removing empty dimensions (viewing)
+- transposition (permutation): `Shape::new(vec![2, 3]) => Shape::new(vec![3, 2])`
+- adding / removing dimensions (viewing): `Shape::new(vec![1, 2, 3]) <=> Shape::new(vec![2, 3])`
 
-_=> don't require touching data_
+_=> only require metadata changes_
 
 
 ---
@@ -262,9 +270,10 @@ $\{sum(x), product(x)\}$
 
 }
 ```
+
 ---
 
-Map
+Map - cpu sequential
 ===
 
 <!-- newlines: 6 -->
@@ -272,8 +281,7 @@ Map
 fn map<F: Fn(f64) -> f64>(
     &self, f: F
 ) -> Self {
-    let len = self.size();
-    let mut out = vec![0.; len];
+    let mut out = vec![0.; self.size()];
     for (i, d) in self.data.iter().enumerate() {
         out[i] = f(*d);
     }
@@ -284,9 +292,10 @@ fn map<F: Fn(f64) -> f64>(
     }
 }
 ```
+
 ---
 
-Map - parallel using rayon
+Map - cpu in parallel using rayon
 ===
 
 <!-- newlines: 4 -->
@@ -302,7 +311,7 @@ fn map<F: Fn(f64) -> f64 + Sync>(
         .map(|d| f(*d))
         .collect();
     Self {
-        data: Arc::new(out),
+        data: out,
         shape: self.shape.clone(),
         strides: self.strides.clone(),
     }
@@ -311,21 +320,29 @@ fn map<F: Fn(f64) -> f64 + Sync>(
 <!-- pause -->
 
 <!-- column: 1 -->
-`Sync` => safe to share references between threads
-<!-- pause -->
-<!-- newlines: 5 -->
-`Arc`  => thread-safe reference-counting pointer
-<!-- pause -->
-
-<!-- reset_layout -->
-<!-- newlines: 1 -->
 ```rust +no_background
-struct Tensor {
-    data: Arc<Vec<f64>>,
-    shape: Shape,
-    strides: Strides,
+fn map<F: Fn(f64) -> f64>(
+    &self, f: F
+) -> Self {
+    let mut out = vec![0.; self.size()];
+    for (i, d) in self.data.iter().enumerate() {
+        out[i] = f(*d);
+    }
+    Self {
+        data: out,
+        shape: self.shape.clone(),
+        strides: self.strides.clone(),
+    }
 }
 ```
+<!-- reset_layout -->
+<!-- alignment: center -->
+<!-- newlines: 2 -->
+<!-- pause -->
+`Sync` => safe to share references between threads
+<!-- pause -->
+[](github.com/rayon-rs/rayon)
+
 ---
 
 Map - gpu using wgpu and wgsl
