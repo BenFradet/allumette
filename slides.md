@@ -838,6 +838,7 @@ $
 ```
 
 ---
+<!-- skip_slide -->
 
 Reduce - impl
 ===
@@ -916,12 +917,14 @@ Reduce - gpu impl
 var<workgroup> shared: array<f32, WG_SIZE>;
 
 @compute @workgroup_size(WG_SIZE)
-fn reduce(local_id: u32, workgroup_id: u32) {
-    let out_pos = workgroup_id;
-    
-    var acc = 0.0;
-    for (var k = local_id; k < red_dim_size; k += WG_SIZE) {
-        acc = op(acc, input[index(out_pos, k)]);
+fn reduce(local_id: u32, wg_id: u32) {
+    var acc = default;
+    for (
+        var k = local_id;
+        k < red_dim_size;
+        k += WG_SIZE
+    ) {
+        acc = op(acc, input[index(wg_id, k)]);
     }
     shared[local_id] = acc;
     workgroupBarrier();
@@ -937,7 +940,7 @@ fn reduce(local_id: u32, workgroup_id: u32) {
     }
 
     if (local_id == 0) {
-        output[out_pos] = shared[0];
+        output[wg_id] = shared[0];
     }
 }
 ```
@@ -947,22 +950,90 @@ fn reduce(local_id: u32, workgroup_id: u32) {
 `WG_SIZE = min(256, red_dim_size)`
 <!-- newlines: 1 -->
 <!-- pause -->
-1 workgroup per output element
+we dispatch 1 workgroup per output element
 <!-- newlines: 2 -->
 <!-- pause -->
 _Phase 1_: each thread strides through the reduce dim
-<!-- newlines: 3 -->
+<!-- newlines: 4 -->
 <!-- pause -->
 _Phase 2_: parallel tree reduction in shared memory
 ![image:width:60%](img/tree_red.png)
 <!-- pause -->
 _Phase 3_: thread 0 writes the final result
-
-<!-- reset_layout -->
-<!-- alignment: center -->
-<!-- newlines: 2 -->
 <!-- pause -->
 presentation by Mark Harris: [](developer.download.nvidia.com/assets/cuda/files/reduction.pdf)
+
+---
+
+Reduce - gpu impl cont'd
+===
+
+<!-- column_layout: [4, 3] -->
+
+<!-- column: 0 -->
+```rust +no_background +line_numbers
+var<workgroup> shared: array<f32, WG_SIZE>;
+
+@compute @workgroup_size(WG_SIZE)
+fn reduce(local_id: u32, wg_id: u32) {
+    var acc = 1.0;
+    for (var k = local_id; k < red_dim_size; k += WG_SIZE) {
+        acc = acc * input[index(wg_id, k)];
+    }
+    shared[local_id] = acc;
+    workgroupBarrier();
+
+    for (var s = WG_SIZE / 2; s > 0; s /= 2) {
+        if (local_id < s) {
+            shared[local_id] =
+                shared[local_id] *
+                shared[local_id + s];
+        }
+        workgroupBarrier();
+    }
+
+    if (local_id == 0) {
+        output[wg_id] = shared[0];
+    }
+}
+```
+
+<!-- column: 1 -->
+```typst +render +width:55%
+$
+product_(d=1) mat(1, 2, 3; 4, 5, 6; 7, 8, 9) = vec(6, 120, 504) \
+"red_dim_size" = 3, "WG_SIZE" = 3
+$
+```
+<!-- pause -->
+```typst +render +width:100%
+wg 0: \
+$
+t_0: k = 0 -> A[0, 0], "acc" = 1. times 1 = 1 \
+t_1: k = 1 -> A[0, 1], "acc" = 1. times 2 = 2 \ 
+t_2: k = 2 -> A[0, 2], "acc" = 1. times 3 = 3 \ 
+"shared" = [1, 2, 3, 1] \
+\
+"stride" = 2 -> "shared"_0 = 1 times 3 = 3, "shared"_1 = 2 times 1 = 2 \
+"stride" = 1 -> "shared"_0 = 3 times 2 = 6
+$
+```
+<!-- pause -->
+```typst +render +width:40%
+wg 1: \
+$
+"shared" = [4, 5, 6, 1] \
+(4 times 6) times (5 times 1) = 120
+$
+```
+<!-- pause -->
+```typst +render +width:50%
+wg 2: \
+$
+"shared" = [7, 8, 9, 1] \
+(7 times 9) times (8 times 1) = 504
+$
+```
 
 ---
 
