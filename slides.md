@@ -383,14 +383,13 @@ fn call(
 <!-- column: 1 -->
 <!-- newlines: 1 -->
 <!-- pause -->
-buffers living in GPU memory bound from the CPU side
-
+buffers living in GPU memory bound from the CPU side  
 GPU doesn't allocate its own memory
 <!-- pause -->
-<!-- newlines: 4 -->
+<!-- newlines: 5 -->
 this is a compute shader as opposed to a graphics one
 <!-- pause -->
-how many threads run together as a work group
+how many threads run together as a work group, templated
 <!-- pause -->
 each thread gets a unique id (SIMT), thread 0 acts on `input[0]`
 <!-- pause -->
@@ -407,35 +406,61 @@ the "loop" is the CPU saying launch `N` threads each running `call`
 
 ---
 
-Map - orchestrating gpu code
+Map - orchestrating gpu code on the cpu
 ===
 
-<!-- newlines: 3 -->
-```rust +no_background {all|1|2|4-5|7-10|4,12|14|16|all}
+<!-- column_layout: [1, 1] -->
+<!-- column: 0 -->
+```rust +no_background +line_numbers
 fn map(&self, f: &'static str) -> Self {
-    let output_buffer = create_output_buffer(self.shape.gpu_byte_size());
+    let output_buffer = create_buffer(
+        self.shape.gpu_byte_size());
     
-    let workgroups = (&self.shape).into();
-    let pipeline = get_or_create_pipeline(f, workgroups.size);
+    let wg = (&self.shape).into();
+
+    let pipeline = get_or_create_pipeline(
+        f,
+        wg.size,
+    );
 
     let bind_group = create_bind_group(
         &[&self.buffer, &output_buffer],
         &pipeline.get_bind_group_layout(0),
     );
 
-    let command = enqueue_command(&workgroups.count, &pipeline, &bind_group);
+    let command = enqueue_command(
+        &pipeline,
+        &bind_group,
+        &wg.count, 
+    );
 
     self.with_buffer(output_buffer)
 }
 ```
 
-TODO: explain more?
-
+<!-- column: 1 -->
 <!-- pause -->
-<!-- newlines: 1 -->
+not a function anymore just a tag
+<!-- pause -->
+`sizeof(f32) * tensor size`
+<!-- pause -->
+work group counts and sizes
+<!-- pause -->
+compute pipeline: compiled shader + bind group layout info  
+cached by templated info: `f` and `wg.size`
+<!-- pause -->
+<!-- newlines: 2 -->
+which buffer goes where in the compiled shader
+<!-- pause -->
+<!-- newlines: 3 -->
+compute command: pipeline + bind group + dispatch info
+<!-- pause -->
+_lazy_
+<!-- newlines: 2 -->
+<!-- pause -->
 ```rust +no_background
-struct Tensor<'a> {
-    buffer: Arc<Buffer>,
+struct GpuTensor<'a> {
+    buffer: Buffer,
     shape: Shape,
     strides: Strides,
     context: &'a WgpuContext,
@@ -461,20 +486,27 @@ credit: CubeCL, Apache 2.0
 <!-- column: 1 -->
 identifiers
 ```typst +render +width:100%
-$vec("global_inv_id.x", "global_inv_id.y", "global_inv_id.z") = vec("local_inv_id.x" times "workgroup_id.x", "local_inv_id.y" times "workgroup_id.y", "local_inv_id.z" times "workgroup_id.z")$
+$
+vec("global_inv_id"_x, "global_inv_id"_y, "global_inv_id"_z) =
+    vec(
+        "wg_size"_x times "wg_id"_x + "local_inv_id"_x,
+        "wg_size"_y times "wg_id"_y + "local_inv_id"_y,
+        "wg_size"_z times "wg_id"_z + "local_inv_id"_z
+    )
+$
 ```
 <!-- pause -->
 total invocations
-```typst +render +width:80%
-$vec("workgroup_size.x", "workgroup_size.y", "workgroup_size.z") dot vec("num_workgroups.x", "num_workgroups.y", "num_workgroups.z")$
+```typst +render +width:60%
+$vec("wg_size"_x, "wg_size"_y, "wg_size"_z) times vec("num_wgs"_x, "num_wgs"_y, "num_wgs"_z)$
 ```
 <!-- pause -->
 
 <!-- column: 0 -->
-<!-- newlines: 1 -->
+<!-- newlines: 2 -->
 ```rust +no_background {all|2|6-7|8|all}
 @compute
-@workgroup_size(wsx, wsy, wsz)
+@workgroup_size(wg_size_x, wg_size_y, wg_size_z)
 fn call(@builtin(global_invocation_id)
     id: vec3<u32>
 ) {
