@@ -520,14 +520,96 @@ fn call(@builtin(global_invocation_id)
 <!-- column: 1 -->
 <!-- newlines: 3 -->
 ```rust +no_background
-// enqueue command explained
+// enqueue_command explained
 let mut encoder = create_command_encoder();
 let mut pass = encoder.begin_compute_pass();
 pass.set_pipeline(pipeline);
 pass.set_bind_group(0, Some(bind_group));
-pass.dispatch_workgroups(nwx, nwy, nwz);
+pass.dispatch_workgroups(num_wgs_x, num_wgs_y, num_wgs_z);
 encoder.finish()
 ```
+---
+
+Map - gpu parallelism cont'd
+===
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 1 -->
+```rust +no_background
+struct WorkgroupInfo {
+    count: (usize, usize, usize),
+    size: (usize, usize, usize),
+}
+```
+<!-- pause -->
+<!-- pause -->
+why don't we stuff everything in wg size?
+<!-- pause -->
+```typst +render +width:70%
+$"wg_size"_x times "wg_size"_y times "wg_size"_z <= 256$
+```
+<!-- pause -->
+<!-- column: 0 -->
+```rust +no_background +line_numbers
+const MAX_WG_SIZE: usize = 256;
+fn from(shape: &Shape) -> Self {
+    let size = shape.size;
+    if size <= MAX_WG_SIZE {
+        WorkgroupInfo {
+            count: (1, 1, 1),
+            size: (size.next_power_of_two(), 1, 1),
+        }
+    } else {
+        let count = size.div_ceil(MAX_WG_SIZE);
+        WorkgroupInfo {
+            count: WorkgroupInfo::chunk(count),
+            size: (MAX_WG_SIZE, 1, 1),
+        }
+    }
+}
+```
+<!-- column: 1 -->
+<!-- pause -->
+we have 1D data so we only leverage `wg_size x`
+<!-- pause -->
+gpus execute threads in _warps_ or _wavefronts_ of `32` or `64`
+
+<!-- column: 0 -->
+<!-- pause -->
+```rust +no_background +line_numbers
+const MAX_WG_CNT: usize = 65535;
+fn chunk(count: usize) -> (usize, usize, usize) {
+    if count <= MAX_WG_CNT {
+        (count, 1, 1)
+    } else if count <= MAX_WG_CNT * MAX_WG_CNT {
+        let y = count.div_ceil(MAX_WG_CNT);
+        (MAX_WG_CNT, y, 1)
+    } else {
+        let z = count.div_ceil(MAX_WG_CNT * MAX_WG_CNT);
+        (MAX_WG_CNT, MAX_WG_CNT, z)
+    }
+}
+```
+
+<!-- column: 1 -->
+<!-- newlines: 3 -->
+<!-- pause -->
+workgroups are here to hide memory latency: while a workgroup waits on a memory fetch, another runs
+<!-- pause -->
+```typst +render +width:45%
+$"shape" = [10^6, 256, 2]$
+```
+<!-- pause -->
+```typst +render +width:40%
+$"size" = 512 times 10^6$
+```
+<!-- pause -->
+```typst +render +width:80%
+$"wg size" = vec(256, 1, 1), "wg count" = vec(65535, 31, 1)$
+```
+
+
 ---
 
 Summary
@@ -748,13 +830,13 @@ fn broadcast(&self, b: &Shape) -> Option<Shape> {
     let mut out = Vec::with_capacity(max);
 
     for i in (0..max).rev() {
-        let si = if i < n { self[n - 1 - i] } else { 1 };
+        let ai = if i < n { self[n - 1 - i] } else { 1 };
         let bi = if i < m { b[m - 1 - i] } else { 1 };
 
-        match (si, bi) {
+        match (ai, bi) {
             (1, b) => out.push(b),
-            (s, 1) => out.push(s),
-            (s, b) if s == b => out.push(s),
+            (a, 1) => out.push(a),
+            (a, b) if a == b => out.push(s),
             _ => return None,
         }
     }
