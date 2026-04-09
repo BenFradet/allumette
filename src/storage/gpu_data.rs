@@ -99,7 +99,6 @@ impl<'a> GpuData<'a> {
         let size = self.shape.gpu_byte_size();
         let staging_buffer = self.context.create_output_buffer(
             size,
-            "to_cpu",
             BufferUsages::MAP_READ | BufferUsages::COPY_DST,
         );
         let mut encoder = self
@@ -160,18 +159,15 @@ impl<'a> GpuData<'a> {
     }
 
     pub fn create_shape_buffer(&self) -> Buffer {
-        self.context
-            .create_storage_buffer(self.shape.iter(), "shape")
+        self.context.create_storage_buffer(self.shape.iter())
     }
 
     pub fn create_strides_buffer(&self) -> Buffer {
-        self.context
-            .create_storage_buffer(self.strides.iter(), "strides")
+        self.context.create_storage_buffer(self.strides.iter())
     }
 
     pub fn create_index_buffer(&self) -> Buffer {
-        self.context
-            .create_storage_buffer(self.shape.idx(0).iter(), "index")
+        self.context.create_storage_buffer(self.shape.idx(0).iter())
     }
 }
 

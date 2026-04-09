@@ -23,7 +23,6 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
 
         let output_buffer = self.context.create_output_buffer(
             gpu_size,
-            tag,
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
 
@@ -72,7 +71,6 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
         let out_gpu_size = out.shape.gpu_byte_size();
         let output_buffer = out.context.create_output_buffer(
             out_gpu_size,
-            tag,
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
 
@@ -127,7 +125,6 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
         let gpu_size = shape.gpu_byte_size();
         let output_buffer = self.context.create_output_buffer(
             gpu_size,
-            tag,
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
 
@@ -192,7 +189,6 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
             let gpu_size = shape.gpu_byte_size();
             let output_buffer = self.context.create_output_buffer(
                 gpu_size,
-                tag,
                 BufferUsages::STORAGE | BufferUsages::COPY_SRC,
             );
 
@@ -256,7 +252,6 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
 
         let output_buffer = self.context.create_output_buffer(
             gpu_size,
-            op,
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
 

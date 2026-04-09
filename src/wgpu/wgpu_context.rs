@@ -123,7 +123,7 @@ impl WgpuContext {
     pub fn create_pipeline_layout(&self, bind_group_layout: &BindGroupLayout) -> PipelineLayout {
         self.device
             .create_pipeline_layout(&PipelineLayoutDescriptor {
-                label: Some("pipeline layout"),
+                label: None,
                 bind_group_layouts: &[bind_group_layout],
                 push_constant_ranges: &[],
             })
@@ -144,20 +144,17 @@ impl WgpuContext {
         pipeline_opt.or_else(|| {
             let module = if Self::MAP_OPS.contains(&operation) {
                 Some(self.create_shader_module(
-                    operation,
                     &Self::MAP_SHADER.replace(Self::REPLACE_OP_NAME, operation),
                     workgroup_info,
                 ))
             } else if Self::ZIP_OPS.contains(&operation) {
                 Some(self.create_shader_module(
-                    operation,
                     &Self::ZIP_SHADER.replace(Self::REPLACE_OP_NAME, operation),
                     workgroup_info,
                 ))
             } else if Self::RED_OPS.contains(&operation) {
                 Some(
                     self.create_shader_module(
-                        operation,
                         &Self::RED_SHADER
                             .replace(Self::REPLACE_OP_NAME, operation)
                             .replace(
@@ -168,7 +165,7 @@ impl WgpuContext {
                     ),
                 )
             } else if operation == Self::MM_OP {
-                Some(self.create_shader_module(operation, Self::MM_SHADER, workgroup_info))
+                Some(self.create_shader_module(Self::MM_SHADER, workgroup_info))
             } else {
                 None
             };
@@ -181,19 +178,19 @@ impl WgpuContext {
         })
     }
 
-    pub fn create_output_buffer(&self, size: u64, operation: &str, usage: BufferUsages) -> Buffer {
+    pub fn create_output_buffer(&self, size: u64, usage: BufferUsages) -> Buffer {
         self.device.create_buffer(&BufferDescriptor {
-            label: Some(&format!("Tensor {operation}")),
+            label: None,
             size,
             usage,
             mapped_at_creation: false,
         })
     }
 
-    pub fn create_storage_buffer(&self, iter: Iter<'_>, label: &str) -> Buffer {
+    pub fn create_storage_buffer(&self, iter: Iter<'_>) -> Buffer {
         let data: Vec<_> = iter.map(|u| u32::try_from(u).unwrap()).collect();
         self.device.create_buffer_init(&BufferInitDescriptor {
-            label: Some(label),
+            label: None,
             contents: bytemuck::cast_slice(&data),
             usage: BufferUsages::STORAGE,
         })
@@ -213,7 +210,7 @@ impl WgpuContext {
             })
             .collect();
         self.device.create_bind_group(&BindGroupDescriptor {
-            label: Some("bind group"),
+            label: None,
             layout: bind_group_layout,
             entries: &bind_group_entries,
         })
@@ -247,7 +244,7 @@ impl WgpuContext {
             .collect();
 
         self.device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("meta"),
+            label: None,
             contents: bytemuck::cast_slice(&metadata),
             usage: BufferUsages::STORAGE,
         })
@@ -291,7 +288,6 @@ impl WgpuContext {
 
     fn create_shader_module(
         &self,
-        operation: &str,
         shader_source: &str,
         workgroup_info: WorkgroupInfo,
     ) -> ShaderModule {
@@ -305,7 +301,7 @@ impl WgpuContext {
                 &workgroup_info.workgroup_size_const(),
             );
         self.device.create_shader_module(ShaderModuleDescriptor {
-            label: Some(operation),
+            label: None,
             source: ShaderSource::Wgsl(Cow::Borrowed(&source)),
         })
     }
@@ -328,7 +324,7 @@ impl WgpuContext {
             .collect();
         self.device
             .create_bind_group_layout(&BindGroupLayoutDescriptor {
-                label: Some("bind group layout"),
+                label: None,
                 entries: &bind_group_layout_entries,
             })
     }
@@ -347,7 +343,7 @@ impl WgpuContext {
         let pipeline_layout = self.create_pipeline_layout(&bind_group_layout);
         let compute_pipeline = Arc::new(self.device.create_compute_pipeline(
             &ComputePipelineDescriptor {
-                label: Some(operation),
+                label: None,
                 layout: Some(&pipeline_layout),
                 module,
                 entry_point: Some(Self::ENTRY_POINT),
