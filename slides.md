@@ -184,6 +184,7 @@ tensor[0][1][0] = data[3]
 tensor[1][1][2] = data[11]
 tensor[i][j][k] = data[i * si + j * sj + k * sk]
 ```
+how many elems to skip to advance one step along that dim
 
 <!-- reset_layout -->
 <!-- newlines: 2 -->
@@ -609,7 +610,6 @@ $"size" = 512 times 10^6$
 $"wg size" = vec(256, 1, 1), "wg count" = vec(65535, 31, 1)$
 ```
 
-
 ---
 
 Summary
@@ -866,9 +866,95 @@ $vec(5) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) vec(5, 2)$
 ```typst +render +width:65%
 $vec(5, 7, 5, 1) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) vec(1, 5, 1, 5)$
 ```
+<!-- pause -->
+<!-- reset_layout -->
+<!-- alignment: center -->
+![image:width:60%](img/broadcast.png)
 
 ---
 
+Zip - impl
+===
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+<!-- newlines: 5 -->
+```rust +no_background
+fn zip(&self, b: &Self, f: &'static str) -> Option<Self> {
+    let c_shape = if self.shape == b.shape {
+        self.shape.clone()
+    } else {
+        self.shape.broadcast(&b.shape)?
+    };
+    let c_strides: Strides = (&c_shape).into();
+    // same ceremony: buffer, pipeline, command
+```
+<!-- pause -->
+```rust +no_background +line_numbers
+@compute @workgroup_size(x, y, z)
+fn zip(@builtin(global_invocation_id) id: vec3<u32>) {
+    let i = id.x;
+
+    let c_idx = to_idx(i, c_shape);
+
+    let a_idx = bc_idx(c_idx, a_shape);
+    let b_idx = bc_idx(c_idx, b_shape);
+
+    let a_pos = dotp(a_idx, a_strides);
+    let b_pos = dotp(b_idx, b_strides);
+    let c_pos = dotp(c_idx, c_strides);
+
+    c[c_pos] = op(a[a_pos], b[b_pos]);
+}
+```
+
+<!-- column: 1 -->
+<!-- pause -->
+```typst +render +width:100%
+$
+    C = A + B =
+    1 lr(size: #1em, brace.l) underbrace((1 #h(0.5em) 2), 2) +
+    underbrace(vec(3, 4), 1) lr(size: #2em, brace.r) 2 =
+    mat(4, 5; 5, 6)
+$
+```
+<!-- pause -->
+```rust +no_background
+a_shape = [1, 2], a_strides = [2, 1]
+b_shape = [2, 1], b_strides = [1, 1]
+c_shape = [1, 2].bc([2, 1]) = [2, 2], c_strides = [2, 1]
+```
+<!-- pause -->
+<!-- newlines: 3 -->
+```rust +no_background
+i = 3
+```
+<!-- pause -->
+```rust +no_background
+// converts 1D indices to nD using the output shape
+to_idx(3, [2, 2]) = [1, 1] // 3 / 2 => (3 % 2) / 1
+```
+<!-- pause -->
+```rust +no_background
+// maps out_idx back to each shape, clamping to 0
+a_idx = bc_idx([1, 1], [1, 2]) = [0, 1]
+b_idx = bc_idx([1, 1], [2, 1]) = [1, 0]
+```
+<!-- pause -->
+```rust +no_background
+// converts nD back to 1D using strides
+a_pos = dotp([0, 1], [2, 1]) = 1
+b_pos = dotp([1, 0], [1, 1]) = 1
+c_pos = dotp([1, 1], [2, 1]) = 2 + 1 = 3
+```
+<!-- pause -->
+```rust +no_background
+c[3] = a[1] + b[1] = 2 + 4 = 6
+```
+
+---
+<!-- skip_slide -->
 Zip - impl
 ===
 
@@ -963,13 +1049,13 @@ Reduce
 <!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
-```typst +render +width:80%
+```typst +render +width:60%
 $
     sum_(d=0) mat(1, 2, 3; 4, 5, 6) = #h(0.5em) ?
 $
 ```
 <!-- pause -->
-```typst +render +width:50%
+```typst +render +width:30%
 $
     (5 #h(0.5em) 7 #h(0.5em) 9)
 $
