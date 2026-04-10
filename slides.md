@@ -1317,7 +1317,7 @@ Matmul
 ...you'll also remember there are rules for matrix multiplication...
 
 
-```typst +render +width:55%
+```typst +render +width:60%
 #let hlp(x) = text(fill: rgb("#f5a97f"))[$#x$]
 #let hlm(x) = text(fill: rgb("#c6a0f6"))[$#x$]
 
@@ -1337,9 +1337,29 @@ Matmul
   align: (right + bottom, left + bottom),
   [],
   $ n lr(size: #3em, brace.l) overbrace(mat(hlm(1), hlp(2); hlm(3), hlp(4); hlm(5), hlp(6)), p) $,
-  $ m lr(size: #2em, brace.l) underbrace(mat(hlm(1), hlm(2), hlm(3); hlp(4), hlp(5), hlp(6)), n) $,
+  $ C = A B = mat(hlm(1), hlm(2), hlm(3); hlp(4), hlp(5), hlp(6)) mat(hlm(1), hlp(2); hlm(3), hlp(4); hlm(5), hlp(6)) =
+        mat(hlm(22), hll(28); hlr(49), hlp(64)) #h(1em) => #h(1em)
+        m lr(size: #2em, brace.l) underbrace(mat(hlm(1), hlm(2), hlm(3); hlp(4), hlp(5), hlp(6)), n) $,
   $ m lr(size: #2em, brace.l) underbrace(mat(hlm(22), hll(28); hlr(49), hlp(64)), p) $,
 )
+```
+
+<!-- newlines: 1 -->
+<!-- pause -->
+```rust +no_background {all|1|2-4|6-7|9|10-11|all}
+fn matmul(&self, b: &Self) -> Option<Self> {
+    let a_shape_len = self.shape.len();
+    let b_shape_len = b.shape.len();
+    (self.shape[a_shape_len - 1] == b.shape[b_shape_len - 2]).then_some(0)?;
+
+    let a_shape = self.shape.clone().drop_right(2);
+    let b_shape = other.shape.clone().drop_right(2);
+
+    let mut shape = a_shape.broadcast(&b_shape)?;
+    shape.push(self.shape[a_shape_len - 2]); // m
+    shape.push(b.shape[b_shape_len - 1]); // p
+    let strides = (&shape).into();
+    // same ceremony: buffer, pipeline, command
 ```
 
 ---
@@ -1500,7 +1520,7 @@ Matmul - gpu impl
 var<workgroup> a_tile: array<array<f32, T>, T>;
 var<workgroup> b_tile: array<array<f32, T>, T>;
 
-@compute @workgroup_size(T, T)
+@compute @workgroup_size(T, T, 1)
 fn matmul(local_id: vec2<u32>, wg_id: vec2<u32>) {
     let lx = local_id.x;
     let ly = local_id.y;
@@ -1509,9 +1529,9 @@ fn matmul(local_id: vec2<u32>, wg_id: vec2<u32>) {
 
     var acc = 0.0;
     for (var tile = 0u; tile < ceil(n / T); tile++) {
-        a_tile[ly][lx] = A[ty + ly][tile * T + lx];
+        a_tile[ly][lx] = a[ty + ly][tile * T + lx];
 
-        b_tile[ly][lx] = B[tile * T + ly][tx + lx];
+        b_tile[ly][lx] = b[tile * T + ly][tx + lx];
 
         workgroupBarrier();
 
@@ -1524,18 +1544,20 @@ fn matmul(local_id: vec2<u32>, wg_id: vec2<u32>) {
         }
     }
 
-    C[ty + ly][tx + lx] = acc;
+    c[ty + ly][tx + lx] = acc;
 }
 ```
 
 <!-- column: 1 -->
 <!-- pause -->
-`T = ceil(dim / 16)`, each wg loads 2 TxT tiles, one load per thread
-<!-- newlines: 2 -->
+`T = 16` because `T x T = 256 = MAX_WG_SIZE`  
+each wg loads `2 TxT` tiles into shared mem  
 <!-- pause -->
-thread position within tile
+2D wg sizes
 <!-- pause -->
-tile position in output grid
+thread positions within tile
+<!-- pause -->
+tile positions in output grid
 <!-- pause -->
 <!-- newlines: 1 -->
 each thread loads 1 element from A and 1 from B
@@ -1544,9 +1566,12 @@ row from A
 <!-- pause -->
 col from B
 <!-- pause -->
-<!-- newlines: 2 -->
-accumulate dot product from shared memory
-<!-- newlines: 2 -->
+<!-- newlines: 3 -->
+each tile is loaded once but used `T` times  
+by accumulating dot product from shared memory  
+
+`fma`: fused multiply-add, one instruction
+<!-- newlines: 1 -->
 <!-- pause -->
 blog post by Simon Boehm: [](siboehm.com/articles/22/CUDA-MMM)
 
@@ -1564,7 +1589,7 @@ Matmul - gpu impl cont'd
 var<workgroup> a_tile: array<array<f32, T>, T>;
 var<workgroup> b_tile: array<array<f32, T>, T>;
 
-@compute @workgroup_size(T, T)
+@compute @workgroup_size(T, T, 1)
 fn matmul(local_id: vec2<u32>, wg_id: vec2<u32>) {
     let lx = local_id.x;
     let ly = local_id.y;
@@ -1598,33 +1623,39 @@ $
 m lr(size: #2em, brace.l) underbrace(mat(1, 2, 3; 4, 5, 6), n)  times
 underbrace(mat(1, 2; 3, 4; 5, 6), p) lr(size: #3em, brace.r) n =
 underbrace(mat(22, 28; 49, 64), p) lr(size: #2em, brace.r) m \
-T = ceil(3 / 2) = 2, #h(0.5em) n = 3, #h(0.5em) k = {0, 1}
+T = 2, #h(0.5em) n = 3, #h(0.5em) k = {0, 1}
 $
 ```
 <!-- pause -->
-```typst +render +width:60%
+```typst +render +width:70%
 tile index = 0
 $
-(0, 0): "fma"(1, 1, 0) -> "fma"(2, 3, 1) = 7 \
-(1, 0): "fma"(1, 2, 0) -> "fma"(2, 4, 2) = 10 \
-(0, 1): "fma"(4, 1, 0) -> "fma"(5, 3, 4) = 19 \
-(1, 1): "fma"(4, 2, 0) -> "fma"(5, 4, 8) = 28 \
-underbrace(mat(1, 2; 4, 5), "a_tile") times underbrace(mat(1, 2; 3, 4), "b_tile") =
-  underbrace(mat(7, 10; 19, 28), "acc")
+underbrace(mat(1, 2; 4, 5), "a_tile") times underbrace(mat(1, 2; 3, 4), "b_tile") \
+t_(0, 0): #h(0.5em) "fma"(1, 1, 0) #h(0.5em) -> #h(0.5em) "fma"(2, 3, 1) #h(0.5em) -> #h(0.5em) "acc" = 7 \
+t_(1, 0): #h(0.5em) "fma"(1, 2, 0) #h(0.5em) -> #h(0.5em) "fma"(2, 4, 2) #h(0.5em) -> #h(0.5em) "acc" = 10 \
+t_(0, 1): #h(0.5em) "fma"(4, 1, 0) #h(0.5em) -> #h(0.5em) "fma"(5, 3, 4) #h(0.5em) -> #h(0.5em) "acc" = 19 \
+t_(1, 1): #h(0.5em) "fma"(4, 2, 0) #h(0.5em) -> #h(0.5em) "fma"(5, 4, 8) #h(0.5em) -> #h(0.5em) "acc" = 28
 $
 ```
 <!-- pause -->
 ```typst +render +width:60%
 tile index = 1
 $
-(0, 0): "fma"(3, 5, 7) -> "fma"(0, 0, 22) = 22 \
-(1, 0): "fma"(3, 6, 10) -> "fma"(0, 0, 28) = 28 \
-(0, 1): "fma"(6, 5, 19) -> "fma"(0, 0, 49) = 49 \
-(1, 1): "fma"(6, 6, 28) -> "fma"(0, 0, 64) = 64 \
-underbrace(mat(7, 10; 19, 28), "acc") + underbrace(mat(3, 0; 6, 0), "a_tile") times
-  underbrace(mat(5, 6; 0, 0), "b_tile") = underbrace(mat(22, 28; 49, 64), C)
+underbrace(mat(3, 0; 6, 0), "a_tile") times underbrace(mat(5, 6; 0, 0), "b_tile") \
+t_(0, 0): "fma"(3, 5, 7) -> "fma"(0, 0, 22) = 22 \
+t_(1, 0): "fma"(3, 6, 10) -> "fma"(0, 0, 28) = 28 \
+t_(0, 1): "fma"(6, 5, 19) -> "fma"(0, 0, 49) = 49 \
+t_(1, 1): "fma"(6, 6, 28) -> "fma"(0, 0, 64) = 64 \
 $
 ```
+
+---
+
+<!-- newlines: 5 -->
+<!-- alignment: center -->
+<!-- newlines: 1 -->
+We now understand what a tensor is and what it does!
+![image:width:50%](img/yay.gif)
 
 ---
 
