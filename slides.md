@@ -1063,16 +1063,31 @@ $
 <!-- pause -->
 
 <!-- column: 1 -->
-```typst +render +width:80%
+```typst +render +width:60%
 $
     sum_(d=1) mat(1, 2, 3; 4, 5, 6) = #h(0.5em) ?
 $
 ```
 <!-- pause -->
-```typst +render +width:40%
+```typst +render +width:20%
 $
     vec(6, 15)
 $
+```
+
+<!-- reset_layout -->
+<!-- alignment: center -->
+<!-- pause -->
+```rust +no_background
+fn red(&self, dim: usize, zero: f32, f: &'static str) -> Option<Self> {
+    if dim >= self.shape.data().len() {
+        None
+    } else {
+        let mut shape_data = self.shape.data().to_vec();
+        shape_data[dim] = 1;
+        let shape = Shape::new(shape_data);
+        let strides = (&shape).into();
+        // same ceremony: buffer, pipeline, command
 ```
 
 ---
@@ -1148,7 +1163,7 @@ out[2] = {1 * 7, 7 * 8, 56 * 9}
 Reduce - gpu impl
 ===
 
-<!-- column_layout: [4, 3] -->
+<!-- column_layout: [3, 4] -->
 
 <!-- column: 0 -->
 ```rust +no_background +line_numbers
@@ -1185,16 +1200,16 @@ fn reduce(local_id: u32, wg_id: u32) {
 
 <!-- column: 1 -->
 <!-- pause -->
-`WG_SIZE = min(256, red_dim_size)`
-<!-- newlines: 1 -->
-<!-- pause -->
-we dispatch 1 workgroup per output element
+`WG_SIZE = min(256, red_dim_size.next_power_of_two())`  
+We dispatch one wg per reduced / output element
 <!-- newlines: 2 -->
 <!-- pause -->
-_Phase 1_: each thread strides through the reduce dim
-<!-- newlines: 4 -->
+_Phase 1_: 
+  - `WG_SIZE` threads split the reduce dim
+  - each thread handles every `WG_SIZE`th elem
+<!-- newlines: 3 -->
 <!-- pause -->
-_Phase 2_: parallel tree reduction in shared memory
+_Phase 2_: striding parallel tree reduction in shared memory
 ![image:width:60%](img/tree_red.png)
 <!-- pause -->
 _Phase 3_: thread 0 writes the final result
@@ -1206,22 +1221,34 @@ presentation by Mark Harris: [](developer.download.nvidia.com/assets/cuda/files/
 Reduce - gpu impl cont'd
 ===
 
-<!-- column_layout: [4, 3] -->
+<!-- column_layout: [1, 1] -->
 
+<!-- column: 1 -->
+```typst +render +width:70%
+$
+product_(d=1) mat(1, 2, 3; 4, 5, 6; 7, 8, 9) = vec(6, 120, 504) \
+"red_dim_size" = 3, #h(0.5em) "WG_SIZE" = 4, #h(0.5em)  "wg" "cnt" = 3
+$
+```
 <!-- column: 0 -->
+<!-- pause -->
 ```rust +no_background +line_numbers
-var<workgroup> shared: array<f32, WG_SIZE>;
+var<workgroup> shared: array<f32, 3>;
 
-@compute @workgroup_size(WG_SIZE)
+@compute @workgroup_size(3, 1, 1)
 fn reduce(local_id: u32, wg_id: u32) {
     var acc = 1.0;
-    for (var k = local_id; k < red_dim_size; k += WG_SIZE) {
+    for (
+        var k = local_id;
+        k < red_dim_size;
+        k += 4
+    ) {
         acc = acc * input[index(wg_id, k)];
     }
     shared[local_id] = acc;
     workgroupBarrier();
 
-    for (var s = WG_SIZE / 2; s > 0; s /= 2) {
+    for (var s = 4 / 2; s > 0; s /= 2) {
         if (local_id < s) {
             shared[local_id] =
                 shared[local_id] *
@@ -1235,25 +1262,18 @@ fn reduce(local_id: u32, wg_id: u32) {
     }
 }
 ```
-
 <!-- column: 1 -->
-```typst +render +width:55%
-$
-product_(d=1) mat(1, 2, 3; 4, 5, 6; 7, 8, 9) = vec(6, 120, 504) \
-"red_dim_size" = 3, "WG_SIZE" = 3
-$
-```
 <!-- pause -->
-```typst +render +width:100%
+```typst +render +width:75%
 wg 0: \
 $
-t_0: k = 0 -> A[0, 0], "acc" = 1. times 1 = 1 \
-t_1: k = 1 -> A[0, 1], "acc" = 1. times 2 = 2 \ 
-t_2: k = 2 -> A[0, 2], "acc" = 1. times 3 = 3 \ 
+t_0: #h(0.5em) k = 0 -> A[0, 0], #h(0.5em) "acc" = 1. times 1 = 1 \
+t_1: #h(0.5em) k = 1 -> A[0, 1], #h(0.5em) "acc" = 1. times 2 = 2 \ 
+t_2: #h(0.5em) k = 2 -> A[0, 2], #h(0.5em) "acc" = 1. times 3 = 3 \ 
 "shared" = [1, 2, 3, 1] \
 \
-"stride" = 2 -> "shared"_0 = 1 times 3 = 3, "shared"_1 = 2 times 1 = 2 \
-"stride" = 1 -> "shared"_0 = 3 times 2 = 6
+"stride" = 2 #h(0.5em) -> #h(0.5em) "shared"_0 = 1 times 3 = 3, #h(1em) "shared"_1 = 2 times 1 = 2 \
+"stride" = 1 #h(0.5em) -> #h(0.5em) "shared"_0 = 3 times 2 = 6
 $
 ```
 <!-- pause -->

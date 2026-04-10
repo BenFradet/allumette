@@ -75,6 +75,10 @@ mod tests {
         assert_eq!(vec![4, 1], res.data);
         let res2: Strides = (&Shape::new(vec![4, 2, 2])).into();
         assert_eq!(vec![4, 2, 1], res2.data);
+        let res3: Strides = (&Shape::new(vec![1, 2])).into();
+        assert_eq!(vec![2, 1], res3.data);
+        let res4: Strides = (&Shape::new(vec![2, 1])).into();
+        assert_eq!(vec![1, 1], res4.data);
     }
 
     #[ignore = "dbg"]
