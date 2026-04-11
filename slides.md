@@ -186,12 +186,18 @@ tensor[i][j][k] = data[i * si + j * sj + k * sk]
 ```
 how many elems to skip to advance one step along that dim
 
-<!-- reset_layout -->
+<!-- pause -->
+transposition (permutation):  
+`Shape([2, 3]) => Shape([3, 2])`  
+<!-- pause -->
+adding / removing dimensions (viewing):  
+`Shape([1, 2, 3]) <=> Shape([2, 3])`
+<!-- column: 0 -->
 <!-- newlines: 2 -->
-<!-- alignment: center -->
-- transposition (permutation): `Shape::new(vec![2, 3]) => Shape::new(vec![3, 2])`
-- adding / removing dimensions (viewing): `Shape::new(vec![1, 2, 3]) <=> Shape::new(vec![2, 3])`
+![image:width:60%](img/broadcast.png)
 
+<!-- pause -->
+<!-- column: 1 -->
 _=> only require metadata changes_
 
 
@@ -1679,7 +1685,7 @@ Neural networks!
 - function approximators parameterised by ... tensors
 
 <!-- pause -->
-- input / output ...
+- output ...
 
 <!-- pause -->
 ![image:width:80%](img/tensors.jpg)
@@ -1689,28 +1695,47 @@ Neural networks!
 What's a neural network anyway?
 ===
 
-```typst +render +width:40%
+<!-- column_layout: [1, 1] -->
+<!-- column: 0 -->
+```typst +render +width:60%
 $
 forall f in C(RR^n), #h(0.5em) forall epsilon.alt > 0, #h(0.5em)  forall x in RR^n,
 $
 ```
-```typst +render +width:30%
+<!-- column: 1 -->
+<!-- pause -->
+for all functions belonging to the set of continuous functions over n-dimensional real numbers
+<!-- column: 0 -->
+<!-- pause -->
+```typst +render +width:50%
 $
 exists accent(f, hat), #h(0.5em) abs(f(x) - accent(f, hat)(x)) < epsilon.alt
 $
 ```
+<!-- column: 1 -->
 <!-- pause -->
-```typst +render +width:35%
+there exists f hat, such that the absolute difference between f hat and f is inferior to epsilon
+<!-- column: 0 -->
+<!-- pause -->
+```typst +render +width:55%
 $
 accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
 $
 ```
 
+<!-- reset_layout -->
 <!-- alignment: center -->
+<!-- pause -->
 universal approximation theorem 🔥
 
+<!-- column_layout: [1, 1] -->
+<!-- column: 0 -->
+<!-- pause -->
 ![image:width:70%](img/weierstrass.gif)
 credit: Doleron, CC BY-SA 3.0
+<!-- column: 1 -->
+<!-- pause -->
+![image:width:70%](img/oneoverx.png)
 
 ---
 
