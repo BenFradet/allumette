@@ -309,7 +309,7 @@ Map - cpu in parallel using rayon
 <!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
-```rust +no_background {all|1|5|7|4-7|9|all}
+```rust +no_background {all|1|5|7|4-7|all}
 fn map<F: Fn(f64) -> f64 + Sync>(
     &self, f: F
 ) -> Self {
@@ -505,7 +505,7 @@ $
 <!-- pause -->
 total invocations
 ```typst +render +width:60%
-$vec("wg_size"_x, "wg_size"_y, "wg_size"_z) times vec("num_wgs"_x, "num_wgs"_y, "num_wgs"_z)$
+$vec("wg_size"_x, "wg_size"_y, "wg_size"_z) dot vec("num_wgs"_x, "num_wgs"_y, "num_wgs"_z)$
 ```
 <!-- pause -->
 
@@ -525,15 +525,11 @@ fn call(@builtin(global_invocation_id)
 <!-- pause -->
 
 <!-- column: 1 -->
-<!-- newlines: 3 -->
+<!-- newlines: 5 -->
 ```rust +no_background
-// enqueue_command explained
-let mut encoder = create_command_encoder();
+// inside enqueue_command
 let mut pass = encoder.begin_compute_pass();
-pass.set_pipeline(pipeline);
-pass.set_bind_group(0, Some(bind_group));
 pass.dispatch_workgroups(num_wgs_x, num_wgs_y, num_wgs_z);
-encoder.finish()
 ```
 ---
 
@@ -638,14 +634,8 @@ Zip - broadcasting
 <!-- pause -->
 <!-- newlines: 1 -->
 
-<!-- column_layout: [1, 1] -->
-
-<!-- column: 0 -->
 <!-- alignment: center -->
-<span style="color:#a6da95">do's 👍</span>
-<!-- pause -->
-
-```typst +render +width:45%
+```typst +render +width:25%
 $
 1
 +
@@ -669,7 +659,7 @@ underbrace(
 $
 ```
 <!-- pause -->
-```typst +render +width:55%
+```typst +render +width:35%
 $
 m lr(size: #3em, brace.l) vec(
   1, dots.v, 2
@@ -695,7 +685,7 @@ underbrace(
 $
 ```
 <!-- pause -->
-```typst +render +width:55%
+```typst +render +width:35%
 $
 underbrace(
   (1 ... 2),
@@ -752,72 +742,6 @@ underbrace(
 ) lr(size: #3em, brace.r) m
 $
 ```
-<!-- pause -->
-
-<!-- column: 1 -->
-<!-- alignment: center -->
-<span style="color:#ed8796">dont's 👎</span>
-
-<!-- pause -->
-```typst +render +width:70%
-$
-p != m, #h(0.5em)
-p lr(size: #3em, brace.l) vec(
-  a_1, dots.v, a_p
-) 
-+
-underbrace(
-  mat(
-    b_11, ..., b(1n);
-    dots.v, dots.down, dots.v;
-    b_(m 1), ..., b_(m n);
-  ),
-  n,
-) lr(size: #3em, brace.r) m
-$
-```
-<!-- pause -->
-```typst +render +width:70%
-$
-q != n, #h(0.5em)
-underbrace(
-  (a_1 ... a_q),
-  q
-) 
-+
-underbrace(
-  mat(
-    b_11, ..., b_(1n);
-    dots.v, dots.down, dots.v;
-    b_(m 1), ..., b_(m n);
-  ),
-  n,
-) lr(size: #3em, brace.r) m
-$
-```
-<!-- pause -->
-```typst +render +width:90%
-$
-p != m, #h(0.5em) q != n, #h(0.5em)
-p lr(size: #3em, brace.l) underbrace(
-  mat(
-    a_11, ..., a_(1q);
-    dots.v, dots.down, dots.v;
-    a_(p 1), ..., a_(p q);
-  ),
-  q,
-) 
-+
-underbrace(
-  mat(
-    b_11, ..., b_(1n);
-    dots.v, dots.down, dots.v;
-    b_(m 1), ..., b_(m n);
-  ),
-  n,
-) lr(size: #3em, brace.r) m
-$
-```
 
 ---
 
@@ -853,29 +777,29 @@ fn broadcast(&self, b: &Shape) -> Option<Shape> {
 <!-- pause -->
 
 <!-- column: 1 -->
-```typst +render +width:70%
+![image:width:80%](img/broadcast.png)
+<!-- pause -->
+![image:width:80%](img/broadcast_no.png)
+<!-- pause -->
+```typst +render +width:60%
 $vec(1) #h(0.5em) "bc" #h(0.5em) vec(2, 3) = vec(2, 3)$
 ```
 <!-- pause -->
-```typst +render +width:70%
+```typst +render +width:60%
 $vec(5) #h(0.5em) "bc" #h(0.5em) vec(2, 5) = vec(2, 5)$
 ```
 <!-- pause -->
-```typst +render +width:85%
+```typst +render +width:75%
 $vec(2, 3, 1) #h(0.5em) "bc" #h(0.5em) vec(7, 2, 3, 5) = vec(7, 2, 3, 5)$
 ```
 <!-- pause -->
-```typst +render +width:55%
+```typst +render +width:40%
 $vec(5) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) vec(5, 2)$
 ```
 <!-- pause -->
-```typst +render +width:65%
+```typst +render +width:75%
 $vec(5, 7, 5, 1) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) vec(1, 5, 1, 5)$
 ```
-<!-- pause -->
-<!-- reset_layout -->
-<!-- alignment: center -->
-![image:width:60%](img/broadcast.png)
 
 ---
 
