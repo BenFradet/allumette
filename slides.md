@@ -284,7 +284,7 @@ Map - cpu sequential
 ===
 
 <!-- newlines: 6 -->
-```rust +no_background {all|4-5|6-8|9-13|all}
+```rust +no_background +line_numbers
 fn map<F: Fn(f64) -> f64>(
     &self, f: F
 ) -> Self {
@@ -309,7 +309,7 @@ Map - cpu in parallel using rayon
 <!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
-```rust +no_background {all|1|5|7|4-7|all}
+```rust +no_background +line_numbers
 fn map<F: Fn(f64) -> f64 + Sync>(
     &self, f: F
 ) -> Self {
@@ -327,7 +327,7 @@ fn map<F: Fn(f64) -> f64 + Sync>(
 <!-- pause -->
 
 <!-- column: 1 -->
-```rust +no_background
+```rust +no_background +line_numbers
 fn map<F: Fn(f64) -> f64>(
     &self, f: F
 ) -> Self {
@@ -821,6 +821,7 @@ fn zip(&self, b: &Self, f: &'static str) -> Option<Self> {
     // same ceremony: buffer, pipeline, command
 ```
 <!-- pause -->
+<!-- newlines: 1 -->
 ```rust +no_background +line_numbers
 @compute @workgroup_size(x, y, z)
 fn zip(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -855,19 +856,16 @@ a_shape = [1, 2], a_strides = [2, 1]
 b_shape = [2, 1], b_strides = [1, 1]
 c_shape = [1, 2].bc([2, 1]) = [2, 2], c_strides = [2, 1]
 ```
+<!-- newlines: 5 -->
 <!-- pause -->
-<!-- newlines: 3 -->
 ```rust +no_background
 i = 3
-```
-<!-- pause -->
-```rust +no_background
 // converts 1D indices to nD using the output shape
-to_idx(3, [2, 2]) = [1, 1] // 3 / 2 => (3 % 2) / 1
+to_idx(3, [2, 2]) = [1, 1] // 3 / 2 => 3 % 2
 ```
 <!-- pause -->
 ```rust +no_background
-// maps out_idx back to each shape, clamping to 0
+// maps c_idx back to each shape, if 1 => 0 else c_idx
 a_idx = bc_idx([1, 1], [1, 2]) = [0, 1]
 b_idx = bc_idx([1, 1], [2, 1]) = [1, 0]
 ```
@@ -1099,7 +1097,7 @@ Reduce - gpu impl
 ```rust +no_background +line_numbers
 var<workgroup> shared: array<f32, WG_SIZE>;
 
-@compute @workgroup_size(WG_SIZE)
+@compute @workgroup_size(WG_SIZE, 1, 1)
 fn reduce(local_id: u32, wg_id: u32) {
     var acc = default;
     for (
@@ -1163,22 +1161,22 @@ $
 <!-- column: 0 -->
 <!-- pause -->
 ```rust +no_background +line_numbers
-var<workgroup> shared: array<f32, 3>;
+var<workgroup> shared: array<f32, WG_SIZE>;
 
-@compute @workgroup_size(3, 1, 1)
+@compute @workgroup_size(WG_SIZE, 1, 1)
 fn reduce(local_id: u32, wg_id: u32) {
     var acc = 1.0;
     for (
         var k = local_id;
         k < red_dim_size;
-        k += 4
+        k += WG_SIZE;
     ) {
         acc = acc * input[index(wg_id, k)];
     }
     shared[local_id] = acc;
     workgroupBarrier();
 
-    for (var s = 4 / 2; s > 0; s /= 2) {
+    for (var s = WG_SIZE / 2; s > 0; s /= 2) {
         if (local_id < s) {
             shared[local_id] =
                 shared[local_id] *
@@ -1194,28 +1192,26 @@ fn reduce(local_id: u32, wg_id: u32) {
 ```
 <!-- column: 1 -->
 <!-- pause -->
-```typst +render +width:75%
+```typst +render +width:30%
 wg 0: \
 $
-t_0: #h(0.5em) k = 0 -> A[0, 0], #h(0.5em) "acc" = 1. times 1 = 1 \
-t_1: #h(0.5em) k = 1 -> A[0, 1], #h(0.5em) "acc" = 1. times 2 = 2 \ 
-t_2: #h(0.5em) k = 2 -> A[0, 2], #h(0.5em) "acc" = 1. times 3 = 3 \ 
 "shared" = [1, 2, 3, 1] \
-\
-"stride" = 2 #h(0.5em) -> #h(0.5em) "shared"_0 = 1 times 3 = 3, #h(1em) "shared"_1 = 2 times 1 = 2 \
-"stride" = 1 #h(0.5em) -> #h(0.5em) "shared"_0 = 3 times 2 = 6
+(1 times 3) times (2 times 1) = 6
 $
 ```
 <!-- pause -->
-```typst +render +width:40%
+```typst +render +width:75%
 wg 1: \
 $
+t_0: #h(0.5em) k = 0 -> A[1, 0], #h(0.5em) "acc" = 1. times 4 = 4 \
+t_1: #h(0.5em) k = 1 -> A[1, 1], #h(0.5em) "acc" = 1. times 5 = 5 \ 
+t_2: #h(0.5em) k = 2 -> A[1, 2], #h(0.5em) "acc" = 1. times 6 = 6 \ 
 "shared" = [4, 5, 6, 1] \
 (4 times 6) times (5 times 1) = 120
 $
 ```
 <!-- pause -->
-```typst +render +width:50%
+```typst +render +width:30%
 wg 2: \
 $
 "shared" = [7, 8, 9, 1] \
@@ -1492,9 +1488,9 @@ tile positions in output grid
 <!-- newlines: 1 -->
 each thread loads 1 element from A and 1 from B
 <!-- pause -->
-row from A
+row elem from A
 <!-- pause -->
-col from B
+col elem from B
 <!-- pause -->
 <!-- newlines: 3 -->
 each tile is loaded once but used `T` times  
@@ -1581,9 +1577,8 @@ $
 
 ---
 
-<!-- newlines: 5 -->
+<!-- newlines: 6 -->
 <!-- alignment: center -->
-<!-- newlines: 1 -->
 We now understand what a tensor is and what it does!
 ![image:width:50%](img/yay.gif)
 
@@ -1675,11 +1670,13 @@ $
 <!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
+<!-- pause -->
 ![image:width:100%](img/nn_training.png)
 <!-- alignment: center -->
 credit: Mikael Häggström, CC0
 
 <!-- column: 1 -->
+<!-- pause -->
 ```typst +render +width:40%
 $
 sigma(x) = (1 + e^x)^(-1)
@@ -1705,7 +1702,7 @@ We need:
 - weights: connections between neurons
   - `wi` input -> hidden: the feature extracted by the neuron from the input
   - `ci` hidden -> output: how important is this feature
-- `bi` biases: how much of the feature is needed for the neuron to activate
+- biases `bi`: how much of the feature is needed for the neuron to activate
 - layers: input, hidden, output
 - `σ` activation function: yes/no detectors, making `wx + b` non-linear
 - a way to convert the result:
@@ -1736,7 +1733,6 @@ In Rust please!? - layer
 <!-- pause -->
 ```rust +no_background
 struct Layer<'a, B: Backend> {
-    name: &'a str,
     weights: Tensor<'a, B>,
     biases: Tensor<'a, B>,
 }
@@ -1745,28 +1741,38 @@ struct Layer<'a, B: Backend> {
 <!-- pause -->
 <!-- column: 1 -->
 <!-- newlines: 3 -->
-```rust +no_background {all|2-6|9-10|11-12|16|17-19|all}
+```rust +no_background
 impl<'a, B: Backend> Layer<'a, B> {
     pub fn new(
-        name: &'a str,
         in_size: usize,
         out_size: usize,
     ) -> Self {
         Self {
-            name,
             // shape [in_size, out_size]
-            weights: Self::weights(name, in_size, out_size),
+            weights: Self::rnd_weights(name, in_size, out_size),
             // shape [out_size]
-            biases: Self::biases(name, out_size),
+            biases: Self::rnd_biases(name, out_size),
         }
     }
 
     fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
-        // weights is shape [in_size, out_size]
-        // result is shape [n_inputs, out_size]
+        // x is shape       [n_inputs, n_feats]
+        // weights is shape [n_feats, out_size]
+        // biases is shape  [out_size]
+        // result is shape  [n_inputs, out_size]
         x.matmul(self.weights) + self.biases
     }
 }
+```
+
+<!-- column: 0 -->
+<!-- pause -->
+<!-- newlines: 9 -->
+```typst +render +width:100%
+$
+accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i) \
+=> w^T x + b
+$
 ```
 
 ---
@@ -1774,38 +1780,65 @@ impl<'a, B: Backend> Layer<'a, B> {
 In Rust please!? - network
 ===
 
+<!-- column_layout: [2, 1] -->
+<!-- column: 1 -->
 ```rust +no_background
 struct Network<'a, B: Backend> {
-    input_layer: Layer<'a, B>,
-    hidden_layer: Layer<'a, B>,
-    output_layer: Layer<'a, B>,
+    input: Layer<'a, B>,
+    hidden: Layer<'a, B>,
+    output: Layer<'a, B>,
 }
 ```
 <!-- pause -->
-```rust +no_background {all|2-7|9-13|10|11|12|all}
+<!-- column: 0 -->
+```rust +no_background
 impl<'a, B: Backend> Network<'a, B> {
-    fn new(n_features: usize, hidden_layer_size: usize) -> Self {
-        let input_layer = Layer::new("input", n_features, hidden_layer_size);
-        let hidden_layer = Layer::new("hidden", hidden_layer_size, hidden_layer_size);
-        let output_layer = Layer::new("output", hidden_layer_size, 1);
+    fn new(
+        n_features: usize,
+        hidden_layer_size: usize,
+    ) -> Self {
+        let hls = hidden_layer_size;
+        let input = Layer::new(n_features, hls);
+        let hidden = Layer::new(hls, hls);
+        let output = Layer::new(hls, 1);
         Self { input_layer, hidden_layer, output_layer }
-    }
-
-    fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
-        let i = self.input_layer.forward(x).sigmoid();
-        let h = self.hidden_layer.forward(i).sigmoid();
-        self.output_layer.forward(h).sigmoid()
     }
 ```
 <!-- pause -->
-<!-- column_layout: [4, 1] -->
+```rust +no_background
+        fn forward_uat(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
+            let h = self.hidden_layer.forward(x).sigma();
+            self.output_layer.forward(h)
+        }
+```
+<!-- pause -->
+<!-- column: 1 -->
+<!-- newlines: 5 -->
+```typst +render +width:100%
+$
+accent(f, hat)_"uat" (x) = c dot sigma (w x + b)
+$
+```
+<!-- pause -->
 <!-- column: 0 -->
 ```rust +no_background
-          fn forward_uat(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
-              let h = self.hidden_layer.forward(x).sigmoid();
-              self.output_layer.forward(h)
-          }
-      }
+     fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
+         let i = self.input_layer.forward(x).sigma();
+         let h = self.hidden_layer.forward(i).sigma();
+         self.output_layer.forward(h).sigma()
+     }
+ }
+```
+<!-- pause -->
+<!-- column: 1 -->
+<!-- newlines: 2 -->
+```typst +render +width:100%
+$
+accent(f, hat)_"in" (x) = sigma(w_"in" x + b_"in") \
+accent(f, hat)_"hid" (x) = sigma(w_"hid" x + b_"hid") \
+accent(f, hat)_"out" (x) = sigma(w_"out" x + b_"out") \
+accent(f, hat)(x) = accent(f, hat)_"out" (accent(f, hat)_"hid" (accent(f, hat)_"in" (x)))
+$
 ```
 
 ---
