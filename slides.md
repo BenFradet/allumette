@@ -2358,7 +2358,7 @@ fn chain_rule(&self, d: &Self) -> impl Iterator<Item = (&Self, Self)> {
     let inputs = &self.trace.inputs;
     let gradients = self
         .trace
-        .last_fn
+        .fn
         .map(|f| match f {
             Function::B(b) => {
                 let (da, db) = b.backward(&inputs[0], &inputs[1], d);
@@ -2381,9 +2381,9 @@ fn chain_rule(&self, d: &Self) -> impl Iterator<Item = (&Self, Self)> {
 <!-- pause -->
 ```typst +render +width:100%
 $
-d = frac(partial L, partial "out") \
-"unary" y = f(x) => [(x, d dot f'(x))] \
-"binary" y = f(a, b) => [(a, d dot (partial f) / (partial a)), (b, d dot (partial f) / (partial b))] 
+"given" d = frac(partial L, partial "out") \
+"unary" => [("in", frac(partial L, partial "out") dot frac(partial "out", partial "in"))] = [("in", frac(partial L, partial "in"))] \
+"binary" =>[(a, frac(partial L, partial "out") dot frac(partial "out", partial a)), (b, frac(partial L, partial "out") dot frac(partial "out", partial b))] = [(a, frac(partial L, partial a)), (b, frac(partial L, partial b))] 
 $
 ```
 
@@ -2392,7 +2392,10 @@ $
 Rust impl - backprop
 ===
 
+![image:width:100%](img/dag_bwd.png)
+
 <!-- newlines: 1 -->
+<!-- pause -->
 ```rust +no_background {all|1|2-3|5|6-7|8-12|15|all}
 fn backprop(&self, d: Self) -> Gradients<'a, B> {
     let mut intermediates = HashMap::from([(self.id, d)]);
