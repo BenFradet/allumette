@@ -2231,10 +2231,13 @@ Summary
 Rust impl - evaluation trace
 ===
 
-<!-- column_layout: [2, 4] -->
+![image:width:75%](img/dag_fwd.png)
+![image:width:100%](img/dag_bwd.png)
 
+<!-- column_layout: [1, 1] -->
 <!-- column: 0 -->
-<!-- newlines: 1 -->
+<!-- newlines: 2 -->
+<!-- pause -->
 ```rust +no_background
 // Rc b/c we need Clone
 // dyn b/c type erasure
@@ -2243,53 +2246,16 @@ enum Function<'a, B: Backend> {
     B(Rc<dyn Binary<'a, B>>),
 }
 ```
-
-<!-- column: 1 -->
-<!-- pause -->
-```rust +no_background
-pub struct Ln;
-impl<'a, B: Backend> Unary<'a, B> for Ln {
-    fn fwd(&self, a: &B::Ops<'a>) -> B::Ops<'a> {
-        a.map(|e| e.ln()) // < 0 amended
-    }
-
-    fn bwd(&self, i: &B::Ops<'a>, d: &B::Ops<'a>) -> B::Ops<'a> {
-        i.zip(d, |ei, ed| ed / ei) // ei != 0 amended
-    }
-}
-```
-<!-- pause -->
-```rust +no_background
-pub struct Mul;
-impl<'a, B: Backend> Binary<'a, B> for Mul {
-    fn fwd(&self, a: &B::Ops<'a>, b: &B::Ops<'a>) -> B::Ops<'a> {
-        a.zip(b, |e1, e2| e1 * e2)
-    }
-
-    fn bwd(
-        &self,
-        lhs: &B::Ops<'a>,
-        rhs: &B::Ops<'a>,
-        d: &B::Ops<'a>,
-    ) -> (B::Ops<'a>, B::Ops<'a>) {
-        (
-            rhs.zip(d, |e1, e2| e1 * e2),
-            lhs.zip(d, |e1, e2| e1 * e2),
-        )
-    }
-}
-```
-
-<!-- column: 0 -->
-<!-- newlines: 2 -->
+<!-- newlines: 1 -->
 <!-- pause -->
 ```rust +no_background
 struct Trace<'a, B: Backend> {
-    last_fn: Option<Function<'a, B>>,
+    fn: Option<Function<'a, B>>,
     inputs: Vec<Tensor<'a, B>>,
 }
 ```
-<!-- newlines: 2 -->
+<!-- column: 1 -->
+<!-- newlines: 4 -->
 <!-- pause -->
 ```rust +no_background
 struct Tensor<'a, B: Backend> {
@@ -2300,8 +2266,8 @@ struct Tensor<'a, B: Backend> {
     trace: Trace<'a, B>,
 }
 ```
-
 <!-- pause -->
+<!-- newlines: 1 -->
 _#rust_bookclub_
 
 ---
@@ -2309,13 +2275,26 @@ _#rust_bookclub_
 Rust impl - trace capture
 ===
 
-<!-- column_layout: [2, 3] -->
+<!-- column_layout: [1, 1] -->
 
 <!-- column: 0 -->
 ```rust +no_background
-pub struct Forward;
+trait Unary<'a, B: Backend> {
+    fn forward(&self, x: &B::Ops<'a>) -> B::Ops<'a>;
+    fn backward(
+        &self,
+        x: &B::Ops<'a>,
+        d: &B::Ops<'a>,
+    ) -> B::Ops<'a>;
+}
+// same for binary
+```
+<!-- pause -->
+<!-- newlines: 2 -->
+```rust +no_background
+struct Forward;
 impl Forward {
-    pub fn unary<'a, B: Backend>(
+    fn unary<'a, B: Backend>(
         u: impl Unary<'a, B>,
         a: Tensor<'a, B>,
     ) -> Tensor<'a, B> {
@@ -2323,53 +2302,47 @@ impl Forward {
         let trace = Trace::default()
             .last_fn(Function::U(Rc::new(u)))
             .push_input(a);
-        Tensor::new(res, new_trace)
-    }
-
-    pub fn binary<'a, B: Backend>(
-        b: impl Binary<'a, B>,
-        lhs: Tensor<'a, B>,
-        rhs: Tensor<'a, B>,
-    ) -> Tensor<'a, B> {
-        let res = b.forward(&lhs, &rhs);
-        let trace = Trace::default()
-            .last_fn(Function::B(Rc::new(b)))
-            .push_input(lhs)
-            .push_input(rhs);
         Tensor::new(res, trace)
     }
+    // same for binary
 }
 ```
 
 <!-- column: 1 -->
 <!-- pause -->
+```rust +no_background
+struct Sigma;
+impl<'a, B: Backend> Unary<'a, B> for Sigma {
+    fn forward(&self, x: &B::Ops<'a>) -> B::Ops<'a> {
+        a.map(|xi| 1. / (1. + (-xi).exp()))
+    }
 
-<!-- newlines: 3 -->
+    // ∂L/∂in = d * ∂out/∂in = ∂L/∂out * ∂out/∂in
+    fn backward(
+        &self,
+        x: &B::Ops<'a>,
+        d: &B::Ops<'a>
+    ) -> B::Ops<'a> {
+        // sig'(x) = sig(x) * (1 - sig(x))
+        x.zip(|xi, di| di * xi.sig() * (1. - xi.sig()))
+    }
+}
+```
+<!-- newlines: 2 -->
+<!-- pause -->
 ```rust +no_background
 impl<'a, B: Backend> Tensor<'a, B> {
-    fn ln(self) -> Self {
-        Forward::unary(Ln {}, self)
+    fn sigma(self) -> Self {
+        Forward::unary(Sigma {}, self)
     }
 }
 
-t.ln()
-```
-<!-- pause -->
-<!-- newlines: 3 -->
-```rust +no_background
-impl<'a, B: Backend> Mul<Tensor<'a, B>> for Tensor<'a, B> {
-    type Output = Tensor<'a, B>;
-
-    fn mul(self, rhs: Tensor<'a, B>) -> Self::Output {
-        Forward::binary(binary::Mul {}, self, rhs)
-    }
-}
-
-t1 * t2
+tensor.sigma()
 ```
 <!-- reset_layout -->
 <!-- pause -->
 <!-- alignment: center -->
+<!-- newlines: 1 -->
 that's _forward_ done!
 
 ---
@@ -2377,6 +2350,8 @@ that's _forward_ done!
 Rust impl - chain rule
 ===
 
+<!-- column_layout: [3, 1] -->
+<!-- column: 0 -->
 ```rust +no_background
 // Self is Tensor<'a, B>
 fn chain_rule(&self, d: &Self) -> impl Iterator<Item = (&Self, Self)> {
@@ -2393,16 +2368,20 @@ fn chain_rule(&self, d: &Self) -> impl Iterator<Item = (&Self, Self)> {
                 let da = u.backward(&inputs[0], d);
                 vec![da]
             }
-        })
-        .unwrap_or_default();
+        });
     inputs.iter().zip(gradients)
 }
 ```
 
 <!-- pause -->
+<!-- column: 1 -->
+![image:width:100%](img/chain_rule.png)
+
+<!-- reset_layout -->
+<!-- pause -->
 ```typst +render +width:100%
 $
-d = frac(partial L, partial y) \
+d = frac(partial L, partial "out") \
 "unary" y = f(x) => [(x, d dot f'(x))] \
 "binary" y = f(a, b) => [(a, d dot (partial f) / (partial a)), (b, d dot (partial f) / (partial b))] 
 $
@@ -2545,8 +2524,8 @@ x1 | x2 | y
 3.46 | 73.77 | 1
 
 <!-- newlines: 2 -->
-binary cross entropy from before
-```typst +render +width:100%
+log loss from before
+```typst +render +width:80%
 $-frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
 ```
 
