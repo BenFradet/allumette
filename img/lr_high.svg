@@ -21,11 +21,11 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="0.70844811"
-     inkscape:cx="532.85483"
-     inkscape:cy="165.14971"
-     inkscape:window-width="1906"
-     inkscape:window-height="1186"
+     inkscape:zoom="0.50094846"
+     inkscape:cx="580.89808"
+     inkscape:cy="5.98864"
+     inkscape:window-width="1920"
+     inkscape:window-height="1200"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="0"
@@ -35,7 +35,46 @@
   <desc
      id="desc1">Generated with Qt</desc>
   <defs
-     id="defs1" />
+     id="defs1">
+    <marker
+       style="overflow:visible"
+       id="Triangle"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="marker3"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path3" />
+    </marker>
+  </defs>
   <g
      fill="none"
      stroke="black"
@@ -2084,5 +2123,35 @@
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:Sans;-inkscape-font-specification:'Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#c6a0f6;fill-opacity:1;stroke:#c6a0f6;stroke-width:2.83465;stroke-dasharray:none;stroke-opacity:1"
          x="630.98596"
          y="121.53098">x</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:48px;font-family:'trebuchet ms', verdana, arial, sans-serif;-inkscape-font-specification:'trebuchet ms, verdana, arial, sans-serif, Normal';writing-mode:lr-tb;direction:ltr;fill:#c6d0f5;fill-opacity:1;stroke:#c6d0f5;stroke-width:2.83465;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+       x="458.93356"
+       y="580.39996"
+       id="text156-4"><tspan
+         sodipodi:role="line"
+         id="tspan156-4"
+         style="fill:#c6d0f5;fill-opacity:1;stroke:#c6d0f5;stroke-width:2.83465;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+         x="458.93356"
+         y="580.39996">p</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:48px;font-family:'trebuchet ms', verdana, arial, sans-serif;-inkscape-font-specification:'trebuchet ms, verdana, arial, sans-serif, Normal';writing-mode:lr-tb;direction:ltr;fill:#c6d0f5;fill-opacity:1;stroke:#c6d0f5;stroke-width:2.83465;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+       x="-93.321381"
+       y="285.67444"
+       id="text156-4-6"><tspan
+         sodipodi:role="line"
+         id="tspan156-4-3"
+         style="fill:#c6d0f5;fill-opacity:1;stroke:#c6d0f5;stroke-width:2.83465;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+         x="-93.321381"
+         y="285.67444">L</tspan></text>
+    <path
+       style="fill:#c6d0f5;fill-opacity:1;stroke:#c6d0f5;stroke-width:8.50395;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Triangle);paint-order:stroke fill markers"
+       d="M 39.497819,524.52267 H 880.37963"
+       id="path1" />
+    <path
+       style="fill:#c6d0f5;fill-opacity:1;stroke:#c6d0f5;stroke-width:8.50395;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3);paint-order:stroke fill markers"
+       d="M -38.830402,452.24713 V 112.02452"
+       id="path2" />
   </g>
 </svg>

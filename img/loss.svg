@@ -21,15 +21,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="0.32679738"
-     inkscape:cx="-729.81002"
-     inkscape:cy="405.45001"
+     inkscape:zoom="0.46216129"
+     inkscape:cx="-752.98388"
+     inkscape:cy="512.80799"
      inkscape:window-width="1906"
      inkscape:window-height="1186"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="0"
-     inkscape:current-layer="g213" />
+     inkscape:current-layer="g178" />
   <title
      id="title1">Qt SVG Document</title>
   <desc
@@ -1951,16 +1951,19 @@
          fill-opacity="1"
          stroke="none"
          xml:space="preserve"
-         x="-403.07751"
+         x="-376.23981"
          y="391.76065"
          font-family="Sans"
          font-size="10px"
          font-weight="400"
          font-style="normal"
          id="text177"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:29.9368px;font-family:Sans;-inkscape-font-specification:'Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:2.82868;stroke-dasharray:none"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:29.9368px;font-family:Sans;-inkscape-font-specification:'Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:2.82868;stroke-dasharray:none"
+         inkscape:export-filename="loss.png"
+         inkscape:export-xdpi="96"
+         inkscape:export-ydpi="96"><tspan
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:29.9368px;font-family:Sans;-inkscape-font-specification:'Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#a6da95;fill-opacity:1;stroke:#a6da95;stroke-width:2.82868;stroke-dasharray:none;stroke-opacity:1"
-           id="tspan213">BCE</tspan></text>
+           id="tspan213">LL</tspan></text>
     </g>
     <g
        fill="none"

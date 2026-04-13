@@ -1883,24 +1883,24 @@ How does the network learn?
 - gather a lot of inputs
 
 <!-- column: 1 -->
-![image:width:70%](img/training_data.png)
+![image:width:80%](img/training_data.png)
 
 <!-- column: 0 -->
 <!-- pause -->
 - forward pass: feed input through the network
 
 <!-- column: 1 -->
-![image:width:70%](img/training_data_scored.png)
+![image:width:80%](img/training_data_scored.png)
 
 <!-- column: 0 -->
 <!-- pause -->
 <!-- list_item_newlines: 2 -->
 - backward pass:
+<!-- pause -->
   - compute network performance <=> loss
 
 <!-- column: 1 -->
 <!-- pause -->
-<!-- newlines: 1 -->
 ```typst +render +width:50%
 $"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 ```
@@ -1946,7 +1946,7 @@ $"L1" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 
 but rather
 ```typst +render +width:100%
-$"BCE" = -frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
+$"LL" = -frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
 ```
 
 why ?
@@ -2024,7 +2024,7 @@ there is another problem however...
 for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = frac(f_j (x_i + h) - f_j (x_i), h) + O(h) $
 ```
 
-- this is `O(mn)` complexity
+- this is `O(n)` complexity
 - we could have **millions or more** of parameters
 - _=> won't work_
 - _still very useful for property tests_
@@ -2089,32 +2089,29 @@ $
 <!-- pause -->
 ![image:width:100%](img/dag_bwd.png)
 
+<!-- column_layout: [2, 1] -->
+<!-- column: 0 -->
 <!-- incremental_lists: true -->
-- adjoints `ū = ȳ ∂y/∂u` represents the sensitivity of the output `y` wrt `u`
+- adjoints `¯p = ∂y/∂p` represent the sensitivity of the output `y` wrt `p`
 - leverages the *chain rule* over and over:
 
-```typst +render +width:80%
+
+```typst +render +width:100%
 $
-g(f(x)), #h(1.5em) frac(d g, d x) = frac(d g, d f) dot frac(d f, d x) #h(5em)
+g(f(x)), #h(1em) frac(d g, d x) = frac(d g, d f) dot frac(d f, d x) #h(3em)
 y(u_3(u_2(u_1(x)))), #h(1.5em) macron(u)_2 = macron(u)_3 dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_3) dot frac(∂ u_3, ∂ u_2)
 $
 ```
 
-<!-- column_layout: [2, 1] -->
+<!-- column: 1 -->
+![image:width:100%](img/chain_rule.png)
 
 <!-- column: 0 -->
 <!-- incremental_lists: true -->
 - forward pass `O(n)`
-- backward pass `O(n)` once the DAG is topologically sorted
-- great for large inputs, small outputs: all `dL/dxi` in one pass
+- backward pass `O(n)` once the DAG is topologically sorted `O(V + E)`
 - _=> will work_
 
-<!-- column: 1 -->
-![image:width:100%](img/phew.gif)
-
-<!-- pause -->
-<!-- reset_layout -->
-<!-- alignment: center -->
 blog post by Andrew M Holmes: [](huggingface.co/blog/andmholm/what-is-automatic-differentiation)
 
 ---
@@ -2149,6 +2146,29 @@ c_i = 3, #h(0.5em) macron(c_i) = frac(∂ L, ∂ c_i) = 0.5
 $
 ```
 <!-- pause -->
+<!-- newlines: 2 -->
+We need to update our params to take the loss' gradient into account `Δ`:
+```typst +render +width:80%
+$
+Delta p_i = -1 dot eta dot frac(∂ L, ∂ p_i) \
+p_(i + 1) = p_(i) + Delta p_i
+$
+```
+
+<!-- column: 1 -->
+<!-- pause -->
+Learning rate `η`:
+<!-- incremental_lists: true -->
+- the step size at each iteration towards the min loss
+- speed at which the network learns
+
+![image:width:100%](img/lr_low.png)
+<!-- pause -->
+<!-- newlines: 1 -->
+![image:width:100%](img/lr_high.png)
+
+<!-- column: 2 -->
+<!-- pause -->
 Gradient direction:
 ```typst +render +width:80%
 $
@@ -2158,52 +2178,38 @@ $
 <!-- pause -->
 ```typst +render +width:80%
 $
-frac(∂ L, ∂ p) < 0, #h(0.5em) p arrow.br #h(0.5em) => #h(0.5em) L arrow.br
+frac(∂ L, ∂ p) < 0, #h(0.5em) p arrow.tr #h(0.5em) => #h(0.5em) L arrow.br
 $
 ```
 
 <!-- pause -->
-we introduce a `-1` factor as a result
-
-<!-- column: 1 -->
-<!-- pause -->
-Learning rate `η`:
-<!-- incremental_lists: true -->
-- the step size at each iteration towards the min loss
-- to what extent new info overrides old info
-- speed at which the network learns
-
-![image:width:100%](img/lr_low.png)
-<!-- pause -->
-![image:width:100%](img/lr_high.png)
-
-<!-- column: 2 -->
-<!-- pause -->
-Delta `Δ`:
-```typst +render +width:80%
-$
-Delta p_i = -1 dot eta dot frac(∂ L, ∂ p_i) \
-p_(i + 1) = p_(i) + Delta p_i
-$
-```
+hence `-1` to go in the correct dir
 
 <!-- pause -->
-<!-- newlines: 2 -->
+<!-- newlines: 1 -->
 For the next iteration:
 
 ```typst +render +width:100%
 $
 eta = 0.01 \
-w_(i + 1) = w_i - 0.01 dot frac(∂ L, ∂ w) = .084 \
-b_(i + 1) = b_i - 0.01 dot frac(∂ L, ∂ b) = -.108 \
-c_(i + 1) = c_i - 0.01 dot frac(∂ L, ∂ c) = 2.995 \
+w_(i + 1) = w_i - 0.01 dot frac(∂ L, ∂ w_i) = .084 \
+b_(i + 1) = b_i - 0.01 dot frac(∂ L, ∂ b_i) = -.108 \
+c_(i + 1) = c_i - 0.01 dot frac(∂ L, ∂ c_i) = 2.995 \
 $
 ```
 
-<!-- reset_layout -->
+<!-- column: 1 -->
 <!-- alignment: center -->
+<!-- newlines: 1 -->
 <!-- pause -->
 that's _gradient descent_
+
+---
+
+<!-- newlines: 7 -->
+<!-- alignment: center -->
+We now understand what a neural network is and how it's trained!
+![image:width:50%](img/noway.gif)
 
 ---
 
