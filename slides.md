@@ -2479,18 +2479,8 @@ Rust impl - putting it all together
 <!-- column_layout: [3, 2] -->
 
 <!-- column: 0 -->
-
-```rust +no_background
-impl<'a, B: Backend> Network<'a, B> {
-    fn forward(&self, x: Tensor<'a, B>) -> Tensor<'a, B> {
-        let l1 = self.input_layer.forward(x).sigmoid();
-        let l2 = self.hidden_layer.forward(l1).sigmoid();
-        self.output_layer.forward(l2).sigmoid()
-    }
-}
-```
-<!-- pause -->
-```rust +no_background {all|2|7|8|10-21|11|13-15|17|19|all}
+<!-- newlines: 5 -->
+```rust +no_background +line_numbers {all|2|7|8|11-22|12|14-16|18|20|all}
 pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     data: Dataset<B::Element>,
     learning_rate: B::Element,
@@ -2499,15 +2489,16 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 ) {
     let mut network = Network::new(hidden_layer_size);
     let gd = GradientDescent::new(learning_rate);
+    let one = Tensor::scalar(1);
 
-    for i in 0..iterations + 1 {
+    for i in 0..iterations {
         let out = network.forward(data.features);
 
         let prob = out * data.labels +
-            (out - data.ones) * (data.labels - data.ones);
-        let loss = (-prob.ln() / data.n).sum();
+            (out - one) * (data.labels - one);
+        let log_loss = (-prob.ln() / data.n).sum();
 
-        let gradients = loss.backprop(Tensor::scalar(1.));
+        let gradients = log_loss.backprop(one);
 
         network.step(&gd, &gradients);
     }
@@ -2517,7 +2508,6 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 <!-- column: 1 -->
 <!-- newlines: 6 -->
 dataset with features `x1`, `x2` and label `y`
-<!-- newlines: 1 -->
 x1 | x2 | y
 -|-|-
 295.54 | 83.35 | 1
@@ -2526,11 +2516,18 @@ x1 | x2 | y
 16.23 | 269.35 | 0
 3.46 | 73.77 | 1
 
-<!-- newlines: 2 -->
+<!-- newlines: 1 -->
 log loss from before
 ```typst +render +width:80%
 $-frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
 ```
+
+---
+
+<!-- newlines: 5 -->
+<!-- alignment: center -->
+You've implemented a neural network running on GPU in Rust!
+![image:width:60%](img/pretty_cool.gif)
 
 ---
 
@@ -2558,7 +2555,7 @@ Summary
 Benchmarks
 ===
 
-<!-- column_layout: [1, 1] -->
+<!-- column_layout: [3, 2] -->
 
 <!-- column: 0 -->
 Benchmarks for:
@@ -2573,12 +2570,12 @@ Benchmarks for:
 <!-- column: 1 -->
 Specs:
 - CPU: i7-1360P
-  - 12 cores @ 5GHz = 0.12 TFLOPS f32 w/o SIMD
+  - 12 cores @ 5GHz = 0.12 TFLOPS f32
 - IGP: Iris Xe
-  - 768 shading units @ 1.3 GHz = 1.9 TFLOPS f32
+  - 768 cores @ 1.3 GHz = 1.9 TFLOPS f32
   - DDR5 @ 6.4GHz => 102.4 GB/s
 - GPU: GTX 1070
-  - 2048 shading units @ 1.4 Ghz = 5.7 TFLOPS f32
+  - 2048 cores @ 1.4 Ghz = 5.7 TFLOPS f32
   - GDDR5 @ 2GHz, 256 bit bus => 256 GB/s
 
 <!-- column: 0 -->
@@ -2590,7 +2587,7 @@ mode | 10^2 | 10^3 | 10^4 | 10^5 | 10^6 | 10^7
 seq | 1.93s   | 18.36s  | 3m24s   | 1h2m   | ???    | ???
 par | 1.96s   | 10.24s  | 1m21s   | 16m6s  | 2h24m  | ???
 igp | 19.72s  | 22.53s  | 37.78s  | 2m29s  | 23m43s | ???
-gpu | 11.22s  | 12s     | 25.33s  | 2m4s  | 20m27s | ???
+gpu | 11.22s  | 12s     | 25.33s  | 2m4s   | 20m27s | ???
 mem | 0.12MiB | 2.28MiB | 22.8MiB | 229MiB | 2.3GiB | 22.89GiB
 
 Memory requirements:
@@ -2603,9 +2600,6 @@ Memory requirements:
 <!-- newlines: 1 -->
 ![image:width:100%](img/benchmark_plot.png)
 
-<!-- reset_layout -->
-<!-- newlines: 2 -->
-<!-- alignment: center -->
 <!-- pause -->
 - gradient descent => stochastic gradient descent `SGD`
 - not compute-bound, not memory-bound but dispatch-bound => `kernel fusion`
@@ -2640,12 +2634,12 @@ What we've learned:
 <!-- incremental_lists: true -->
 - _neural networks_ are function approximators parameterised by _tensors_
 - we've seen 3 representations for nns:
-  - `layers` and `neurons`
   - math equation
+  - `layers` and `neurons`
   - computational `DAG`
 - training happens in two repeated stages:
   - `forward` where input data goes through the network
-  - `backward` where gradients flow back into the network's parameters
+  - `backward` where gradients flow back and update the network's parameters
 - `gradient descent` on the `loss` guides this process
 - gradient computation is done with `auto differentiation`
 
