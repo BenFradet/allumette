@@ -62,6 +62,14 @@ built with https://github.com/mfontanini/presenterm
 
 <!-- no_footer -->
 
+<!--
+speaker_note: |
+  3 goals when I started more than a year ago:
+  - be a better Rust programmer
+  - learn about GPU programming
+  - understand tensors and nns fully
+-->
+
 ---
 
 Summary
@@ -88,6 +96,10 @@ credit: Cmglee, GNU FDL
 <!-- newlines: 1 -->
 <!-- alignment: center -->
 multi-dimensional array of arbitrary dimensions
+
+<!--
+speaker_note: algebra to abstract over all algebras
+-->
 
 ---
 
@@ -199,6 +211,14 @@ adding / removing "empty" dimensions (viewing):
 <!-- column: 1 -->
 _=> only require metadata changes_
 
+<!--
+speaker_note:|
+  usually represented as 1-D arrays
+  strides:
+  - user-land index <=> 1-D index
+  - can be derived from shape with a cum prod from the right
+  3rd dim: layer
+-->
 
 ---
 
@@ -277,6 +297,14 @@ $\{sum(x), product(x)\}$
 }
 ```
 
+<!--
+speaker_note: |
+  Element abstract over f32, f64, etc
+  zip: tensors can have incompatible shapes => none
+  red: we're reducing along 1 dim of our tensor
+  matmul: we also need to have compat shapes
+-->
+
 ---
 
 Map - cpu sequential
@@ -298,6 +326,8 @@ fn map<F: Fn(f64) -> f64>(
     }
 }
 ```
+
+<!-- speaker_note: we're constraining Element to be f64 for CPU -->
 
 ---
 
@@ -349,13 +379,19 @@ fn map<F: Fn(f64) -> f64>(
 <!-- pause -->
 [](github.com/rayon-rs/rayon)
 
+<!--
+speaker_note: |
+  side by side comparison shows the par version is even more elegant
+  par iterators dynamically adapt for max perf
+-->
+
 ---
 
 Map - gpu using wgpu and wgsl
 ===
 
 <!-- pause -->
-_WebGPU_: cross platform API sitting on top of Vulkan, Metal or Direct3D
+_WebGPU_: cross platform API sitting on top of Vulkan (Linux), Metal (Apple) or Direct3D (Windows)
 <!-- pause -->
 _WGSL_: WebGPU shader language, similar to Rust
 <!-- pause -->
@@ -409,6 +445,15 @@ _implicit parallelism_: there is no loop,
 the "loop" is the CPU saying launch `N` threads each running `call`
 
 [](github.com/gfx-rs/wgpu)
+
+<!--
+speaker_note: |
+  cpu sets up buffers, gpu works on them
+  binding: how the gpu knows which buffer goes where
+  single instruction multiple threads
+  template: one shader file per op, not per fn
+  fundamental mental shift compared to cpu
+-->
 
 ---
 
@@ -472,6 +517,14 @@ struct GpuTensor<'a> {
     context: &'a WgpuContext,
 }
 ```
+
+<!--
+speaker_note:|
+  not a fn anymore, only a tag to be templated in
+  more about wgs in the next slides
+  dispatch info: cpu telling gpu how many wgs to run
+-->
+
 ---
 
 Map - gpu parallelism
@@ -530,6 +583,16 @@ fn call(@builtin(global_invocation_id)
 let mut pass = encoder.begin_compute_pass();
 pass.dispatch_workgroups(num_wgs_x, num_wgs_y, num_wgs_z);
 ```
+
+<!--
+speaker_note: |
+  two levers for parallelism: wg sizes and counts
+  unique thread id lets us know where we are in the tensor
+  you can think of it as an office building
+  counts: how many offices there are in the building
+  sizes: how many workers are actually doing work within each offices
+-->
+
 ---
 
 Map - gpu parallelism cont'd
@@ -610,6 +673,13 @@ $"size" = 512 times 10^6$
 ```typst +render +width:80%
 $"wg size" = vec(256, 1, 1), "wg count" = vec(65535, 31, 1)$
 ```
+
+<!--
+speaker_note:
+  you might be thinking why don't we just stuff everything in wg size
+  max wg size is hardware limit across all dims: 256 for webgpu, 1024 for cuda
+  max wg count is per dim
+-->
 
 ---
 
@@ -781,23 +851,23 @@ fn broadcast(&self, b: &Shape) -> Option<Shape> {
 ![image:width:80%](img/broadcast_no.png)
 <!-- pause -->
 ```typst +render +width:60%
-$vec(1) #h(0.5em) "bc" #h(0.5em) vec(2, 3) = vec(2, 3)$
+$mat(1) #h(0.5em) "bc" #h(0.5em) mat(2, 3) = mat(2, 3)$
 ```
 <!-- pause -->
 ```typst +render +width:60%
-$vec(5) #h(0.5em) "bc" #h(0.5em) vec(2, 5) = vec(2, 5)$
+$mat(5) #h(0.5em) "bc" #h(0.5em) mat(2, 5) = mat(2, 5)$
 ```
 <!-- pause -->
-```typst +render +width:75%
-$vec(2, 3, 1) #h(0.5em) "bc" #h(0.5em) vec(7, 2, 3, 5) = vec(7, 2, 3, 5)$
+```typst +render +width:100%
+$mat(2, 3, 1) #h(0.5em) "bc" #h(0.5em) mat(7, 2, 3, 5) = mat(7, 2, 3, 5)$
 ```
 <!-- pause -->
 ```typst +render +width:40%
-$vec(5) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) vec(5, 2)$
+$mat(5) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) mat(5, 2)$
 ```
 <!-- pause -->
 ```typst +render +width:75%
-$vec(5, 7, 5, 1) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) vec(1, 5, 1, 5)$
+$mat(5, 7, 5, 1) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) mat(1, 5, 1, 5)$
 ```
 
 ---
