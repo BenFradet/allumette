@@ -189,8 +189,7 @@ how many elems to skip to advance one step along that dim
 <!-- pause -->
 transposition (permutation):  
 `Shape([2, 3]) => Shape([3, 2])`  
-<!-- pause -->
-adding / removing dimensions (viewing):  
+adding / removing "empty" dimensions (viewing):  
 `Shape([1, 2, 3]) <=> Shape([2, 3])`
 <!-- column: 0 -->
 <!-- newlines: 2 -->
@@ -221,7 +220,7 @@ What can be done with a tensor?
 
 <!-- column: 0 -->
 ```rust +no_background
-pub trait Ops<E: Element> {
+trait Ops<E: Element> {
 
     fn map<F: Fn(E) -> E>(&self, f: F) -> Self;
 ```
@@ -752,7 +751,7 @@ Zip - broadcasting cont'd
 
 <!-- column: 0 -->
 <!-- newlines: 3 -->
-```rust +no_background {all|1|2-3|5|7|8-9|11-16|19|all}
+```rust +no_background +line_numbers
 fn broadcast(&self, b: &Shape) -> Option<Shape> {
     let (n, m) = (self.len(), b.len());
     let max = m.max(n);
@@ -1128,7 +1127,7 @@ fn reduce(local_id: u32, wg_id: u32) {
 
 <!-- column: 1 -->
 <!-- pause -->
-`WG_SIZE = min(256, red_dim_size.next_power_of_two())`  
+shared mem of `WG_SIZE = min(256, red_dim_size.next_power_of_two())`  
 We dispatch one wg per reduced / output element
 <!-- newlines: 2 -->
 <!-- pause -->
@@ -1199,7 +1198,6 @@ $
 (1 times 3) times (2 times 1) = 6
 $
 ```
-<!-- pause -->
 ```typst +render +width:75%
 wg 1: \
 $
@@ -1210,7 +1208,6 @@ t_2: #h(0.5em) k = 2 -> A[1, 2], #h(0.5em) "acc" = 1. times 6 = 6 \
 (4 times 6) times (5 times 1) = 120
 $
 ```
-<!-- pause -->
 ```typst +render +width:30%
 wg 2: \
 $
@@ -1272,7 +1269,7 @@ Matmul
 
 <!-- newlines: 1 -->
 <!-- pause -->
-```rust +no_background {all|1|2-4|6-7|9|10-11|all}
+```rust +no_background +line_numbers
 fn matmul(&self, b: &Self) -> Option<Self> {
     let a_shape_len = self.shape.len();
     let b_shape_len = b.shape.len();
@@ -1621,17 +1618,14 @@ $
 forall f in C(RR^n), #h(0.5em) forall epsilon.alt > 0, #h(0.5em)  forall x in RR^n,
 $
 ```
-<!-- column: 1 -->
-<!-- pause -->
-for all functions belonging to the set of continuous functions over n-dimensional real numbers
-<!-- column: 0 -->
-<!-- pause -->
 ```typst +render +width:50%
 $
 exists accent(f, hat), #h(0.5em) abs(f(x) - accent(f, hat)(x)) < epsilon.alt
 $
 ```
 <!-- column: 1 -->
+<!-- pause -->
+for all functions belonging to the set of continuous functions over n-dimensional real numbers
 <!-- pause -->
 there exists f hat, such that the absolute difference between f hat and f is inferior to epsilon
 <!-- column: 0 -->
@@ -1704,8 +1698,9 @@ We need:
   - `ci` hidden -> output: how important is this feature
 - biases `bi`: how much of the feature is needed for the neuron to activate
 - layers: input, hidden, output
-- `σ` activation function: yes/no detectors, making `wx + b` non-linear
-- a way to convert the result:
+- `σ` activation function:
+  - yes/no detectors
+  - a way to convert the result:
 
 <!-- column_layout: [1, 1] -->
 
@@ -1749,9 +1744,9 @@ impl<'a, B: Backend> Layer<'a, B> {
     ) -> Self {
         Self {
             // shape [in_size, out_size]
-            weights: Self::rnd_weights(name, in_size, out_size),
+            weights: Self::rnd_weights(in_size, out_size),
             // shape [out_size]
-            biases: Self::rnd_biases(name, out_size),
+            biases: Self::rnd_biases(out_size),
         }
     }
 
@@ -1907,7 +1902,7 @@ $"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 
 <!-- column: 0 -->
 <!-- pause -->
-  - determine the loss' gradients (derivatives)
+  - determine the loss' gradients (partial derivatives)
 <!-- pause -->
   - propagate gradients by updating weights and biases
 <!-- pause -->
@@ -2099,12 +2094,14 @@ $
 ```typst +render +width:100%
 $
 g(f(x)), #h(1em) frac(d g, d x) = frac(d g, d f) dot frac(d f, d x) #h(3em)
-y(u_3(u_2(u_1(x)))), #h(1.5em) macron(u)_2 = macron(u)_3 dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_3) dot frac(∂ u_3, ∂ u_2)
+y(u_3(u_2(u_1(x)))), #h(1.5em) macron(u)_2 = macron(u)_3 dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_2) = frac(∂ y, ∂ u_3) dot frac(∂ u_3, ∂ u_2)
 $
 ```
 
 <!-- column: 1 -->
-![image:width:100%](img/chain_rule.png)
+![image:width:65%](img/chain_rule.png)
+<!-- alignment: center -->
+credit: Qniemiec, CC0
 
 <!-- column: 0 -->
 <!-- incremental_lists: true -->
@@ -2300,7 +2297,7 @@ impl Forward {
     ) -> Tensor<'a, B> {
         let res = u.forward(&a);
         let trace = Trace::default()
-            .last_fn(Function::U(Rc::new(u)))
+            .fn(Function::U(Rc::new(u)))
             .push_input(a);
         Tensor::new(res, trace)
     }
@@ -2360,13 +2357,13 @@ fn chain_rule(&self, d: &Self) -> impl Iterator<Item = (&Self, Self)> {
         .trace
         .fn
         .map(|f| match f {
-            Function::B(b) => {
-                let (da, db) = b.backward(&inputs[0], &inputs[1], d);
-                vec![da, db]
-            }
             Function::U(u) => {
                 let da = u.backward(&inputs[0], d);
                 vec![da]
+            }
+            Function::B(b) => {
+                let (da, db) = b.backward(&inputs[0], &inputs[1], d);
+                vec![da, db]
             }
         });
     inputs.iter().zip(gradients)
@@ -2376,6 +2373,8 @@ fn chain_rule(&self, d: &Self) -> impl Iterator<Item = (&Self, Self)> {
 <!-- pause -->
 <!-- column: 1 -->
 ![image:width:100%](img/chain_rule.png)
+<!-- alignment: center -->
+credit: Qniemiec, CC0
 
 <!-- reset_layout -->
 <!-- pause -->
@@ -2437,8 +2436,7 @@ struct GradientDescent<'a, B: Backend> {
 impl<'a, B: Backend> Optimizer<'a, B> for GradientDescent<'a, B> {
     fn update(&self, p: &mut Tensor<'a, B>, grads: &Gradients<'a, B>) {
         if let Some(grad) = grads.wrt(p) {
-            *p = (p - self.learning_rate * grad)
-                .trace(Trace::default());
+            *p = p - self.learning_rate * grad;
         }
     }
 }
@@ -2591,7 +2589,7 @@ gpu | 11.22s  | 12s     | 25.33s  | 2m4s   | 20m27s | ???
 mem | 0.12MiB | 2.28MiB | 22.8MiB | 229MiB | 2.3GiB | 22.89GiB
 
 Memory requirements:
-- matmul -> add -> relu
+- matmul -> add -> sigma
 - input and hidden layers
 - forward and backward
 - `3 x 2 x 2 x [N, 50]`
@@ -2611,8 +2609,8 @@ Profiling
 
 <!-- newlines: 5 -->
 <!-- column_layout: [1, 1] -->
-
 <!-- column: 0 -->
+TODO: rename relu
 ![image:width:100%](img/profile_plot.png)
 <!-- pause -->
 <!-- column: 1 -->
