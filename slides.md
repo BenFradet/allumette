@@ -212,7 +212,7 @@ adding / removing "empty" dimensions (viewing):
 _=> only require metadata changes_
 
 <!--
-speaker_note:|
+speaker_note: |
   usually represented as 1-D arrays
   strides:
   - user-land index <=> 1-D index
@@ -675,7 +675,7 @@ $"wg size" = vec(256, 1, 1), "wg count" = vec(65535, 31, 1)$
 ```
 
 <!--
-speaker_note:
+speaker_note: |
   you might be thinking why don't we just stuff everything in wg size
   max wg size is hardware limit across all dims: 256 for webgpu, 1024 for cuda
   max wg count is per dim
@@ -950,6 +950,8 @@ c_pos = dotp([1, 1], [2, 1]) = 2 + 1 = 3
 c[3] = a[1] + b[1] = 2 + 4 = 6
 ```
 
+<!-- speaker_note: tbd -->
+
 ---
 <!-- skip_slide -->
 Zip - impl
@@ -1212,6 +1214,15 @@ _Phase 2_: striding parallel tree reduction in shared memory
 _Phase 3_: thread 0 writes the final result
 <!-- pause -->
 presentation by Mark Harris: [](developer.download.nvidia.com/assets/cuda/files/reduction.pdf)
+
+<!--
+speaker_note: |
+  shared mem within a wg
+  wg size is templated as before
+  wg barrier: all threads within a wg waits until they all reach that point
+  avoid data race for the shared memory
+  2nd wg barrier: we mutate shared memory to the left
+-->
 
 ---
 
@@ -1570,6 +1581,8 @@ blog post by Simon Boehm: [](siboehm.com/articles/22/CUDA-MMM)
 
 blog post by Aleksa Gordić: [](www.aleksagordic.com/blog/matmul)
 
+<!-- speaker_note: wg barrier again -->
+
 ---
 
 Matmul - gpu impl cont'd
@@ -1642,6 +1655,14 @@ t_(1, 1): "fma"(6, 6, 28) -> "fma"(0, 0, 64) = 64 \
 $
 ```
 
+<!--
+speaker_note: |
+  t = 2 and not 16 to ease comprehension
+  it's like putting a TxT mask over our matrices
+  and we know we can matmul square matrices
+  tile index = 1, we pad with 0s
+-->
+
 ---
 
 <!-- newlines: 6 -->
@@ -1702,23 +1723,42 @@ there exists f hat, such that the absolute difference between f hat and f is inf
 <!-- pause -->
 ```typst +render +width:55%
 $
-accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
+accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i x + b_i)
 $
 ```
-
-<!-- reset_layout -->
-<!-- alignment: center -->
-<!-- pause -->
+<!-- column: 1 -->
+<!-- newlines: 2 -->
 universal approximation theorem 🔥
 
 <!-- column_layout: [1, 1] -->
 <!-- column: 0 -->
 <!-- pause -->
-![image:width:70%](img/weierstrass.gif)
+<!-- newlines: 1 -->
+```typst +render +width:40%
+$
+f(x) = sum_(n=0)^inf a^n cos(b^n pi x)
+$
+```
+![image:width:50%](img/weierstrass.gif)
+<!-- alignment: center -->
 credit: Doleron, CC BY-SA 3.0
 <!-- column: 1 -->
 <!-- pause -->
+<!-- newlines: 1 -->
+```typst +render +width:20%
+$
+f(x) = 1/x
+$
+```
 ![image:width:70%](img/oneoverx.png)
+
+<!--
+speaker_note: |
+  what does this mean?
+  any arbitrarily complex continuous function can be approxd by this simple function
+  weierstrass: continuous function
+  1/x: non continuous because undefined at 0
+-->
 
 ---
 
@@ -1747,6 +1787,23 @@ sigma(x) = (1 + e^x)^(-1)
 $
 ```
 ![image:width:100%](img/sig.png)
+
+<!--
+speaker_note: |
+  if you're unconvinced
+  we can also think of a neural network as a sequence of layers comprised of neurons
+  let's say we want to classify images of star fish and sea urchins
+  input layer: images
+  hidden layer: identified features
+  output layer: whether it's a star fish or a sea urchin
+  M: size of the hidden layer, the greater the M, the greater the number of things we can identify
+  W: how much of that feature is in the input
+  C: how important is that feature to our output
+  what's sigma and B?
+  sigma: neuron activation function which has this characteristic S-shape, y/n detector where W is
+  how confident we are when we activate the neuron and B is how much we need of that feature to
+  activate the neuron
+-->
 
 ---
 
@@ -1785,6 +1842,12 @@ $
 <!-- column: 1 -->
 <!-- pause -->
 ![image:width:100%](img/enough.gif)
+
+<!--
+speaker_note: |
+  we can get the probability that y is starfish given our input by applying an S-shape function
+  because it squashes everything between 0 and 1
+-->
 
 ---
 
@@ -1835,10 +1898,18 @@ impl<'a, B: Backend> Layer<'a, B> {
 <!-- newlines: 9 -->
 ```typst +render +width:100%
 $
-accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i) \
-=> w^T x + b
+accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i x + b_i) \
+=> w x + b
 $
 ```
+
+<!--
+speaker_note: |
+  parameterized by Backend cpu seq, par and gpu
+  weights: matrix initialized with random values
+  biases: vector initialized with random values
+  we defined forward as wx+b
+-->
 
 ---
 
@@ -1906,6 +1977,14 @@ accent(f, hat)(x) = accent(f, hat)_"out" (accent(f, hat)_"hid" (accent(f, hat)_"
 $
 ```
 
+<!--
+speaker_note: |
+  n features in our input data, eg the number of pixels in an image
+  hls number of neurons in the hidden layer
+  one output: a probability
+  forward is more complex because we don't want to be limited to approximating continuous functions
+-->
+
 ---
 
 Summary
@@ -1933,6 +2012,12 @@ how do we get to this ...
 ... from this
 <!-- newlines: 1 -->
 ![image:width:100%](img/nn_untrained.png)
+
+<!--
+speaker_note: |
+  left: a trained neural network
+  right: initial neural network with random parameters
+-->
 
 ---
 
@@ -2175,11 +2260,20 @@ credit: Qniemiec, CC0
 
 <!-- column: 0 -->
 <!-- incremental_lists: true -->
-- forward pass `O(n)`
-- backward pass `O(n)` once the DAG is topologically sorted `O(V + E)`
-- _=> will work_
+- forward pass `O(E)`
+- backward pass `O(E)` once the DAG is topologically sorted `O(V + E)`
 
+<!-- newlines: 1 -->
 blog post by Andrew M Holmes: [](huggingface.co/blog/andmholm/what-is-automatic-differentiation)
+
+<!--
+speaker_note: |
+  we're back with our old UAT function
+  we're decomposing it into the smallest parts possible
+  evaluation trace: function, inputs and outputs
+  what we've done is just apply the chain rule over and over
+  numerical: evaluate the derivative for each param for each step
+-->
 
 ---
 
@@ -2271,6 +2365,13 @@ $
 <!-- pause -->
 that's _gradient descent_
 
+<!--
+speaker_note: |
+  shortcut: we want the gradients for the loss not just y
+  grad > 0, slope > 0 => we want p to decrease
+  grad < 0, slope < 0 => we want p to increase
+-->
+
 ---
 
 <!-- newlines: 7 -->
@@ -2337,10 +2438,17 @@ struct Tensor<'a, B: Backend> {
 <!-- newlines: 1 -->
 _#rust_bookclub_
 
+<!--
+speaker_note: |
+  we need that info inside our tensors
+-->
+
 ---
 
 Rust impl - trace capture
 ===
+
+![image:width:70%](img/dag_both.png)
 
 <!-- column_layout: [1, 1] -->
 
@@ -2491,6 +2599,21 @@ fn backprop(&self, d: Self) -> Gradients<'a, B> {
 - intermediates stores all `∂L/∂ui`
 - leaves stores all `∂L/∂pi`
 
+<!-- reset_layout -->
+<!-- alignment: center -->
+that's _backpropagation_ done!
+
+<!--
+speaker_note: |
+  we look back at our dag
+  intermediates store U adjoints
+  leaves store our param adjoints
+  we sort our dag
+  we init intermediates with the root node
+  we go through the nodes with their ancestors thanks to the chain rule function
+  is_leaf = trace.fn is none which is true for params no function created them they're just there
+-->
+
 ---
 
 Rust impl - gradient descent
@@ -2539,6 +2662,16 @@ impl<'a, B: Backend> Network<'a, B> {
 }
 ```
 
+<!-- reset_layout -->
+<!-- alignment: center -->
+that's _gradient descent_ done!
+
+<!--
+speaker_note: |
+  we define an optimizer trait with just updates param p using the gradients
+  our network update all its params with a step function
+-->
+
 ---
 
 Rust impl - putting it all together
@@ -2584,11 +2717,24 @@ x1 | x2 | y
 16.23 | 269.35 | 0
 3.46 | 73.77 | 1
 
-<!-- newlines: 1 -->
-log loss from before
-```typst +render +width:80%
-$-frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
+<!-- newlines: 2 -->
+L1 loss from before
+```typst +render +width:40%
+$frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 ```
+
+<!--
+speaker_note: |
+  dataset is synthetic numerical data but it could be anything
+  (x1, x2) features, y label
+  we create a network with a set number of neurons
+  we create our gradient descent optimizer with the learning rate
+  we run our training loop for a set number of iterations
+  we push all our data through our network
+  we compute our log loss, trust me they're equivalent
+  then we run our backpropagation with the initial gradient 1
+  we update our params with the gradients we just computed
+-->
 
 ---
 
@@ -2672,6 +2818,17 @@ Memory requirements:
 - gradient descent => stochastic gradient descent `SGD`
 - not compute-bound, not memory-bound but dispatch-bound => `kernel fusion`
 
+<!--
+speaker_note: |
+  even if it's a personal project, I encourage everyone to run benchmarks to understand the limits
+  of the choices you've made
+  no one broke the 10M points and that's because of memory
+  we need to keep these tensors in memory because we need them for backward
+  how do actual ML frameworks solve this?
+  for memory: their randomly sample their input data on each iteration => stochastic part of sgd
+  for runtime: they compile custom shaders combining multiple operations => kernel fusion
+-->
+
 ---
 
 Profiling
@@ -2685,6 +2842,12 @@ TODO: rename relu
 <!-- pause -->
 <!-- column: 1 -->
 ![image:width:100%](img/profile_pie.png)
+
+<!--
+speaker_note: |
+  also encourage you to profile your code
+  time is finite and it's better to spend it where it will make the most impact
+-->
 
 ---
 
