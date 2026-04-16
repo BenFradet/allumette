@@ -12,12 +12,10 @@ impl<P: Profiler> Ops<f64, Seq, P> for CpuData {
     fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F, tag: &'static str) -> Self {
         let p = P::start();
 
-        let len = self.size();
-        let mut out = vec![0.; len];
-        // TODO: add an iterator
-        for (i, d) in self.data.iter().enumerate() {
-            out[i] = f(*d);
-        }
+        let out: Vec<_> = self.data
+            .iter()
+            .map(|d| f(*d))
+            .collect();
 
         p.stop(tag);
 
