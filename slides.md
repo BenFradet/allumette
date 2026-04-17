@@ -2108,73 +2108,28 @@ gather a **lot** of _labeled_ inputs
 
 <!-- column: 1 -->
 <!-- pause -->
+<!-- newlines: 2 -->
 ```typst +render +width:50%
-$"loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
+$"L1 loss" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
 ```
 
 <!-- column: 0 -->
 <!-- pause -->
   - determine the loss' gradients (partial derivatives)
 <!-- pause -->
-  - propagate gradients by updating weights and biases
+  - update weights and biases with their gradients
 <!-- pause -->
-- rinse and repeat for `n` iterations
+rinse and repeat for `n` iterations
 
 <!-- column: 1 -->
 ![image:width:70%](img/desire.gif)
 
----
-
-Summary
-===
-
-<!-- newlines: 5 -->
-# Tensors
-# Neural networks
-## What's a neural network?
-## Training
-### Loss function
-
----
-
-Loss function
-===
-
-<!-- column_layout: [1, 1] -->
-
-<!-- column: 0 -->
-
-Well, we're not gonna use
-```typst +render +width:60%
-$"L1" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
-```
-
-<!-- pause -->
-
-but rather
-```typst +render +width:100%
-$"LL" = -frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
-```
-
-why ?
-
-<!-- pause -->
-
-![image:width:100%](img/abs.png)
-
-&nbsp; and we want to compute its derivatives / gradients
-
-<!-- pause -->
-
-<!-- column: 1 -->
-
-<!-- newlines: 2 -->
-
-and also
-
-![image:width:100%](img/loss.png)
-
-the more wrong we are, the bigger the loss
+<!--
+speaker_note: |
+  we need to answer one question: how does it learn?
+  we can just compute the absolute difference between probs and labels
+  we use these gradients to update the parameters vl
+-->
 
 ---
 
@@ -2186,91 +2141,7 @@ Summary
 # Neural networks
 ## What's a neural network?
 ## Training
-### Loss function
 ### Gradient computations
-
----
-
-How to get the loss' gradients? - numerical differentiation
-===
-
-<!-- column_layout: [5, 2] -->
-
-<!-- column: 0 -->
-if you remember your calculus classes ...
-```typst +render +width:70%
-derivative definition: #h(0.5em) $f: RR -> RR, #h(0.5em) frac(diff f, diff x) = lim_(h -> 0) frac(f(x + h) - f(x), h)$
-```
-
-<!-- column: 1 -->
-![image:width:100%](img/gradient.png)
-<!-- column: 0 -->
-
-<!-- pause -->
-
-```typst +render +width:75%
-using Taylor's theorem: #h(0.5em) $f: RR -> RR, #h(0.5em) frac(diff f, diff x) approx frac(f(x + h) - f(x), h) + O(h)$
-```
-<!-- incremental_lists: true -->
-- `O` is the truncation error
-- we're mis-approximating the derivative with some error dependent on `h`
-- as `h` goes down, the truncation error goes down 👌
-- but ... as `h` is nearing `0`, we introduce a round-off error: underflow to `0`
-<!-- column: 1 -->
-<!-- newlines: 2 -->
-![image:width:100%](img/errors.png)
-<!-- column: 0 -->
-- round-off error worsens as floating point precision decreases
-- cost increases as floating point precision increases
-- max for my gpu is `f32`, SOTA is using `f4`
-
-there is another problem however...
-<!-- pause -->
-
-```typst +render +width:70%
-for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = frac(f_j (x_i + h) - f_j (x_i), h) + O(h) $
-```
-
-- this is `O(n)` complexity
-- we could have **millions or more** of parameters
-- _=> won't work_
-- _still very useful for property tests_
-
----
-
-How to get the loss' gradients? - symbolic differentiation
-===
-
-if you remember your calculus classes ...
-```typst +render +width:30%
-$
-f(x) = x^2, #h(1em) f'(x) = 2x
-$
-```
-<!-- incremental_lists: true -->
-- no numerical inaccuracies
-- no numerical instabilities
-- expression which can compute a gradient directly 🥳
-
-there are other issues however...
-<!-- pause -->
-```typst +render +width:40%
-$frac(d, d x) f(x) g(x) = f'(x) g(x) + g'(x) f(x)$
-```
-
-<!-- column_layout: [5, 2] -->
-
-<!-- column: 0 -->
-<!-- incremental_lists: true -->
-- this is `O(2^n)` complexity
-- we could have **hundreds** of these functions nested within each other
-- quickly becomes untractable
-- is also limited to closed form expressions: `+`, `-`, `x`, `/`, `^`, `√`, `e`, `log`, trig fns
-- can't have `>`, `==`, `is close to` as they are not symbolically differentiable
-- _=> won't work_
-
-<!-- column: 1 -->
-![image:width:70%](img/whatdowedo.gif)
 
 ---
 
@@ -2280,9 +2151,9 @@ How to get the loss' gradients? - automatic differentiation
 - aka `AD`, aka reverse mode `AD` (yes, there is a forward mode)
 
 <!-- pause -->
-```typst +render +width:60%
+```typst +render +width:70%
 $
-y = c dot sigma (w^T x + b) #h(4em)
+y = c dot sigma (w x + b) => {frac(partial y, partial w), frac(partial y, partial b), frac(partial y, partial c)} #h(4em)
 x = 2, #h(0.5em) w = 0.1, #h(0.5em) b = -0.1, #h(0.5em) c = 3
 $
 ```
@@ -2612,48 +2483,63 @@ fn chain_rule(
 
 <!-- pause -->
 <!-- column: 1 -->
-![image:width:100%](img/chain_rule.png)
-<!-- alignment: center -->
-credit: Qniemiec, CC0
-
-<!-- reset_layout -->
-<!-- pause -->
-```typst +render +width:100%
+<!-- newlines: 3 -->
+```typst +render +width:50%
+$"given adj" = frac(partial L, partial "out")$
+```
+```typst +render +width:50%
 $
-"given" d = frac(partial L, partial "out") \
-"unary" => [("in", frac(partial L, partial "out") dot frac(partial "out", partial "in"))] = [("in", frac(partial L, partial "in"))] \
-"binary" =>[(a, frac(partial L, partial "out") dot frac(partial "out", partial a)), (b, frac(partial L, partial "out") dot frac(partial "out", partial b))] = [(a, frac(partial L, partial a)), (b, frac(partial L, partial b))] 
+"unary" \
+[("in", frac(partial L, partial "out") dot frac(partial "out", partial "in"))] = \
+[("in", frac(partial L, partial "in"))]
 $
 ```
+```typst +render +width:100%
+$
+"binary" \
+[(a, frac(partial L, partial "out") dot frac(partial "out", partial a)), (b, frac(partial L, partial "out") dot frac(partial "out", partial b))] = \
+[(a, frac(partial L, partial a)), (b, frac(partial L, partial b))] 
+$
+```
+
+<!--
+speaker_note: |
+  we're going to call that function on each node in our DAG in the next slide to compute gradients
+  we're leveraging our trace inputs and function
+-->
 
 ---
 
 Rust impl - backprop
 ===
 
-![image:width:100%](img/dag_bwd.png)
+![image:width:100%](img/dag_both.png)
 
-<!-- newlines: 1 -->
+<!-- column_layout: [2, 1] -->
+
+<!-- column: 0 -->
+<!-- newlines: 2 -->
 <!-- pause -->
-```rust +no_background {all|1|2-3|5|6-7|8-12|15|all}
+```rust +no_background +line_numbers {all|1|2-3|5|6-7|8-12|15|all}
 fn backprop(&self, d: Self) -> Gradients<'a, B> {
-    let mut intermediates = HashMap::from([(self.id, d)]);
-    let mut leaves = HashMap::new();
+    let mut adjoints = HashMap::from([(self.id, d)]);
+    let mut params = HashMap::new();
 
     for node in self.topological_sort() {
-        let d = intermediates[&node.id];
-        for (parent, d_i) in node.chain_rule(&d_i) {
-            if parent.is_leaf() {
-                *leaves.entry(parent.id).or_default() += d_i;
+        let adjoint = adjoints[&node.id];
+        for (input, dl) in node.chain_rule(&adjoint) {
+            if input.is_leaf() {
+                *params.entry(input.id).or_default() += dl;
             } else {
-                *intermediates.entry(parent.id).or_default() += d_i;
+                *adjoints.entry(input.id).or_default() += dl;
             }
         }
     }
-    Gradients(leaves)
+    Gradients(params)
 }
 ```
 
+<!-- column: 1 -->
 <!-- newlines: 3 -->
 <!-- incremental_lists: true -->
 - topological sort: all children appear before their parents and __stable__
@@ -2954,3 +2840,122 @@ What's next:
 <!-- column: 0 -->
 <!-- newlines: 1 -->
 Thank you! [](github.com/BenFradet/allumette)
+
+---
+
+Loss function
+===
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+<!-- newlines: 6 -->
+Well, we're not gonna use
+```typst +render +width:60%
+$"L1" = frac(1, N) sum_(i = 1)^N abs(y_i - p_i)$
+```
+
+<!-- pause -->
+
+but rather
+```typst +render +width:100%
+$"LL" = -frac(1, N) sum_(i = 1)^N (y_i log(p_i) + (1 - y_i) log(1 - p_i))$
+```
+
+why ?
+
+<!-- pause -->
+<!-- column: 1 -->
+<!-- newlines: 2 -->
+![image:width:100%](img/loss.png)
+
+the more wrong we are, the bigger the loss
+
+<!--
+speaker_note: |
+  l1 is linear, ll aka bce is logarithmic
+-->
+
+---
+
+How to get the loss' gradients? - numerical differentiation
+===
+
+<!-- column_layout: [5, 2] -->
+
+<!-- column: 0 -->
+if you remember your calculus classes ...
+```typst +render +width:70%
+derivative definition: #h(0.5em) $f: RR -> RR, #h(0.5em) frac(diff f, diff x) = lim_(h -> 0) frac(f(x + h) - f(x), h)$
+```
+
+<!-- column: 1 -->
+![image:width:100%](img/gradient.png)
+<!-- column: 0 -->
+
+<!-- pause -->
+
+```typst +render +width:75%
+using Taylor's theorem: #h(0.5em) $f: RR -> RR, #h(0.5em) frac(diff f, diff x) approx frac(f(x + h) - f(x), h) + O(h)$
+```
+<!-- incremental_lists: true -->
+- `O` is the truncation error
+- we're mis-approximating the derivative with some error dependent on `h`
+- as `h` goes down, the truncation error goes down 👌
+- but ... as `h` is nearing `0`, we introduce a round-off error: underflow to `0`
+<!-- column: 1 -->
+<!-- newlines: 2 -->
+![image:width:100%](img/errors.png)
+<!-- column: 0 -->
+- round-off error worsens as floating point precision decreases
+- cost increases as floating point precision increases
+- max for my gpu is `f32`, SOTA is using `f4`
+
+there is another problem however...
+<!-- pause -->
+
+```typst +render +width:70%
+for tensors: #h(0.5em) $f: RR^n -> RR^m, #h(0.5em) frac(diff f_j, diff x_i) = frac(f_j (x_i + h) - f_j (x_i), h) + O(h) $
+```
+
+- this is `O(n)` complexity
+- we could have **millions or more** of parameters
+- _=> won't work_
+- _still very useful for property tests_
+
+---
+
+How to get the loss' gradients? - symbolic differentiation
+===
+
+if you remember your calculus classes ...
+```typst +render +width:30%
+$
+f(x) = x^2, #h(1em) f'(x) = 2x
+$
+```
+<!-- incremental_lists: true -->
+- no numerical inaccuracies
+- no numerical instabilities
+- expression which can compute a gradient directly 🥳
+
+there are other issues however...
+<!-- pause -->
+```typst +render +width:40%
+$frac(d, d x) f(x) g(x) = f'(x) g(x) + g'(x) f(x)$
+```
+
+<!-- column_layout: [5, 2] -->
+
+<!-- column: 0 -->
+<!-- incremental_lists: true -->
+- this is `O(2^n)` complexity
+- we could have **hundreds** of these functions nested within each other
+- quickly becomes untractable
+- is also limited to closed form expressions: `+`, `-`, `x`, `/`, `^`, `√`, `e`, `log`, trig fns
+- can't have `>`, `==`, `is close to` as they are not symbolically differentiable
+- _=> won't work_
+
+<!-- column: 1 -->
+![image:width:70%](img/whatdowedo.gif)
+
