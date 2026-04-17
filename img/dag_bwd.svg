@@ -35,6 +35,25 @@
          d="M 5.77,0 -2.88,5 V -5 Z"
          id="path135-9" />
     </marker>
+    <marker
+       style="overflow:visible"
+       id="Triangle-2-6"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135-9-7" />
+    </marker>
   </defs>
   <sodipodi:namedview
      id="namedview45"
@@ -45,9 +64,9 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="0.1319229"
-     inkscape:cx="1038.4853"
-     inkscape:cy="2001.1688"
+     inkscape:zoom="0.2638458"
+     inkscape:cx="2141.4023"
+     inkscape:cy="909.62221"
      inkscape:window-width="1906"
      inkscape:window-height="1186"
      inkscape:window-x="0"
@@ -340,16 +359,16 @@
            id="path51" />
         <path
            style="fill:#cad3f5;fill-opacity:1;stroke:#8aadf4;stroke-width:7.80032;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Triangle-2)"
-           d="m 1225.5641,125.11142 175.2425,-0.44113"
+           d="M 1220.5162,114.22108 1389.6733,68.438869"
            id="path51-0" />
+        <path
+           style="fill:#cad3f5;fill-opacity:1;stroke:#8aadf4;stroke-width:7.80032;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Triangle-2-6)"
+           d="M -412.4071,114.22108 -243.25,68.438869"
+           id="path51-0-35" />
         <path
            style="fill:#cad3f5;fill-opacity:1;stroke:#8aadf4;stroke-width:7.80032;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Triangle-2)"
            d="M 492.76901,120.91762 668.01157,120.4765"
            id="path51-0-3" />
-        <path
-           style="fill:#cad3f5;fill-opacity:1;stroke:#8aadf4;stroke-width:7.80032;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Triangle-2)"
-           d="m -414.23587,123.20365 175.24256,-0.44113"
-           id="path51-0-4" />
       </g>
       <g
          class="basic label-container outer-path"
