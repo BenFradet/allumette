@@ -848,29 +848,84 @@ fn broadcast(&self, b: &Shape) -> Option<Shape> {
 <!-- pause -->
 
 <!-- column: 1 -->
-![image:width:80%](img/broadcast.png)
+![image:width:70%](img/broadcast.png)
 <!-- pause -->
-![image:width:80%](img/broadcast_no.png)
+![image:width:70%](img/broadcast_no.png)
 <!-- pause -->
-```typst +render +width:60%
-$mat(1) #h(0.5em) "bc" #h(0.5em) mat(2, 3) = mat(2, 3)$
+```typst +render +width:50%
+#grid(
+  columns: (auto, auto, auto),
+  align: (right + horizon, center + horizon, left + horizon),
+  row-gutter: 0.5em,
+  $mat(delim: "(", 1)$,
+  grid.cell(rowspan: 2, align: center + horizon, $#h(0.5em)=#h(0.5em)$),
+  grid.cell(rowspan: 2, align: left + horizon, $mat(delim: "(", 2, 3)$),
+  $mat(delim: "(", 2, 3)$,
+)
+```
+<!-- pause -->
+```typst +render +width:50%
+#grid(
+  columns: (auto, auto, auto),
+  align: (right + horizon, center + horizon, left + horizon),
+  row-gutter: 0.5em,
+  $mat(delim: "(", 5)$,
+  grid.cell(rowspan: 2, align: center + horizon, $#h(0.5em)=#h(0.5em)$),
+  grid.cell(rowspan: 2, align: left + horizon, $mat(delim: "(", 2, 5)$),
+  $mat(delim: "(", 2, 5)$,
+)
 ```
 <!-- pause -->
 ```typst +render +width:60%
-$mat(5) #h(0.5em) "bc" #h(0.5em) mat(2, 5) = mat(2, 5)$
+#grid(
+  columns: (auto, auto, auto),
+  align: (right + horizon, center + horizon, left + horizon),
+  row-gutter: 0.5em,
+  $mat(delim: "(", 2, 3, 1)$,
+  grid.cell(rowspan: 2, align: center + horizon, $#h(0.5em)=#h(0.5em)$),
+  grid.cell(rowspan: 2, align: left + horizon, $mat(delim: "(", 7, 2, 3, 5)$),
+  $mat(delim: "(", 7, 2, 3, 5)$,
+)
 ```
+<!-- column_layout: [1, 1, 1] -->
+<!-- column: 1 -->
 <!-- pause -->
 ```typst +render +width:100%
-$mat(2, 3, 1) #h(0.5em) "bc" #h(0.5em) mat(7, 2, 3, 5) = mat(7, 2, 3, 5)$
+#grid(
+  columns: (auto, auto),
+  align: (right + horizon, center + horizon),
+  row-gutter: 0.5em,
+  $mat(delim: "(", 5, 2)$,
+  grid.cell(
+    rowspan: 2,
+    align: center + horizon,
+    [\= #text(fill: red)[None]],
+  ),
+  $mat(delim: "(", 5)$,
+)
 ```
+<!-- column: 2 -->
 <!-- pause -->
-```typst +render +width:40%
-$mat(5) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) mat(5, 2)$
+```typst +render +width:70%
+#grid(
+  columns: (auto, auto),
+  align: (right + horizon, center + horizon),
+  row-gutter: 0.5em,
+  $mat(delim: "(", 5, 7, 5, 1)$,
+  grid.cell(
+    rowspan: 2,
+    align: center + horizon,
+    [\= #text(fill: red)[None]],
+  ),
+  $mat(delim: "(", 1, 5, 1, 5)$,
+)
 ```
-<!-- pause -->
-```typst +render +width:75%
-$mat(5, 7, 5, 1) #h(0.5em) #strike(stroke: 1pt + red)[bc] #h(0.5em) mat(1, 5, 1, 5)$
-```
+
+<!--
+speaker_note: |
+  we can pad left a shape with 1s (empty dimensions), aka viewing
+  anything takes priority over 1
+-->
 
 ---
 
