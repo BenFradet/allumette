@@ -206,8 +206,6 @@ adding / removing "empty" dimensions (viewing):
 <!-- column: 0 -->
 <!-- newlines: 2 -->
 ![image:width:60%](img/broadcast.png)
-
-<!-- pause -->
 <!-- column: 1 -->
 _=> only require metadata changes_
 
@@ -315,10 +313,10 @@ Map - cpu sequential
 fn map<F: Fn(f64) -> f64>(
     &self, f: F
 ) -> Self {
-    let mut out = vec![0.; self.size()];
-    for (i, d) in self.data.iter().enumerate() {
-        out[i] = f(*d);
-    }
+    let out: Vec<_> = self.data
+        .iter()
+        .map(|d| f(*d))
+        .collect();
     Self {
         data: out,
         shape: self.shape.clone(),
@@ -360,10 +358,10 @@ fn map<F: Fn(f64) -> f64 + Sync>(
 fn map<F: Fn(f64) -> f64>(
     &self, f: F
 ) -> Self {
-    let mut out = vec![0.; self.size()];
-    for (i, d) in self.data.iter().enumerate() {
-        out[i] = f(*d);
-    }
+    let out: Vec<_> = self.data
+        .iter()
+        .map(|d| f(*d))
+        .collect();
     Self {
         data: out,
         shape: self.shape.clone(),
@@ -376,7 +374,7 @@ fn map<F: Fn(f64) -> f64>(
 <!-- newlines: 2 -->
 <!-- pause -->
 `Sync` => safe to share references between threads
-<!-- pause -->
+
 [](github.com/rayon-rs/rayon)
 
 <!--
@@ -485,7 +483,12 @@ fn map(&self, f: &'static str) -> Self {
         &wg.count, 
     );
 
-    self.with_buffer(output_buffer)
+    Self {
+        buffer: output_buffer,
+        shape: self.shape.clone(),
+        strides: self.strides.clone(),
+        context: self.context,
+    }
 }
 ```
 
@@ -563,7 +566,7 @@ $vec("wg_size"_x, "wg_size"_y, "wg_size"_z) dot vec("num_wgs"_x, "num_wgs"_y, "n
 
 <!-- column: 0 -->
 <!-- newlines: 2 -->
-```rust +no_background {all|2|6-7|8|all}
+```rust +no_background +line_numbers
 @compute
 @workgroup_size(wg_size_x, wg_size_y, wg_size_z)
 fn call(@builtin(global_invocation_id)
@@ -608,7 +611,6 @@ struct WorkgroupInfo {
 }
 ```
 <!-- pause -->
-<!-- pause -->
 why don't we stuff everything in wg size?
 <!-- pause -->
 ```typst +render +width:70%
@@ -638,7 +640,7 @@ fn from(shape: &Shape) -> Self {
 <!-- pause -->
 we have 1D data so we only leverage `wg_size x`
 <!-- pause -->
-gpus execute threads in _warps_ or _wavefronts_ of `32` or `64`
+gpus execute threads in _warps_ or _wavefronts_ of `32` or `64`, hence `next_power_of_two`
 
 <!-- column: 0 -->
 <!-- pause -->
@@ -658,9 +660,7 @@ fn chunk(count: usize) -> (usize, usize, usize) {
 ```
 
 <!-- column: 1 -->
-<!-- newlines: 3 -->
-<!-- pause -->
-workgroups are here to hide memory latency: while a workgroup waits on a memory fetch, another runs
+<!-- newlines: 2 -->
 <!-- pause -->
 ```typst +render +width:45%
 $"shape" = [10^6, 256, 2]$
@@ -673,6 +673,8 @@ $"size" = 512 times 10^6$
 ```typst +render +width:80%
 $"wg size" = vec(256, 1, 1), "wg count" = vec(65535, 31, 1)$
 ```
+<!-- pause -->
+workgroups are here to hide memory latency: while a workgroup waits on a memory fetch, another runs
 
 <!--
 speaker_note: |
@@ -817,7 +819,7 @@ $
 Zip - broadcasting cont'd
 ===
 
-<!-- column_layout: [6, 3] -->
+<!-- column_layout: [6, 4] -->
 
 <!-- column: 0 -->
 <!-- newlines: 3 -->
@@ -1285,8 +1287,8 @@ $
 t_0: #h(0.5em) k = 0 -> A[1, 0], #h(0.5em) "acc" = 1. times 4 = 4 \
 t_1: #h(0.5em) k = 1 -> A[1, 1], #h(0.5em) "acc" = 1. times 5 = 5 \ 
 t_2: #h(0.5em) k = 2 -> A[1, 2], #h(0.5em) "acc" = 1. times 6 = 6 \ 
-"shared" = [4, 5, 6, 1] \
-(4 times 6) times (5 times 1) = 120
+"phase 1: shared" = [4, 5, 6, 1] \
+"phase 2: "(4 times 6) times (5 times 1) = 120
 $
 ```
 ```typst +render +width:30%
@@ -1517,7 +1519,7 @@ tmp = {4 * 2, 8 + 5 * 4, 28 + 6 * 6} => 64
 Matmul - gpu impl
 ===
 
-<!-- column_layout: [4, 3] -->
+<!-- column_layout: [5, 4] -->
 
 <!-- column: 0 -->
 ```rust +no_background +line_numbers
@@ -1532,10 +1534,10 @@ fn matmul(local_id: vec2<u32>, wg_id: vec2<u32>) {
     let ty = wg_id.y * T;
 
     var acc = 0.0;
-    for (var tile = 0u; tile < ceil(n / T); tile++) {
-        a_tile[ly][lx] = a[ty + ly][tile * T + lx];
+    for (var ti = 0u; ti < ceil(n / T); ti++) {
+        a_tile[ly][lx] = a[ty + ly][ti * T + lx];
 
-        b_tile[ly][lx] = b[tile * T + ly][tx + lx];
+        b_tile[ly][lx] = b[ti * T + ly][tx + lx];
 
         workgroupBarrier();
 
@@ -1564,7 +1566,7 @@ thread positions within tile
 tile positions in output grid
 <!-- pause -->
 <!-- newlines: 1 -->
-each thread loads 1 element from A and 1 from B
+thread `lx,ly` loads 1 elem from A and B for each tile
 <!-- pause -->
 row elem from A
 <!-- pause -->
@@ -1629,7 +1631,7 @@ $
 m lr(size: #2em, brace.l) underbrace(mat(1, 2, 3; 4, 5, 6), n)  times
 underbrace(mat(1, 2; 3, 4; 5, 6), p) lr(size: #3em, brace.r) n =
 underbrace(mat(22, 28; 49, 64), p) lr(size: #2em, brace.r) m \
-T = 2, #h(0.5em) n = 3, #h(0.5em) k = {0, 1}
+T = 2, #h(0.5em) n = 3
 $
 ```
 <!-- pause -->
@@ -1714,20 +1716,18 @@ $
 exists accent(f, hat), #h(0.5em) abs(f(x) - accent(f, hat)(x)) < epsilon.alt
 $
 ```
-<!-- column: 1 -->
-<!-- pause -->
-for all functions belonging to the set of continuous functions over n-dimensional real numbers
-<!-- pause -->
-there exists f hat, such that the absolute difference between f hat and f is inferior to epsilon
-<!-- column: 0 -->
-<!-- pause -->
 ```typst +render +width:55%
 $
 accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i x + b_i)
 $
 ```
 <!-- column: 1 -->
+<!-- pause -->
+for all functions belonging to the set of continuous functions over n-dimensional real numbers
+<!-- pause -->
+there exists f hat, such that the absolute difference between f hat and f is inferior to epsilon
 <!-- newlines: 2 -->
+<!-- pause -->
 universal approximation theorem 🔥
 
 <!-- column_layout: [1, 1] -->
@@ -1767,7 +1767,7 @@ But like, really, what's a neural network?
 
 ```typst +render +width:30%
 $
-accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
+accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i x + b_i)
 $
 ```
 
@@ -1812,7 +1812,7 @@ To recap
 
 ```typst +render +width:30%
 $
-accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i^T x + b_i)
+accent(f, hat)(x) = sum_(i=1)^M c_i dot sigma (w_i x + b_i)
 $
 ```
 
@@ -1820,14 +1820,14 @@ $
 We need:
 
 - neurons
+- layers: input, hidden, output
 - weights: connections between neurons
   - `wi` input -> hidden: the feature extracted by the neuron from the input
   - `ci` hidden -> output: how important is this feature
 - biases `bi`: how much of the feature is needed for the neuron to activate
-- layers: input, hidden, output
 - `σ` activation function:
   - yes/no detectors
-  - a way to convert the result:
+  - a way to convert the result into a probability:
 
 <!-- column_layout: [1, 1] -->
 
@@ -1920,9 +1920,9 @@ In Rust please!? - network
 <!-- column: 1 -->
 ```rust +no_background
 struct Network<'a, B: Backend> {
-    input: Layer<'a, B>,
-    hidden: Layer<'a, B>,
-    output: Layer<'a, B>,
+    input_layer: Layer<'a, B>,
+    hidden_layer: Layer<'a, B>,
+    output_layer: Layer<'a, B>,
 }
 ```
 <!-- pause -->
@@ -1937,7 +1937,7 @@ impl<'a, B: Backend> Network<'a, B> {
         let input = Layer::new(n_features, hls);
         let hidden = Layer::new(hls, hls);
         let output = Layer::new(hls, 1);
-        Self { input_layer, hidden_layer, output_layer }
+        Self { input, hidden, output }
     }
 ```
 <!-- pause -->
@@ -2029,14 +2029,16 @@ How does the network learn?
 
 <!-- column: 0 -->
 
-<!-- list_item_newlines: 3 -->
-- gather a lot of inputs
+<!-- newlines: 1 -->
+gather a **lot** of _labeled_ inputs
 
 <!-- column: 1 -->
 ![image:width:80%](img/training_data.png)
 
 <!-- column: 0 -->
 <!-- pause -->
+<!-- list_item_newlines: 3 -->
+<!-- newlines: 3 -->
 - forward pass: feed input through the network
 
 <!-- column: 1 -->
@@ -2249,12 +2251,12 @@ $
 ```typst +render +width:100%
 $
 g(f(x)), #h(1em) frac(d g, d x) = frac(d g, d f) dot frac(d f, d x) #h(3em)
-y(u_3(u_2(u_1(x)))), #h(1.5em) macron(u)_2 = macron(u)_3 dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_2) = frac(∂ y, ∂ u_3) dot frac(∂ u_3, ∂ u_2)
+y(u_3(u_2(u_1(x)))), #h(1.5em) macron(u)_2 = macron(u)_3 dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_3) dot frac(∂ u_3, ∂ u_2) = frac(∂ y, ∂ u_2)
 $
 ```
 
 <!-- column: 1 -->
-![image:width:65%](img/chain_rule.png)
+![image:width:55%](img/chain_rule.png)
 <!-- alignment: center -->
 credit: Qniemiec, CC0
 
@@ -2285,7 +2287,6 @@ Summary
 # Neural networks
 ## What's a neural network?
 ## Training
-### Loss function
 ### Gradient computation
 ### Gradient propagation
 
@@ -2297,7 +2298,7 @@ How to propagate the loss' gradients?
 <!-- column_layout: [1, 1, 1] -->
 
 <!-- column: 0 -->
-Recap with `y => L` at iteration `i`:
+Shortcut: `∂y/∂x => ∂L/∂x` at iteration `i`:
 
 ```typst +render +width:80%
 $
@@ -2311,8 +2312,8 @@ $
 We need to update our params to take the loss' gradient into account `Δ`:
 ```typst +render +width:80%
 $
-Delta p_i = -1 dot eta dot frac(∂ L, ∂ p_i) \
-p_(i + 1) = p_(i) + Delta p_i
+p_(i + 1) = p_(i) + Delta p_i \
+Delta p_i = -1 dot eta dot frac(∂ L, ∂ p_i)
 $
 ```
 
@@ -2389,7 +2390,6 @@ Summary
 # Neural networks
 ## What's a neural network?
 ## Training
-### Loss function
 ### Gradient computations
 ### Gradient propagation
 ### Rust implementation
@@ -2399,8 +2399,7 @@ Summary
 Rust impl - evaluation trace
 ===
 
-![image:width:75%](img/dag_fwd.png)
-![image:width:100%](img/dag_bwd.png)
+![image:width:100%](img/dag_both.png)
 
 <!-- column_layout: [1, 1] -->
 <!-- column: 0 -->
@@ -2459,13 +2458,12 @@ trait Unary<'a, B: Backend> {
     fn backward(
         &self,
         x: &B::Ops<'a>,
-        d: &B::Ops<'a>,
+        adj: &B::Ops<'a>,
     ) -> B::Ops<'a>;
 }
 // same for binary
 ```
 <!-- pause -->
-<!-- newlines: 2 -->
 ```rust +no_background
 struct Forward;
 impl Forward {
@@ -2496,14 +2494,13 @@ impl<'a, B: Backend> Unary<'a, B> for Sigma {
     fn backward(
         &self,
         x: &B::Ops<'a>,
-        d: &B::Ops<'a>
+        adj: &B::Ops<'a>
     ) -> B::Ops<'a> {
         // sig'(x) = sig(x) * (1 - sig(x))
-        x.zip(|xi, di| di * xi.sig() * (1. - xi.sig()))
+        x.zip(adj, |x, d| d * x.sig() * (1. - x.sig()))
     }
 }
 ```
-<!-- newlines: 2 -->
 <!-- pause -->
 ```rust +no_background
 impl<'a, B: Backend> Tensor<'a, B> {
@@ -2514,33 +2511,43 @@ impl<'a, B: Backend> Tensor<'a, B> {
 
 tensor.sigma()
 ```
-<!-- reset_layout -->
-<!-- pause -->
-<!-- alignment: center -->
-<!-- newlines: 1 -->
-that's _forward_ done!
+
+<!--
+speaker_note: |
+  we need that trace info during our forward pass for backward
+  we're going to wrap every operation on our tensors, that's where `Forward` comes in
+  let's take sigma as an example
+  we're leveraging the chain rule in backward
+  we can now define a trace-capturing sigma function on tensor
+-->
 
 ---
 
 Rust impl - chain rule
 ===
 
-<!-- column_layout: [3, 1] -->
+![image:width:100%](img/dag_both.png)
+
+<!-- pause -->
+<!-- column_layout: [2, 1] -->
 <!-- column: 0 -->
+<!-- newlines: 2 -->
 ```rust +no_background
-// Self is Tensor<'a, B>
-fn chain_rule(&self, d: &Self) -> impl Iterator<Item = (&Self, Self)> {
-    let inputs = &self.trace.inputs;
+fn chain_rule(
+    &self,
+    adj: &Self
+) -> impl Iterator<Item = (&Self, Self)> {
+    let ins = &self.trace.inputs;
     let gradients = self
         .trace
         .fn
         .map(|f| match f {
             Function::U(u) => {
-                let da = u.backward(&inputs[0], d);
+                let da = u.backward(&ins[0], adj);
                 vec![da]
             }
             Function::B(b) => {
-                let (da, db) = b.backward(&inputs[0], &inputs[1], d);
+                let (da, db) = b.backward(&ins[0], &ins[1], adj);
                 vec![da, db]
             }
         });
@@ -2693,13 +2700,13 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
     let one = Tensor::scalar(1);
 
     for i in 0..iterations {
-        let out = network.forward(data.features);
+        let probs = network.forward(data.features);
 
-        let prob = out * data.labels +
-            (out - one) * (data.labels - one);
-        let log_loss = (-prob.ln() / data.n).sum();
+        let l1_loss = (
+            (data.labels - probs).abs() / data.n
+        ).sum();
 
-        let gradients = log_loss.backprop(one);
+        let gradients = l1_loss.backprop(one);
 
         network.step(&gd, &gradients);
     }
@@ -2707,7 +2714,7 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 ```
 
 <!-- column: 1 -->
-<!-- newlines: 6 -->
+<!-- newlines: 5 -->
 dataset with features `x1`, `x2` and label `y`
 x1 | x2 | y
 -|-|-
@@ -2795,26 +2802,29 @@ Specs:
 <!-- column: 0 -->
 <!-- newlines: 5 -->
 Results:
-<!--incremental_tables: true -->
 mode | 10^2 | 10^3 | 10^4 | 10^5 | 10^6 | 10^7
 -|-|-|-|-|-|-
-seq | 1.93s   | 18.36s  | 3m24s   | 1h2m   | ???    | ???
-par | 1.96s   | 10.24s  | 1m21s   | 16m6s  | 2h24m  | ???
-igp | 19.72s  | 22.53s  | 37.78s  | 2m29s  | 23m43s | ???
-gpu | 11.22s  | 12s     | 25.33s  | 2m4s   | 20m27s | ???
-mem | 0.12MiB | 2.28MiB | 22.8MiB | 229MiB | 2.3GiB | 22.89GiB
-
-Memory requirements:
-- matmul -> add -> sigma
-- input and hidden layers
-- forward and backward
-- `3 x 2 x 2 x [N, 50]`
+seq | _1.93s_   | 18.36s   | 3m24s    | 1h2m   | ???      | ???
+par | _1.96s_   | _10.24s_ | 1m21s    | 16m6s  | 2h24m    | ???
+igp | 19.72s    | 22.53s   | 37.78s   | 2m29s  | 23m43s   | ???
+gpu | 11.22s    | 12s      | _25.33s_ | _2m4s_ | _20m27s_ | ???
+mem | 0.12MiB   | 2.28MiB  | 22.8MiB  | 229MiB | 2.3GiB   | 22.89GiB
 
 <!-- column: 1 -->
 <!-- newlines: 1 -->
+<!-- pause -->
 ![image:width:100%](img/benchmark_plot.png)
 
+<!-- column: 0 -->
 <!-- pause -->
+Memory requirements:
+- matmul -> add -> sigma `σ(wx + b)`
+- input and hidden layers, output is a scalar
+- tensor and their grad
+- `3 x 2 x 2 x [N, 50]`
+
+<!-- pause -->
+<!-- column: 1 -->
 - gradient descent => stochastic gradient descent `SGD`
 - not compute-bound, not memory-bound but dispatch-bound => `kernel fusion`
 
@@ -2837,7 +2847,6 @@ Profiling
 <!-- newlines: 5 -->
 <!-- column_layout: [1, 1] -->
 <!-- column: 0 -->
-TODO: rename relu
 ![image:width:100%](img/profile_plot.png)
 <!-- pause -->
 <!-- column: 1 -->
