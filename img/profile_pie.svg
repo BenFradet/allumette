@@ -5,7 +5,7 @@
    viewBox="0 0 948 1125"
    version="1.2"
    id="svg176"
-   sodipodi:docname="profile_plot.svg"
+   sodipodi:docname="profile_pie.svg"
    inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -21,10 +21,10 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="2.56"
-     inkscape:cx="966.99219"
-     inkscape:cy="-665.625"
-     inkscape:window-width="1906"
+     inkscape:zoom="0.64"
+     inkscape:cx="681.25"
+     inkscape:cy="-637.5"
+     inkscape:window-width="1020"
      inkscape:window-height="1186"
      inkscape:window-x="0"
      inkscape:window-y="0"
@@ -111,7 +111,7 @@
        font-style="normal"
        id="g5"
        style="fill:#a5adce;fill-opacity:1;stroke:#a5adce;stroke-opacity:1"
-       inkscape:export-filename="profile_plot.png"
+       inkscape:export-filename="profile_pie.png"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96">
       <path
@@ -1719,7 +1719,7 @@
        stroke-width="1"
        stroke-linecap="square"
        stroke-linejoin="bevel"
-       transform="matrix(1.48125,0,0,1.48125,147.07455,-463.79615)"
+       transform="matrix(1.48125,0,0,1.48125,151.57455,-457.79615)"
        font-family="Sans"
        font-size="10px"
        font-weight="400"
@@ -1739,7 +1739,7 @@
          id="text123"
          style="stroke-width:0.956843;stroke-dasharray:none"><tspan
            style="stroke:#232634;stroke-width:0.956843;stroke-dasharray:none;stroke-opacity:1"
-           id="tspan177">relu diff 19.1% </tspan></text>
+           id="tspan177">sigma' 19.1% </tspan></text>
     </g>
     <g
        fill="none"
@@ -1944,7 +1944,7 @@
          fill-opacity="1"
          stroke="none"
          xml:space="preserve"
-         x="0"
+         x="-4.0506349"
          y="0"
          font-family="Sans"
          font-size="10px"
@@ -1952,7 +1952,7 @@
          font-style="normal"
          id="text137"><tspan
            style="stroke:#232634;stroke-opacity:1"
-           id="tspan179"> relu 12.1%</tspan></text>
+           id="tspan179"> sigma 12.1%</tspan></text>
     </g>
     <g
        fill="none"
