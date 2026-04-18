@@ -21,10 +21,9 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
         let workgroup_info = (&self.shape).into();
         let gpu_size = self.shape.gpu_byte_size();
 
-        let output_buffer = self.context.create_output_buffer(
-            gpu_size,
-            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-        );
+        let output_buffer = self
+            .context
+            .create_output_buffer(gpu_size, BufferUsages::STORAGE | BufferUsages::COPY_SRC);
 
         let pipeline = self
             .context
@@ -69,10 +68,9 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
         let workgroup_info = (&out.shape).into();
         // TODO: use out.buffer.size?
         let out_gpu_size = out.shape.gpu_byte_size();
-        let output_buffer = out.context.create_output_buffer(
-            out_gpu_size,
-            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-        );
+        let output_buffer = out
+            .context
+            .create_output_buffer(out_gpu_size, BufferUsages::STORAGE | BufferUsages::COPY_SRC);
 
         let pipeline = self
             .context
@@ -123,10 +121,9 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
         let strides = (&shape).into();
         let workgroup_info = (&shape).into();
         let gpu_size = shape.gpu_byte_size();
-        let output_buffer = self.context.create_output_buffer(
-            gpu_size,
-            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-        );
+        let output_buffer = self
+            .context
+            .create_output_buffer(gpu_size, BufferUsages::STORAGE | BufferUsages::COPY_SRC);
 
         let pipeline = self
             .context
@@ -187,10 +184,9 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
             let strides = (&shape).into();
             let workgroup_info = WorkgroupInfo::for_reduce(self.shape.data()[dim], &shape);
             let gpu_size = shape.gpu_byte_size();
-            let output_buffer = self.context.create_output_buffer(
-                gpu_size,
-                BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-            );
+            let output_buffer = self
+                .context
+                .create_output_buffer(gpu_size, BufferUsages::STORAGE | BufferUsages::COPY_SRC);
 
             let pipeline =
                 self.context
@@ -250,10 +246,9 @@ impl<P: Profiler> Ops<f32, Gpu, P> for GpuData<'_> {
         let (workgroup_info, y_chunks) = WorkgroupInfo::for_matmul(sqrt_max_invoc_per_wg, &shape);
         let gpu_size = shape.gpu_byte_size();
 
-        let output_buffer = self.context.create_output_buffer(
-            gpu_size,
-            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-        );
+        let output_buffer = self
+            .context
+            .create_output_buffer(gpu_size, BufferUsages::STORAGE | BufferUsages::COPY_SRC);
 
         let pipeline = self
             .context

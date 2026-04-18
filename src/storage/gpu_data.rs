@@ -97,10 +97,9 @@ impl<'a> GpuData<'a> {
     pub fn to_cpu(&self) -> Result<Vec<f32>, GpuError> {
         self.context.flush_commands()?;
         let size = self.shape.gpu_byte_size();
-        let staging_buffer = self.context.create_output_buffer(
-            size,
-            BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-        );
+        let staging_buffer = self
+            .context
+            .create_output_buffer(size, BufferUsages::MAP_READ | BufferUsages::COPY_DST);
         let mut encoder = self
             .context
             .device

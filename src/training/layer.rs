@@ -56,14 +56,11 @@ impl<'a, B: Backend> Layer<'a, B> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        backend::backend::CpuSeqBackend,
-        shaping::strides::Strides,
-        storage::cpu_data::CpuData,
+        backend::backend::CpuSeqBackend, shaping::strides::Strides, storage::cpu_data::CpuData,
     };
     #[cfg(feature = "gpu")]
     use crate::{
-        backend::backend::GpuBackend,
-        storage::gpu_data::GpuData,
+        backend::backend::GpuBackend, storage::gpu_data::GpuData,
         wgpu::wgpu_context::get_wgpu_context,
     };
 

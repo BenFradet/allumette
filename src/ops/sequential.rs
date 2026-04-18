@@ -12,10 +12,7 @@ impl<P: Profiler> Ops<f64, Seq, P> for CpuData {
     fn map<F: Fn(f64) -> f64 + Sync>(&self, f: F, tag: &'static str) -> Self {
         let p = P::start();
 
-        let out: Vec<_> = self.data
-            .iter()
-            .map(|d| f(*d))
-            .collect();
+        let out: Vec<_> = self.data.iter().map(|d| f(*d)).collect();
 
         p.stop(tag);
 

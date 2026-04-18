@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+#[cfg(feature = "gpu")]
+use crate::{backend::mode::Gpu, storage::gpu_data::GpuData};
 use crate::{
     backend::mode::{Par, Seq},
     math::element::Element,
@@ -10,8 +12,6 @@ use crate::{
         unsafe_usize_convert::UnsafeUsizeConvert,
     },
 };
-#[cfg(feature = "gpu")]
-use crate::{backend::mode::Gpu, storage::gpu_data::GpuData};
 
 use super::mode::Mode;
 

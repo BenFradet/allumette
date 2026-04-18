@@ -1,5 +1,7 @@
 use std::io::Error;
 
+#[cfg(feature = "gpu")]
+use allumette::backend::backend::GpuBackend;
 use allumette::{
     backend::backend::{CpuParBackend, CpuSeqBackend},
     training::{dataset::Dataset, train},
@@ -8,8 +10,6 @@ use allumette::{
         profiler::{CsvProfiler, NoopProfiler, Profiler},
     },
 };
-#[cfg(feature = "gpu")]
-use allumette::backend::backend::GpuBackend;
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]

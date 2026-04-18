@@ -1,9 +1,6 @@
 use crate::{
     autodiff::{forward::Forward, gradients::Gradients, trace::Trace},
-    backend::{
-        backend::Backend,
-        mode::Mode,
-    },
+    backend::{backend::Backend, mode::Mode},
     fns::{
         binary::{Add, All, Div, Eq, IsClose, Lt, MatMul, Mul, Permute, Sum, View},
         function::Function,
@@ -15,18 +12,16 @@ use crate::{
     storage::{cpu_data::CpuData, data::Data},
     util::unsafe_usize_convert::UnsafeUsizeConvert,
 };
+#[cfg(feature = "gpu")]
+use crate::{
+    backend::backend::GpuBackend, storage::gpu_data::GpuData, wgpu::wgpu_context::get_wgpu_context,
+};
 use proptest::{collection, prelude::*};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     marker::PhantomData,
     ops,
     sync::atomic::{AtomicU64, Ordering},
-};
-#[cfg(feature = "gpu")]
-use crate::{
-    backend::backend::GpuBackend,
-    storage::gpu_data::GpuData,
-    wgpu::wgpu_context::get_wgpu_context,
 };
 
 static TENSOR_ID: AtomicU64 = AtomicU64::new(0);
@@ -586,12 +581,12 @@ impl<'a, B: Backend> ops::Neg for Tensor<'a, B> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "gpu")]
+    use crate::storage::gpu_data::GpuData;
     use crate::{
         backend::backend::{CpuParBackend, CpuSeqBackend},
         shaping::idx::Idx,
     };
-    #[cfg(feature = "gpu")]
-    use crate::storage::gpu_data::GpuData;
     #[cfg(feature = "gpu")]
     use serial_test::serial;
 
@@ -1710,7 +1705,8 @@ mod tests {
                 let xcg = mc.wrt(&xc).unwrap().data.collect();
                 assert_eq!(vec![1., 1., 1., 1., 1., 1.], xcg);
 
-                let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
+                let xg: Tensor<GpuBackend> =
+                    Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
                 let xg_size = xg.size();
                 let vg = xg.clone().view(&Shape::scalar(xg_size));
                 let yg = vg.sum(None);
@@ -1730,7 +1726,8 @@ mod tests {
                 let xcg = mc.wrt(&xc).unwrap().data.collect();
                 assert_eq!(vec![2., 2., 2., 2., 2., 2.], xcg);
 
-                let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
+                let xg: Tensor<GpuBackend> =
+                    Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
                 let og = xg.clone() * Tensor::from_scalar(2.);
                 let lg = og.sum(None);
                 let mg = lg.backward();
