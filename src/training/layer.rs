@@ -56,16 +56,39 @@ impl<'a, B: Backend> Layer<'a, B> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        backend::backend::{CpuSeqBackend, GpuBackend},
+        backend::backend::CpuSeqBackend,
         shaping::strides::Strides,
-        storage::{cpu_data::CpuData, gpu_data::GpuData},
+        storage::cpu_data::CpuData,
+    };
+    #[cfg(feature = "gpu")]
+    use crate::{
+        backend::backend::GpuBackend,
+        storage::gpu_data::GpuData,
         wgpu::wgpu_context::get_wgpu_context,
     };
 
     use super::*;
 
     #[test]
-    fn test_layer() {
+    fn test_layer_cpu() {
+        let shape = Shape::new(vec![2, 3]);
+        let strides: Strides = (&shape).into();
+
+        let tdc = CpuData::new(vec![1., 2., 3., 4., 5., 6.], shape.clone(), strides.clone());
+        let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
+        let clayer = Layer::new(2, 2);
+        let cout = clayer.forward(c.clone());
+        let closs = cout.sum(None);
+        let cres = closs.backward();
+        assert_eq!(
+            vec![1., 1., 1., 1., 1., 1.],
+            cres.wrt(&c).unwrap().data.collect()
+        );
+    }
+
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn test_layer_gpu() {
         let shape = Shape::new(vec![2, 3]);
         let strides: Strides = (&shape).into();
 
@@ -83,17 +106,6 @@ mod tests {
         assert_eq!(
             vec![1., 1., 1., 1., 1., 1.],
             gres.wrt(&g).unwrap().data.collect()
-        );
-
-        let tdc = CpuData::new(vec![1., 2., 3., 4., 5., 6.], shape.clone(), strides.clone());
-        let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
-        let clayer = Layer::new(2, 2);
-        let cout = clayer.forward(c.clone());
-        let closs = cout.sum(None);
-        let cres = closs.backward();
-        assert_eq!(
-            vec![1., 1., 1., 1., 1., 1.],
-            cres.wrt(&c).unwrap().data.collect()
         );
     }
 }

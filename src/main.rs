@@ -1,13 +1,15 @@
 use std::io::Error;
 
 use allumette::{
-    backend::backend::{CpuParBackend, CpuSeqBackend, GpuBackend},
+    backend::backend::{CpuParBackend, CpuSeqBackend},
     training::{dataset::Dataset, train},
     util::{
         debugger::{TerseDebugger, VizDebugger},
         profiler::{CsvProfiler, NoopProfiler, Profiler},
     },
 };
+#[cfg(feature = "gpu")]
+use allumette::backend::backend::GpuBackend;
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
@@ -43,6 +45,7 @@ enum CliCommand {
 enum CliBackend {
     Seq,
     Par,
+    #[cfg(feature = "gpu")]
     Gpu,
 }
 
@@ -191,6 +194,7 @@ fn run_training<P: Profiler + Clone + std::fmt::Debug + 'static>(
                 profile_path,
             );
         }
+        #[cfg(feature = "gpu")]
         CliBackend::Gpu => {
             let dataset = Dataset::circle(points, seed);
             train::train::<GpuBackend<P>, _>(

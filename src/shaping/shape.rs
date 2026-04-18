@@ -3,6 +3,7 @@ use std::ops::Index;
 use proptest::{prelude::Strategy, sample::SizeRange};
 use rand::Rng;
 
+#[cfg(feature = "gpu")]
 use crate::wgpu::wgpu_context::WGPU_ELEMENT_SIZE;
 
 use super::{idx::Idx, iter::Iter};
@@ -41,6 +42,7 @@ impl Shape {
         self
     }
 
+    #[cfg(feature = "gpu")]
     pub fn gpu_byte_size(&self) -> u64 {
         u64::try_from(self.size * WGPU_ELEMENT_SIZE).unwrap()
     }

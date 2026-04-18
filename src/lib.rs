@@ -12,4 +12,5 @@ pub mod storage;
 pub mod tensor;
 pub mod training;
 pub mod util;
+#[cfg(feature = "gpu")]
 pub mod wgpu;

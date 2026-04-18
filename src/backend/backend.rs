@@ -1,15 +1,17 @@
 use std::marker::PhantomData;
 
 use crate::{
-    backend::mode::{Gpu, Par, Seq},
+    backend::mode::{Par, Seq},
     math::element::Element,
     ops::ops::Ops,
-    storage::{cpu_data::CpuData, data::Data, gpu_data::GpuData},
+    storage::{cpu_data::CpuData, data::Data},
     util::{
         profiler::{NoopProfiler, Profiler},
         unsafe_usize_convert::UnsafeUsizeConvert,
     },
 };
+#[cfg(feature = "gpu")]
+use crate::{backend::mode::Gpu, storage::gpu_data::GpuData};
 
 use super::mode::Mode;
 
@@ -48,10 +50,12 @@ impl<P: Profiler + Clone + std::fmt::Debug + 'static> Backend for CpuParBackend<
     type Storage<'a> = CpuData;
 }
 
+#[cfg(feature = "gpu")]
 #[derive(Clone, Debug)]
 pub struct GpuBackend<P: Profiler = NoopProfiler> {
     _p: PhantomData<P>,
 }
+#[cfg(feature = "gpu")]
 impl<P: Profiler + Clone + std::fmt::Debug + 'static> Backend for GpuBackend<P> {
     type Element = f32;
     type Mode = Gpu;

@@ -59,15 +59,22 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 mod tests {
     use crate::{
         autodiff::trace::Trace,
-        backend::backend::{CpuSeqBackend, GpuBackend},
+        backend::backend::CpuSeqBackend,
         shaping::strides::Strides,
-        storage::{cpu_data::CpuData, data::Data, gpu_data::GpuData},
+        storage::{cpu_data::CpuData, data::Data},
+    };
+    #[cfg(feature = "gpu")]
+    use crate::{
+        backend::backend::GpuBackend,
+        storage::gpu_data::GpuData,
         wgpu::wgpu_context::get_wgpu_context,
     };
+    #[cfg(feature = "gpu")]
     use serial_test::serial;
 
     use super::*;
 
+    #[cfg(feature = "gpu")]
     #[test]
     #[serial(gpu)]
     fn test_train() {
@@ -95,6 +102,7 @@ mod tests {
         assert_eq!(vec![-6.6666665, -3.3333335, -2.3611112], xgg);
     }
 
+    #[cfg(feature = "gpu")]
     #[test]
     #[serial(gpu)]
     fn gpu_vs_cpu() {
@@ -168,6 +176,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "gpu")]
     fn compare(label: &str, cpu: &[f64], gpu: &[f32], tol: f64) {
         assert_eq!(cpu.len(), gpu.len(), "{label}: length mismatch");
         for (i, (c, g)) in cpu.iter().zip(gpu).enumerate() {

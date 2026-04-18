@@ -3,14 +3,18 @@ name = "allumette"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["gpu"]
+gpu = ["dep:wgpu", "dep:bytemuck", "dep:flume", "dep:futures"]
+
 [dependencies]
-bytemuck = "1.23.1"
-flume = "0.11.1"
-futures = "0.3.31"
+bytemuck = { version = "1.23.1", optional = true }
+flume = { version = "0.11.1", optional = true }
+futures = { version = "0.3.31", optional = true }
 proptest = "1.9.0"
 rand = "0.8.5"
 rayon = "1.10.0"
-wgpu = "27.0.1"
+wgpu = { version = "27.0.1", optional = true }
 ratatui = { git = "https://github.com/ratatui/ratatui", branch = "main" }
 clap = { version = "4.6.0", features = ["derive"] }
 serial_test = "3.4.0"

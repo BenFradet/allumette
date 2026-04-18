@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
-use crate::storage::{cpu_data::CpuData, gpu_data::GpuData};
+use crate::storage::cpu_data::CpuData;
+#[cfg(feature = "gpu")]
+use crate::storage::gpu_data::GpuData;
 
 use super::iter::Iter;
 
@@ -67,6 +69,7 @@ impl From<&CpuData> for Order {
     }
 }
 
+#[cfg(feature = "gpu")]
 impl From<GpuData<'_>> for Order {
     fn from(td: GpuData) -> Self {
         td.to_cpu()
@@ -76,6 +79,7 @@ impl From<GpuData<'_>> for Order {
     }
 }
 
+#[cfg(feature = "gpu")]
 impl From<&GpuData<'_>> for Order {
     fn from(td: &GpuData) -> Self {
         td.to_cpu()

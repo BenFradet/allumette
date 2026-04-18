@@ -1,7 +1,7 @@
 use crate::{
     autodiff::{forward::Forward, gradients::Gradients, trace::Trace},
     backend::{
-        backend::{Backend, GpuBackend},
+        backend::Backend,
         mode::Mode,
     },
     fns::{
@@ -12,9 +12,8 @@ use crate::{
     math::element::Element,
     ops::ops::Ops,
     shaping::{order::Order, shape::Shape, strides::Strides},
-    storage::{cpu_data::CpuData, data::Data, gpu_data::GpuData},
+    storage::{cpu_data::CpuData, data::Data},
     util::unsafe_usize_convert::UnsafeUsizeConvert,
-    wgpu::wgpu_context::get_wgpu_context,
 };
 use proptest::{collection, prelude::*};
 use std::{
@@ -22,6 +21,12 @@ use std::{
     marker::PhantomData,
     ops,
     sync::atomic::{AtomicU64, Ordering},
+};
+#[cfg(feature = "gpu")]
+use crate::{
+    backend::backend::GpuBackend,
+    storage::gpu_data::GpuData,
+    wgpu::wgpu_context::get_wgpu_context,
 };
 
 static TENSOR_ID: AtomicU64 = AtomicU64::new(0);
@@ -464,6 +469,7 @@ where
     }
 }
 
+#[cfg(feature = "gpu")]
 impl<'a> Tensor<'a, GpuBackend> {
     pub fn arbitrary() -> impl Strategy<Value = Self> {
         GpuData::arbitrary().prop_map(Self::from_data)
@@ -583,8 +589,10 @@ mod tests {
     use crate::{
         backend::backend::{CpuParBackend, CpuSeqBackend},
         shaping::idx::Idx,
-        storage::gpu_data::GpuData,
     };
+    #[cfg(feature = "gpu")]
+    use crate::storage::gpu_data::GpuData;
+    #[cfg(feature = "gpu")]
     use serial_test::serial;
 
     use super::*;
@@ -1248,6 +1256,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "gpu")]
     mod gpu {
         use crate::{backend::backend::CpuSeqBackend, util::profiler::NoopProfiler};
 
@@ -1602,241 +1611,246 @@ mod tests {
             }
         }
 
-        #[test]
-        #[serial(gpu)]
-        fn test_reduce_forward_one_dim() {
-            let shape = Shape::new(vec![3, 2]);
-            let strides = (&shape).into();
-            let td = GpuData::new(
-                &[2., 3., 4., 6., 5., 7.],
-                shape,
-                strides,
-                get_wgpu_context(),
-            );
+        #[cfg(feature = "gpu")]
+        mod gpu_standalone {
+            use super::*;
 
-            let t: Tensor<GpuBackend> = Tensor::from_data(td);
-            let summed = t.sum(Some(0));
+            #[test]
+            #[serial(gpu)]
+            fn test_reduce_forward_one_dim() {
+                let shape = Shape::new(vec![3, 2]);
+                let strides = (&shape).into();
+                let td = GpuData::new(
+                    &[2., 3., 4., 6., 5., 7.],
+                    shape,
+                    strides,
+                    get_wgpu_context(),
+                );
 
-            let exp = Tensor::from_1d(&[11., 16.]);
-            let is_close = summed.is_close(exp);
-            let shape = Shape::scalar(is_close.size());
-            assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
-        }
+                let t: Tensor<GpuBackend> = Tensor::from_data(td);
+                let summed = t.sum(Some(0));
 
-        #[test]
-        #[serial(gpu)]
-        fn test_reduce_forward_one_dim_2() {
-            let shape = Shape::new(vec![3, 2]);
-            let strides = (&shape).into();
-            let td = GpuData::new(
-                &[2., 3., 4., 6., 5., 7.],
-                shape,
-                strides,
-                get_wgpu_context(),
-            );
+                let exp = Tensor::from_1d(&[11., 16.]);
+                let is_close = summed.is_close(exp);
+                let shape = Shape::scalar(is_close.size());
+                assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
+            }
 
-            let t: Tensor<GpuBackend> = Tensor::from_data(td);
-            let summed = t.sum(Some(1));
+            #[test]
+            #[serial(gpu)]
+            fn test_reduce_forward_one_dim_2() {
+                let shape = Shape::new(vec![3, 2]);
+                let strides = (&shape).into();
+                let td = GpuData::new(
+                    &[2., 3., 4., 6., 5., 7.],
+                    shape,
+                    strides,
+                    get_wgpu_context(),
+                );
 
-            let exp = Tensor::from_2d(&[&[5.], &[10.], &[12.]]).unwrap();
-            let is_close = summed.is_close(exp);
-            let shape = Shape::scalar(is_close.size());
-            assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
-        }
+                let t: Tensor<GpuBackend> = Tensor::from_data(td);
+                let summed = t.sum(Some(1));
 
-        #[test]
-        #[serial(gpu)]
-        fn test_reduce_forward_all_dim() {
-            let shape = Shape::new(vec![3, 2]);
-            let strides = (&shape).into();
-            let td = GpuData::new(
-                &[2., 3., 4., 6., 5., 7.],
-                shape,
-                strides,
-                get_wgpu_context(),
-            );
+                let exp = Tensor::from_2d(&[&[5.], &[10.], &[12.]]).unwrap();
+                let is_close = summed.is_close(exp);
+                let shape = Shape::scalar(is_close.size());
+                assert_eq!(Some(1.), is_close.view(&shape).all(Some(0)).item());
+            }
 
-            let t: Tensor<GpuBackend> = Tensor::from_data(td);
-            let summed = t.sum(None);
-            assert_eq!(Some(27.), summed.item());
-        }
+            #[test]
+            #[serial(gpu)]
+            fn test_reduce_forward_all_dim() {
+                let shape = Shape::new(vec![3, 2]);
+                let strides = (&shape).into();
+                let td = GpuData::new(
+                    &[2., 3., 4., 6., 5., 7.],
+                    shape,
+                    strides,
+                    get_wgpu_context(),
+                );
 
-        #[test]
-        #[serial(gpu)]
-        fn test_backward_gpu() {
-            let shape = Shape::new(vec![3, 1]);
-            let strides: Strides = (&shape).into();
+                let t: Tensor<GpuBackend> = Tensor::from_data(td);
+                let summed = t.sum(None);
+                assert_eq!(Some(27.), summed.item());
+            }
 
-            let tdg = GpuData::new(
-                &[1., 2., 3.],
-                shape.clone(),
-                strides.clone(),
-                get_wgpu_context(),
-            );
-            let g: Tensor<GpuBackend> = Tensor::from_data(tdg);
-            let gs = g.clone().view(&Shape::new(vec![3])).sum(None);
-            let gres = gs.backward();
-            assert_eq!(vec![1., 1., 1.], gres.wrt(&g).unwrap().data.collect());
+            #[test]
+            #[serial(gpu)]
+            fn test_backward_gpu() {
+                let shape = Shape::new(vec![3, 1]);
+                let strides: Strides = (&shape).into();
 
-            let tdc = CpuData::new(vec![1., 2., 3.], shape.clone(), strides.clone());
-            let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
-            let cs = c.clone().view(&Shape::new(vec![3])).sum(None);
-            let cres = cs.backward();
-            assert_eq!(vec![1., 1., 1.], cres.wrt(&c).unwrap().data.collect());
-        }
+                let tdg = GpuData::new(
+                    &[1., 2., 3.],
+                    shape.clone(),
+                    strides.clone(),
+                    get_wgpu_context(),
+                );
+                let g: Tensor<GpuBackend> = Tensor::from_data(tdg);
+                let gs = g.clone().view(&Shape::new(vec![3])).sum(None);
+                let gres = gs.backward();
+                assert_eq!(vec![1., 1., 1.], gres.wrt(&g).unwrap().data.collect());
 
-        #[test]
-        #[serial(gpu)]
-        fn test_view_backward() {
-            let xc: Tensor<CpuSeqBackend> =
-                Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
-            let xc_size = xc.size();
-            let vc = xc.clone().view(&Shape::scalar(xc_size));
-            let yc = vc.sum(None);
-            let mc = yc.backward();
-            let xcg = mc.wrt(&xc).unwrap().data.collect();
-            assert_eq!(vec![1., 1., 1., 1., 1., 1.], xcg);
+                let tdc = CpuData::new(vec![1., 2., 3.], shape.clone(), strides.clone());
+                let c: Tensor<CpuSeqBackend> = Tensor::from_data(tdc);
+                let cs = c.clone().view(&Shape::new(vec![3])).sum(None);
+                let cres = cs.backward();
+                assert_eq!(vec![1., 1., 1.], cres.wrt(&c).unwrap().data.collect());
+            }
 
-            let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
-            let xg_size = xg.size();
-            let vg = xg.clone().view(&Shape::scalar(xg_size));
-            let yg = vg.sum(None);
-            let mg = yg.backward();
-            let xgg = mg.wrt(&xg).unwrap().data.collect();
-            assert_eq!(vec![1., 1., 1., 1., 1., 1.], xgg);
-        }
+            #[test]
+            #[serial(gpu)]
+            fn test_view_backward() {
+                let xc: Tensor<CpuSeqBackend> =
+                    Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
+                let xc_size = xc.size();
+                let vc = xc.clone().view(&Shape::scalar(xc_size));
+                let yc = vc.sum(None);
+                let mc = yc.backward();
+                let xcg = mc.wrt(&xc).unwrap().data.collect();
+                assert_eq!(vec![1., 1., 1., 1., 1., 1.], xcg);
 
-        #[test]
-        #[serial(gpu)]
-        fn test_broadcast_mul_backward() {
-            let xc: Tensor<CpuSeqBackend> =
-                Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
-            let oc = xc.clone() * Tensor::from_scalar(2.);
-            let lc = oc.sum(None);
-            let mc = lc.backward();
-            let xcg = mc.wrt(&xc).unwrap().data.collect();
-            assert_eq!(vec![2., 2., 2., 2., 2., 2.], xcg);
+                let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
+                let xg_size = xg.size();
+                let vg = xg.clone().view(&Shape::scalar(xg_size));
+                let yg = vg.sum(None);
+                let mg = yg.backward();
+                let xgg = mg.wrt(&xg).unwrap().data.collect();
+                assert_eq!(vec![1., 1., 1., 1., 1., 1.], xgg);
+            }
 
-            let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
-            let og = xg.clone() * Tensor::from_scalar(2.);
-            let lg = og.sum(None);
-            let mg = lg.backward();
-            let xgg = mg.wrt(&xg).unwrap().data.collect();
-            assert_eq!(vec![2., 2., 2., 2., 2., 2.], xgg);
-        }
+            #[test]
+            #[serial(gpu)]
+            fn test_broadcast_mul_backward() {
+                let xc: Tensor<CpuSeqBackend> =
+                    Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
+                let oc = xc.clone() * Tensor::from_scalar(2.);
+                let lc = oc.sum(None);
+                let mc = lc.backward();
+                let xcg = mc.wrt(&xc).unwrap().data.collect();
+                assert_eq!(vec![2., 2., 2., 2., 2., 2.], xcg);
 
-        #[test]
-        #[serial(gpu)]
-        fn test_broadcast_add_backward() {
-            let xc: Tensor<CpuSeqBackend<NoopProfiler>> = Tensor::from_1d(&[1., 2., 3.]);
-            let oc = xc.clone() + Tensor::from_scalar(5.);
-            let lc = oc.sum(None);
-            let mc = lc.backward();
-            let xcg = mc.wrt(&xc).unwrap().data.collect();
-            assert_eq!(vec![1., 1., 1.], xcg);
+                let xg: Tensor<GpuBackend> = Tensor::from_2d(&[&[1., 2., 3.], &[4., 5., 6.]]).unwrap();
+                let og = xg.clone() * Tensor::from_scalar(2.);
+                let lg = og.sum(None);
+                let mg = lg.backward();
+                let xgg = mg.wrt(&xg).unwrap().data.collect();
+                assert_eq!(vec![2., 2., 2., 2., 2., 2.], xgg);
+            }
 
-            let xg: Tensor<GpuBackend> = Tensor::from_1d(&[1., 2., 3.]);
-            let og = xg.clone() + Tensor::from_scalar(5.);
-            let lg = og.sum(None);
-            let mg = lg.backward();
-            let xgg = mg.wrt(&xg).unwrap().data.collect();
-            assert_eq!(vec![1., 1., 1.], xgg);
-        }
+            #[test]
+            #[serial(gpu)]
+            fn test_broadcast_add_backward() {
+                let xc: Tensor<CpuSeqBackend<NoopProfiler>> = Tensor::from_1d(&[1., 2., 3.]);
+                let oc = xc.clone() + Tensor::from_scalar(5.);
+                let lc = oc.sum(None);
+                let mc = lc.backward();
+                let xcg = mc.wrt(&xc).unwrap().data.collect();
+                assert_eq!(vec![1., 1., 1.], xcg);
 
-        #[test]
-        #[serial(gpu)]
-        fn test_expand_backward() {
-            let a_shape = Shape::new(vec![2, 1]);
-            let b_shape = Shape::new(vec![2, 3]);
+                let xg: Tensor<GpuBackend> = Tensor::from_1d(&[1., 2., 3.]);
+                let og = xg.clone() + Tensor::from_scalar(5.);
+                let lg = og.sum(None);
+                let mg = lg.backward();
+                let xgg = mg.wrt(&xg).unwrap().data.collect();
+                assert_eq!(vec![1., 1., 1.], xgg);
+            }
 
-            let ac: Tensor<CpuSeqBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
-            let bc = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
-            let oc = ac.clone() + bc;
-            let lc = oc.sum(None);
-            let mc = lc.backward();
-            let acg = mc.wrt(&ac).unwrap().data.collect();
-            assert_eq!(vec![3., 3.], acg);
+            #[test]
+            #[serial(gpu)]
+            fn test_expand_backward() {
+                let a_shape = Shape::new(vec![2, 1]);
+                let b_shape = Shape::new(vec![2, 3]);
 
-            let ag: Tensor<GpuBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
-            let bg = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
-            let og = ag.clone() + bg;
-            let lg = og.sum(None);
-            let mg = lg.backward();
-            let agg = mg.wrt(&ag).unwrap().data.collect();
-            assert_eq!(vec![3., 3.], agg);
-        }
+                let ac: Tensor<CpuSeqBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
+                let bc = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
+                let oc = ac.clone() + bc;
+                let lc = oc.sum(None);
+                let mc = lc.backward();
+                let acg = mc.wrt(&ac).unwrap().data.collect();
+                assert_eq!(vec![3., 3.], acg);
 
-        #[test]
-        #[serial(gpu)]
-        fn test_matmul_backward() {
-            let a_shape = Shape::new(vec![1, 5, 3]);
-            let b_shape = Shape::new(vec![1, 3, 1]);
-            let a_grad = vec![
-                1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0,
-            ];
-            let b_grad = vec![30., 35., 40.];
+                let ag: Tensor<GpuBackend> = Tensor::from_shape(&[1., 2.], a_shape.clone());
+                let bg = Tensor::from_shape(&[10., 20., 30., 40., 50., 60.], b_shape.clone());
+                let og = ag.clone() + bg;
+                let lg = og.sum(None);
+                let mg = lg.backward();
+                let agg = mg.wrt(&ag).unwrap().data.collect();
+                assert_eq!(vec![3., 3.], agg);
+            }
 
-            let ac: Tensor<CpuSeqBackend> = Tensor::from_shape(
-                &(0..15).map(|i| i as f64).collect::<Vec<_>>(),
-                a_shape.clone(),
-            );
-            let bc = Tensor::from_shape(&[1., 2., 3.], b_shape.clone());
-            let oc = ac.clone().mm(bc.clone());
-            let lc = oc.sum(None);
-            let mc = lc.backward();
-            let acg = mc.wrt(&ac).unwrap().data.collect();
-            assert_eq!(a_grad.clone(), acg);
-            let bcg = mc.wrt(&bc).unwrap().data.collect();
-            assert_eq!(b_grad.clone(), bcg);
+            #[test]
+            #[serial(gpu)]
+            fn test_matmul_backward() {
+                let a_shape = Shape::new(vec![1, 5, 3]);
+                let b_shape = Shape::new(vec![1, 3, 1]);
+                let a_grad = vec![
+                    1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0,
+                ];
+                let b_grad = vec![30., 35., 40.];
 
-            let ag: Tensor<GpuBackend> = Tensor::from_shape(
-                &(0..15).map(|i| i as f32).collect::<Vec<_>>(),
-                a_shape.clone(),
-            );
-            let bg = Tensor::from_shape(&[1., 2., 3., 4., 5., 6.], b_shape.clone());
-            let og = ag.clone().mm(bg.clone());
-            let lg = og.sum(None);
-            let mg = lg.backward();
-            let agg = mg.wrt(&ag).unwrap().data.collect();
-            assert_eq!(a_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), agg);
-            let bgg = mg.wrt(&bg).unwrap().data.collect();
-            assert_eq!(b_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), bgg);
-        }
+                let ac: Tensor<CpuSeqBackend> = Tensor::from_shape(
+                    &(0..15).map(|i| i as f64).collect::<Vec<_>>(),
+                    a_shape.clone(),
+                );
+                let bc = Tensor::from_shape(&[1., 2., 3.], b_shape.clone());
+                let oc = ac.clone().mm(bc.clone());
+                let lc = oc.sum(None);
+                let mc = lc.backward();
+                let acg = mc.wrt(&ac).unwrap().data.collect();
+                assert_eq!(a_grad.clone(), acg);
+                let bcg = mc.wrt(&bc).unwrap().data.collect();
+                assert_eq!(b_grad.clone(), bcg);
 
-        #[test]
-        #[serial(gpu)]
-        fn test_relu_backward() {
-            let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
-            let oc = xc.clone().relu();
-            let lc = oc.sum(None);
-            let mc = lc.backward();
-            let xcg = mc.wrt(&xc).unwrap().data.collect();
-            assert_eq!(vec![0., 0., 1.], xcg);
+                let ag: Tensor<GpuBackend> = Tensor::from_shape(
+                    &(0..15).map(|i| i as f32).collect::<Vec<_>>(),
+                    a_shape.clone(),
+                );
+                let bg = Tensor::from_shape(&[1., 2., 3., 4., 5., 6.], b_shape.clone());
+                let og = ag.clone().mm(bg.clone());
+                let lg = og.sum(None);
+                let mg = lg.backward();
+                let agg = mg.wrt(&ag).unwrap().data.collect();
+                assert_eq!(a_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), agg);
+                let bgg = mg.wrt(&bg).unwrap().data.collect();
+                assert_eq!(b_grad.iter().map(|&f| f as f32).collect::<Vec<_>>(), bgg);
+            }
 
-            let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
-            let og = xg.clone().relu();
-            let lg = og.sum(None);
-            let mg = lg.backward();
-            let xgg = mg.wrt(&xg).unwrap().data.collect();
-            assert_eq!(vec![0., 0., 1.], xgg);
-        }
+            #[test]
+            #[serial(gpu)]
+            fn test_relu_backward() {
+                let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
+                let oc = xc.clone().relu();
+                let lc = oc.sum(None);
+                let mc = lc.backward();
+                let xcg = mc.wrt(&xc).unwrap().data.collect();
+                assert_eq!(vec![0., 0., 1.], xcg);
 
-        #[test]
-        #[serial(gpu)]
-        fn test_sig_backward() {
-            let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
-            let oc = xc.clone().sig();
-            let lc = oc.sum(None);
-            let mc = lc.backward();
-            let xcg = mc.wrt(&xc).unwrap().data.collect();
-            assert_eq!(vec![0.19661193324148185, 0.25, 0.19661193324148185], xcg);
+                let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
+                let og = xg.clone().relu();
+                let lg = og.sum(None);
+                let mg = lg.backward();
+                let xgg = mg.wrt(&xg).unwrap().data.collect();
+                assert_eq!(vec![0., 0., 1.], xgg);
+            }
 
-            let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
-            let og = xg.clone().sig();
-            let lg = og.sum(None);
-            let mg = lg.backward();
-            let xgg = mg.wrt(&xg).unwrap().data.collect();
-            assert_eq!(vec![0.19661194, 0.25, 0.19661193], xgg);
+            #[test]
+            #[serial(gpu)]
+            fn test_sig_backward() {
+                let xc: Tensor<CpuSeqBackend> = Tensor::from_1d(&[-1., 0., 1.]);
+                let oc = xc.clone().sig();
+                let lc = oc.sum(None);
+                let mc = lc.backward();
+                let xcg = mc.wrt(&xc).unwrap().data.collect();
+                assert_eq!(vec![0.19661193324148185, 0.25, 0.19661193324148185], xcg);
+
+                let xg: Tensor<GpuBackend> = Tensor::from_1d(&[-1., 0., 1.]);
+                let og = xg.clone().sig();
+                let lg = og.sum(None);
+                let mg = lg.backward();
+                let xgg = mg.wrt(&xg).unwrap().data.collect();
+                assert_eq!(vec![0.19661194, 0.25, 0.19661193], xgg);
+            }
         }
     }
 
@@ -1857,12 +1871,17 @@ mod tests {
     }
 
     #[test]
-    #[serial(gpu)]
     fn test_view() {
         let t_seq = Tensor::<CpuSeqBackend>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_seq);
         let t_par = Tensor::<CpuParBackend>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_par);
+    }
+
+    #[cfg(feature = "gpu")]
+    #[test]
+    #[serial(gpu)]
+    fn test_view_gpu() {
         let t_gpu = Tensor::<GpuBackend>::from_2d(&[&[2., 3., 4.], &[4., 5., 7.]]).unwrap();
         view_test(t_gpu);
     }
