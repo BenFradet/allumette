@@ -57,21 +57,18 @@ pub fn train<'a, B: Backend + 'a, D: Debugger<'a, B>>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        autodiff::trace::Trace,
-        backend::backend::CpuSeqBackend,
-        shaping::strides::Strides,
-        storage::{cpu_data::CpuData, data::Data},
-    };
     #[cfg(feature = "gpu")]
     use crate::{
-        backend::backend::GpuBackend,
-        storage::gpu_data::GpuData,
+        autodiff::trace::Trace,
+        backend::backend::{CpuSeqBackend, GpuBackend},
+        shaping::strides::Strides,
+        storage::{cpu_data::CpuData, data::Data, gpu_data::GpuData},
         wgpu::wgpu_context::get_wgpu_context,
     };
     #[cfg(feature = "gpu")]
     use serial_test::serial;
 
+    #[cfg(feature = "gpu")]
     use super::*;
 
     #[cfg(feature = "gpu")]
