@@ -207,6 +207,20 @@ impl<E: Element + UnsafeUsizeConvert> Dataset<E> {
     }
 }
 
+impl Dataset<f64> {
+    pub fn to_f32(&self) -> Dataset<f32> {
+        Dataset {
+            n: self.n,
+            features: self
+                .features
+                .iter()
+                .map(|(a, b)| (*a as f32, *b as f32))
+                .collect(),
+            labels: self.labels.clone(),
+        }
+    }
+}
+
 mod tests {
     use super::*;
     use proptest::prelude::*;
