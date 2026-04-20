@@ -13,24 +13,42 @@ use allumette::{
     },
 };
 use clap::{Parser, Subcommand, ValueEnum};
+use std::fmt;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    #[arg(value_enum, short, long, default_value_t = CliBackend::Seq)]
+    #[arg(value_enum, short, long, default_value_t = CliBackend::Seq, global = true)]
     backend: CliBackend,
-    #[arg(value_enum, short, long, default_value_t = CliDataset::Star)]
+    #[arg(value_enum, short, long, default_value_t = CliDataset::Star, global = true)]
     dataset: CliDataset,
-    #[arg(short, long, default_value_t = 4)]
+    #[arg(short, long, default_value_t = 4, global = true)]
     power_ten_points: u32,
-    #[arg(short, long, default_value_t = 500)]
+    #[arg(short, long, default_value_t = 500, global = true)]
     iterations: usize,
-    #[arg(short, long, default_value_t = 0.1)]
+    #[arg(short, long, default_value_t = 0.1, global = true)]
     learning_rate: f64,
-    #[arg(long, default_value_t = 50)]
+    #[arg(long, default_value_t = 50, global = true)]
     hidden_layer_size: usize,
     #[command(subcommand)]
     command: Option<CliCommand>,
+}
+
+impl fmt::Display for Cli {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let points: u64 = 10u64.pow(self.power_ten_points);
+        writeln!(f, "Training Summary")?;
+        writeln!(f, "├─ Backend:    {}", self.backend)?;
+        writeln!(f, "├─ Dataset:    {}", self.dataset)?;
+        writeln!(
+            f,
+            "├─ Points:     {} (10^{})",
+            points, self.power_ten_points
+        )?;
+        writeln!(f, "├─ Iterations: {}", self.iterations)?;
+        writeln!(f, "├─ LR:         {}", self.learning_rate)?;
+        write!(f, "└─ Hidden:     {}", self.hidden_layer_size)
+    }
 }
 
 #[derive(Subcommand)]
@@ -54,6 +72,17 @@ enum CliBackend {
     Par,
     #[cfg(feature = "gpu")]
     Gpu,
+}
+
+impl fmt::Display for CliBackend {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CliBackend::Seq => write!(f, "sequential"),
+            CliBackend::Par => write!(f, "parallel"),
+            #[cfg(feature = "gpu")]
+            CliBackend::Gpu => write!(f, "gpu"),
+        }
+    }
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -83,8 +112,22 @@ impl CliDataset {
     }
 }
 
+impl fmt::Display for CliDataset {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CliDataset::Simple => write!(f, "simple"),
+            CliDataset::Star => write!(f, "star"),
+            CliDataset::Xor => write!(f, "xor"),
+            CliDataset::Circle => write!(f, "circle"),
+            CliDataset::Diag => write!(f, "diag"),
+            CliDataset::Split => write!(f, "split"),
+        }
+    }
+}
+
 fn main() -> Result<(), Error> {
     let cli = Cli::parse();
+    println!("{cli}");
 
     match cli.command {
         Some(CliCommand::Benchmark { seed }) => {
