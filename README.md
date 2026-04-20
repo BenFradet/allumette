@@ -5,112 +5,70 @@
 </h2>
 
 `allumette`, French for match, is a toy tensor library built for fun to better understand
-tensors, autodifferentiation and neural networks.
+tensors, autodifferentiation, neural networks and GPU programming.
 
 It is inspired by a small cohort of projects:
 
-- [minitorch](minitorch.github.io)
-- [tinygrad](https://github.com/tinygrad/tinygrad)
+- [minitorch](https://minitorch.github.io)
 - [burn](https://github.com/tracel-ai/burn)
-- [candle](https://github.com/huggingface/candle)
 - [tensorken](https://github.com/kurtschelfthout/tensorken)
 
 ### Usage
 
-```rust
-use allumette::{
-    backend::backend::GpuBackend,
-    training::{
-        dataset::Dataset,
-        debugger::ChattyDebugger,
-        train,
-    },
-};
+There is a cli built on top which you can use to train a neural network.
 
-fn main() {
-    let pts = 1000;
-    let dataset = Dataset::simple(pts);
-    let hidden_layer_size = 3;
-    let learning_rate = 0.1;
-    let iterations = 200;
-    // you have a choice of backend:
-    // - CpuSeqBackend for sequential training
-    // - CpuParBackend to leverage rayon's parallel iterators
-    // - GpuBackend as below
-    train::train::<GpuBackend, ChattyDebugger>(
-        dataset,
-        learning_rate,
-        iterations,
-        hidden_layer_size,
-    );
-}
+For example, to train a gpu neural network on 1000 points:
+
+```bash
+$ allumette -b gpu -p 3
 ```
 
-[Dataset](./src/training/dataset.rs) provides a few ways to create synthetic datasets.
+You can know more about the cli arguments with
+
+```bash
+$ allumette help
+Usage: allumette [OPTIONS] [COMMAND]
+
+Commands:
+  viz        
+  benchmark  
+  profile    
+  help       Print this message or the help of the given subcommand(s)
+
+Options:
+  -b, --backend <BACKEND>
+          [default: seq] [possible values: seq, par, gpu]
+  -d, --dataset <DATASET>
+          [default: star] [possible values: simple, diag, split, xor, circle, star]
+  -p, --power-ten-points <POWER_TEN_POINTS>
+          [default: 4]
+  -i, --iterations <ITERATIONS>
+          [default: 500]
+  -l, --learning-rate <LEARNING_RATE>
+          [default: 0.1]
+      --hidden-layer-size <HIDDEN_LAYER_SIZE>
+          [default: 50]
+  -h, --help
+          Print help
+  -V, --version
+          Print version
+```
 
 #### Visual debugger
 
 There is also a visual debugger built with ratatui.
 
-```rust
-use std::io::Error;
-
-use allumette::{
-    backend::backend::CpuSeqBackend,
-    training::{
-        dataset::Dataset,
-        debugger::VizDebugger,
-        train,
-    },
-};
-
-fn main() -> Result<(), Error> {
-    let pts = 1000;
-    let dataset = Dataset::diag(pts);
-    let hidden_layer_size = 3;
-    let learning_rate = 0.2;
-    let iterations = 200;
-
-    let mut debugger = VizDebugger::new(&dataset, iterations);
-
-    let mut debugger_thread_clone = debugger.clone();
-
-    std::thread::spawn(move || {
-        train::train::<CpuSeqBackend, _>(
-            dataset,
-            learning_rate,
-            iterations,
-            hidden_layer_size,
-            &mut debugger_thread_clone,
-        );
-    });
-
-    debugger.run()
-}
+```bash
+$ allumette viz -b gpu -p 3
 ```
 
 ![img](img/screenshot.png)
-
-### Build and dependencies
-
-Part of the codebase makes use of the `trait_alias` experimental features so it requires nightly.
-
-The set of dependencies is otherwise pretty limited:
-- `wgpu` for the GPU runtime
-- `rayon` for the parallel CPU runtime
-- `flume` and `futures` for wgpu callbacks
-- `bytemuck` to convert binary buffers copied to/from the GPU
-- `ratatui` for visualization
-- `clap` for cli argument parsing
-- `proptest` for property-based testing
-- `serial_test` for non parallel gpu tests
-- `rand` for synthetic data generation
 
 ### Benchmarks
 
 You can run benchmarks with:
 ```bash
-cargo run --release -- benchmark -b gpu -p 5 -s 1234
+$ allumette benchmark -b gpu -p 5 -s 1234
 ```
 
 - `b` stands for backend, you have a choice of `gpu`, `par` and `seq`.
@@ -123,7 +81,7 @@ There is a small profiling tool which helps understand in which operations time 
 run with:
 
 ```bash
-cargo run --release -- profile -b gpu -p 5 -s 1234 -o /tmp/profile.csv
+$ allumette profile -b gpu -p 5 -s 1234 -o /tmp/profile.csv
 ```
 
 - `b` stands for backend, you have a choice of `gpu`, `par` and `seq`.
@@ -148,6 +106,28 @@ xan groupby op 'sum(duration_micros) as sum' /tmp/profile.csv |
     xan view -I
 ```
 
+### Presentation
+
+Slides were built to present this project, you can check them out with [presenterm](https://github.com/mfontanini/presenterm):
+
+```bash
+$ presenterm slides.md
+```
+
+### Build and dependencies
+
+Part of the codebase makes use of the `trait_alias` experimental features so it requires nightly.
+
+The set of dependencies is otherwise pretty limited:
+- `wgpu` for the GPU runtime
+- `rayon` for the parallel CPU runtime
+- `flume` and `futures` for wgpu callbacks
+- `bytemuck` to convert binary buffers copied to/from the GPU
+- `ratatui` for visualization
+- `clap` for cli argument parsing
+- `proptest` for property-based testing
+- `serial_test` for non parallel gpu tests
+- `rand` for synthetic data generation
 
 ### Next up
 
@@ -155,26 +135,7 @@ xan groupby op 'sum(duration_micros) as sum' /tmp/profile.csv |
 - [x] gpu backend
 - [x] associated types
 - [x] visualization
+- [ ] simd cpu backend
 - [ ] convolution
 - [ ] optimizations
 - [ ] const generics for tensor ranks
-
-### Gotchas / learnings
-
-#### proptest
-
-Seems like `proptest` distributions are truly uniform unlike quickcheck or scalacheck which do
-hotspot values.
-`relu'(x)` is undefined when `x = 0` and by convention I had chosen 0. The central diff however
-reports nonsensical values.
-The bug was there for months until I ported the same logic to GPU where I hit on 0 by chance.
-C.f. https://github.com/proptest-rs/proptest/issues/82
-
-#### proptest & GPU
-
-GPU is fast except going to and from the CPU which happens a lot with prop tests
-
-#### rust superpowers
-
-- associated types
-- const generics
