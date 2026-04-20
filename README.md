@@ -17,13 +17,23 @@ It is inspired by a small cohort of projects:
 
 There is a cli built on top which you can use to train a neural network.
 
-For example, to train a gpu neural network on 1000 points:
+For example, to train a neural network on cpu in parallel on:
+- 1000 (10^3) points
+- 100 iterations
+- 0.15 learning rate
+- 12 neurons in the hidden layer
 
 ```bash
-$ allumette -b gpu -p 3
+$ allumette -b par -p 3 -i 100 -l 0.15 --hidden-layer-size 12
 ```
 
-You can know more about the cli arguments with
+To train on gpu, you will need to set an env variable:
+
+```bash
+$ WGPU_ADAPTER_NAME="NVidia" allumette -b gpu -p 3
+```
+
+You can know more about the cli arguments with:
 
 ```bash
 $ allumette help
@@ -136,6 +146,7 @@ The set of dependencies is otherwise pretty limited:
 - [x] associated types
 - [x] visualization
 - [ ] simd cpu backend
+- [ ] abstract the number of hidden layers
 - [ ] convolution
 - [ ] optimizations
 - [ ] const generics for tensor ranks

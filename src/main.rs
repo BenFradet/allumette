@@ -22,7 +22,7 @@ struct Cli {
     backend: CliBackend,
     #[arg(value_enum, short, long, default_value_t = CliDataset::Star, global = true)]
     dataset: CliDataset,
-    #[arg(short, long, default_value_t = 4, global = true)]
+    #[arg(short, long, default_value_t = 3, global = true)]
     power_ten_points: u32,
     #[arg(short, long, default_value_t = 500, global = true)]
     iterations: usize,
