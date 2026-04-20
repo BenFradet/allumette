@@ -125,6 +125,14 @@ Memory requirements:
 
 ![image:width:100%](img/benchmark_plot.png)
 
+We can see the limits of the current API:
+
+- we're using full gradient descent, frameworks usually use stochastic gradient descent and don't
+train on the full input
+- for gpu, we're not compute-bound nor memory-bound but rather dispatch-bound, every single op
+triggers a gpu command, that's where actual frameworks leverage kernel fusion and make the gpu do
+more in a single command
+
 ### Profiling
 
 There is a small profiling tool which helps understand in which operations time is spent, it can be
