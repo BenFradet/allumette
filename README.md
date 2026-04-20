@@ -164,6 +164,10 @@ xan groupby op 'sum(duration_micros) as sum' /tmp/profile.csv |
     xan view -I
 ```
 
+#### Results
+
+![image:width:100%](img/profile_pie.png)
+
 ### Presentation
 
 Slides were built to present this project, you can check them out with [presenterm](https://github.com/mfontanini/presenterm):
