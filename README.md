@@ -5,9 +5,14 @@
 </h2>
 
 `allumette`, French for match, is a toy tensor library built for fun to better understand
-tensors, autodifferentiation, neural networks and GPU programming.
+tensors, autodifferentiation and neural networks.
 
-It is inspired by a small cohort of projects:
+It has three backends:
+- sequential cpu
+- parallel cpu using [rayon](https://github.com/rayon-rs/rayon)
+- gpu using [wgpu](https://github.com/gfx-rs/wgpu)
+
+It is inspired by a few projects:
 
 - [minitorch](https://minitorch.github.io)
 - [burn](https://github.com/tracel-ai/burn)
