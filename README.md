@@ -69,7 +69,7 @@ Options:
           Print version
 ```
 
-#### Visual debugger
+### Visual debugger
 
 There is also a visual debugger built with ratatui.
 
@@ -89,6 +89,41 @@ $ allumette benchmark -b gpu -p 5 -s 1234
 - `b` stands for backend, you have a choice of `gpu`, `par` and `seq`.
 - `p` is the number of points raised to the power of 10, e.g. 5 stands for 100 000 points
 - `s` is the seed to generate synthetic data
+
+#### Results
+
+Results from the benchmarks for:
+- `500` iterations
+- `0.1` learning rate
+- `2` features
+- `50` hidden layer size 
+- variable is the size of the input dataset `N`
+
+Specs:
+- CPU: i7-1360P
+  - 12 cores @ 5GHz = 0.12 TFLOPS f32
+- IGP: Iris Xe
+  - 768 cores @ 1.3 GHz = 1.9 TFLOPS f32
+  - DDR5 @ 6.4GHz => 102.4 GB/s
+- GPU: GTX 1070
+  - 2048 cores @ 1.4 Ghz = 5.7 TFLOPS f32
+  - GDDR5 @ 2GHz, 256 bit bus => 256 GB/s
+
+mode | 10^2 | 10^3 | 10^4 | 10^5 | 10^6 | 10^7
+-|-|-|-|-|-|-
+seq | _1.93s_   | 18.36s   | 3m24s    | 1h2m   | ???      | ???
+par | _1.96s_   | _10.24s_ | 1m21s    | 16m6s  | 2h24m    | ???
+igp | 19.72s    | 22.53s   | 37.78s   | 2m29s  | 23m43s   | ???
+gpu | 11.22s    | 12s      | _25.33s_ | _2m4s_ | _20m27s_ | ???
+mem | 0.12MiB   | 2.28MiB  | 22.8MiB  | 229MiB | 2.3GiB   | 22.89GiB
+
+Memory requirements:
+- matmul -> add -> sigma `σ(wx + b)`
+- input and hidden layers, output is a scalar
+- tensor and their grad
+- `3 x 2 x 2 x [N, 50]`
+
+![image:width:100%](img/benchmark_plot.png)
 
 ### Profiling
 
